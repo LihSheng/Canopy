@@ -127,6 +127,80 @@ not ad hoc shared mutable state.
 
 This keeps refresh flow testable and prevents hidden coupling between stages.
 
+## V1 completion guardrails for future V2
+
+V1 should be completed as a single-tenant product slice, but the
+implementation must not trap the codebase in a forever-single-tenant shape.
+
+These guardrails apply while finishing the remaining V1 work.
+
+### Tenant-aware seam rule
+
+Even when runtime behavior is still single-tenant, architecture seams should
+assume that a request or job belongs to a tenant context.
+
+This does not mean full multi-tenant support is in scope for V1.
+It means new code should avoid assuming one permanent global dataset or one
+permanent global storage target.
+
+### Storage routing rule
+
+Business services should not depend directly on one global database session as
+an architectural assumption.
+
+Use repository or storage-adapter boundaries so storage can later be routed per
+tenant without rewriting business logic.
+
+For V1, the application may still resolve to one effective storage target.
+That is acceptable as long as the code path does not hardcode that as an
+unchangeable system rule.
+
+### Logical storage-role rule
+
+Treat product-owned storage as two logical roles, even if they still share one
+physical database in V1:
+
+- application storage for auth, config, job state, snapshot metadata, and
+  operational application records
+- analytics storage for normalized ontology data, derived metrics, anomalies,
+  cached summaries, and export-ready read models
+
+This keeps the code ready for future physical isolation or storage split
+without forcing that complexity into V1 delivery.
+
+### Source isolation rule
+
+Source-specific schema knowledge must stay inside source sync readers and
+source-facing mapping boundaries.
+
+Do not let analytics, API handlers, exports, or insight builders depend
+directly on raw source tables or raw source naming.
+
+Future connector-based ingestion depends on this isolation.
+
+### No hidden global-state rule
+
+Do not introduce caches, helpers, or shortcut query paths that silently assume
+one global mutable dataset outside snapshot and orchestration boundaries.
+
+Refresh, dashboard, export, and insight flows must remain snapshot-scoped and
+replaceable by tenant-scoped storage later.
+
+### Practical implication for current V1 work
+
+While finishing Insight Generation, Refresh Orchestration, Reporting and
+Export, Data Store, and Quality Gates:
+
+- keep storage wiring centralized
+- keep repository interfaces narrow
+- keep analytics read models explicit
+- keep refresh job sequencing owned by orchestration
+- keep export and AI outputs bound to the same snapshot basis as dashboard data
+
+These guardrails are architecture constraints, not additional V1 feature
+scope. They exist to reduce rewrite cost when tenant isolation and connector
+expansion are introduced in a later version.
+
 ---
 
 ## Main runtime modules
