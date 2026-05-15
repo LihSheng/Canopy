@@ -5,7 +5,7 @@
 - [x] [Frontend Dashboard Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/frontend-dashboard.md)
 - [x] [API Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/api.md)
 - [x] [Source Sync Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/source-sync.md)
-- [ ] [Ontology Mapping Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/ontology-mapping.md)
+- [x] [Ontology Mapping Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/ontology-mapping.md)
 - [ ] [Analytics Aggregation Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/analytics-aggregation.md)
 - [ ] [Anomaly Detection Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/anomaly-detection.md)
 - [ ] [Insight Generation Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/insight-generation.md)
