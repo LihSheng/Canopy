@@ -7,21 +7,21 @@ staging, and explicit sync failure handling.
 
 ## Tasks
 
-- [ ] Define source snapshot domain types and shared reader contracts.
-- [ ] Implement source reader for departments.
-- [ ] Implement source reader for employees.
-- [ ] Implement source reader for claims.
-- [ ] Implement source reader for payroll.
-- [ ] Implement source reader for cost centers.
-- [ ] Implement source reader for budget codes.
-- [ ] Implement source snapshot persistence repository.
-- [ ] Implement sync orchestration that extracts each entity family into one snapshot.
-- [ ] Record extraction timestamps and sync errors per snapshot.
-- [ ] Ensure source access remains read-only and isolated to this module.
-- [ ] Add explicit handling for empty source result sets versus hard failures.
+- [x] Define source snapshot domain types and shared reader contracts.
+- [x] Implement source reader for departments.
+- [x] Implement source reader for employees.
+- [x] Implement source reader for claims.
+- [x] Implement source reader for payroll.
+- [x] Implement source reader for cost centers.
+- [x] Implement source reader for budget codes.
+- [x] Implement source snapshot persistence repository.
+- [x] Implement sync orchestration that extracts each entity family into one snapshot.
+- [x] Record extraction timestamps and sync errors per snapshot.
+- [x] Ensure source access remains read-only and isolated to this module.
+- [x] Add explicit handling for empty source result sets versus hard failures.
 
 ## Testing
 
-- [ ] Add backend unit tests for each source reader contract using fixture source rows.
-- [ ] Add backend unit tests for sync orchestration success and partial-failure paths.
-- [ ] Add backend integration tests for snapshot persistence and extraction metadata recording.
+- [x] Add backend unit tests for each source reader contract using fixture source rows.
+- [x] Add backend unit tests for sync orchestration success and partial-failure paths.
+- [x] Add backend integration tests for snapshot persistence and extraction metadata recording.

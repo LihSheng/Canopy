@@ -67,6 +67,7 @@ def get_db():
 
 def init_db(engine_override: Engine | None = None):
     import auth.schema  # noqa: F401  ensure UserModel is registered
+    import sync.schema  # noqa: F401  ensure SourceSnapshotModel is registered
 
     eng = engine_override or engine()
     Base.metadata.create_all(bind=eng)
