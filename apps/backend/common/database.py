@@ -70,6 +70,8 @@ def init_db(engine_override: Engine | None = None):
     import sync.schema  # noqa: F401  ensure SourceSnapshotModel is registered
     import ontology.schema  # noqa: F401  ensure ontology models are registered
     import analytics.schema  # noqa: F401  ensure analytics models are registered
+    import anomalies.schema  # noqa: F401  ensure anomaly models are registered
+    import insights.schema  # noqa: F401  ensure insight models are registered
 
     eng = engine_override or engine()
     Base.metadata.create_all(bind=eng)

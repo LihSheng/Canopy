@@ -11,6 +11,7 @@ from api.routes.dashboard import router as dashboard_router
 from api.routes.departments import router as departments_router
 from api.routes.exports import router as exports_router
 from api.routes.health import router as health_router
+from api.routes.insights import router as insights_router
 from api.routes.refresh import router as refresh_router
 from common.database import init_db
 from common.errors import AppError
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(anomalies_router)
     app.include_router(refresh_router)
     app.include_router(exports_router)
+    app.include_router(insights_router)
 
     return app
 

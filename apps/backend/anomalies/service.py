@@ -1,82 +1,83 @@
-# ruff: noqa: E501
-from api.schemas.anomalies import AnomalyDetailResponse, AnomalyItem
+from sqlalchemy.orm import Session
+
+from analytics.repositories.analytics import AnalyticsRepository
+from anomalies.domain import AnomalyOutput
+from anomalies.repository import AnomalyRepository
+from anomalies.rules import department_claim_spike_rule, department_total_spike_rule
 
 
-def get_anomalies() -> list[AnomalyItem]:
+def detect_anomalies(
+    db: Session,
+    snapshot_id: str,
+    current_month: str,
+    previous_month: str,
+) -> list[AnomalyOutput]:
+    analytics_repo = AnalyticsRepository(db)
+    anomaly_repo = AnomalyRepository(db)
+
+    anomaly_repo.clear_snapshot(snapshot_id)
+
+    current_spends = analytics_repo.get_monthly_spends_for_month(
+        current_month, snapshot_id=snapshot_id
+    )
+    previous_spends = analytics_repo.get_monthly_spends_for_month(
+        previous_month, snapshot_id=snapshot_id
+    )
+
+    outputs: list[AnomalyOutput] = []
+    outputs.extend(
+        department_total_spike_rule(snapshot_id, current_spends, previous_spends)
+    )
+    outputs.extend(
+        department_claim_spike_rule(snapshot_id, current_spends, previous_spends)
+    )
+
+    anomaly_repo.save_anomalies(outputs)
+    return outputs
+
+
+def get_anomalies_list(db: Session) -> list[dict]:
+    repo = AnomalyRepository(db)
+    outputs = repo.find_all()
+    dept_map = AnalyticsRepository(db).get_department_map()
     return [
-        AnomalyItem(
-            id="anom-1",
-            department_id="dept-3",
-            department_name="Marketing",
-            period="2026-05",
-            description="Marketing total spend increased 8.7% month-over-month, driven by campaign-related travel claims.",
-            severity="high",
-            change_pct=8.7,
-        ),
-        AnomalyItem(
-            id="anom-2",
-            department_id="dept-6",
-            department_name="HR",
-            period="2026-05",
-            description="HR payroll spend rose 12.3% due to three new hires onboarded this month.",
-            severity="medium",
-            change_pct=12.3,
-        ),
-        AnomalyItem(
-            id="anom-3",
-            department_id="dept-2",
-            department_name="Sales",
-            period="2026-05",
-            description="Sales claims spend dropped 15.2% compared to previous quarter average.",
-            severity="low",
-            change_pct=-15.2,
-        ),
+        _to_item(o, dept_map) for o in outputs
     ]
 
 
-def get_anomaly(anomaly_id: str) -> AnomalyDetailResponse | None:
-    lookup = {
-        "anom-1": AnomalyDetailResponse(
-            id="anom-1",
-            department_id="dept-3",
-            department_name="Marketing",
-            period="2026-05",
-            description="Marketing total spend increased 8.7% month-over-month, driven by campaign-related travel claims.",
-            severity="high",
-            change_pct=8.7,
-            baseline_value=253000.00,
-            observed_value=275000.00,
-            delta_value=22000.00,
-            delta_percent=8.7,
-            driver_details=["Q2 product launch campaign", "Increased travel for client visits", "3 new agency contracts"],
-        ),
-        "anom-2": AnomalyDetailResponse(
-            id="anom-2",
-            department_id="dept-6",
-            department_name="HR",
-            period="2026-05",
-            description="HR payroll spend rose 12.3% due to three new hires onboarded this month.",
-            severity="medium",
-            change_pct=12.3,
-            baseline_value=142000.00,
-            observed_value=159500.00,
-            delta_value=17500.00,
-            delta_percent=12.3,
-            driver_details=["3 new full-time hires", "Annual salary adjustments applied"],
-        ),
-        "anom-3": AnomalyDetailResponse(
-            id="anom-3",
-            department_id="dept-2",
-            department_name="Sales",
-            period="2026-05",
-            description="Sales claims spend dropped 15.2% compared to previous quarter average.",
-            severity="low",
-            change_pct=-15.2,
-            baseline_value=82500.00,
-            observed_value=70000.00,
-            delta_value=-12500.00,
-            delta_percent=-15.2,
-            driver_details=["Reduced travel due to virtual client meetings", "Q1 conference expenses not repeated"],
-        ),
+def get_anomaly_detail(db: Session, anomaly_id: str) -> dict | None:
+    repo = AnomalyRepository(db)
+    output = repo.find_by_id(anomaly_id)
+    if output is None:
+        return None
+    dept_map = AnalyticsRepository(db).get_department_map()
+    return _to_detail(output, dept_map)
+
+
+def _to_item(o: AnomalyOutput, dept_map: dict[str, str]) -> dict:
+    return {
+        "id": o.id,
+        "department_id": o.target_entity_id,
+        "department_name": dept_map.get(o.target_entity_id, o.target_entity_id),
+        "period": o.month_key,
+        "description": o.description,
+        "severity": o.severity,
+        "change_pct": o.delta_percent,
     }
-    return lookup.get(anomaly_id)
+
+
+def _to_detail(o: AnomalyOutput, dept_map: dict[str, str]) -> dict:
+    return {
+        "id": o.id,
+        "department_id": o.target_entity_id,
+        "department_name": dept_map.get(o.target_entity_id, o.target_entity_id),
+        "period": o.month_key,
+        "description": o.description,
+        "severity": o.severity,
+        "change_pct": o.delta_percent,
+        "baseline_value": o.baseline_value,
+        "observed_value": o.observed_value,
+        "delta_value": o.delta_value,
+        "delta_percent": o.delta_percent,
+        "driver_details": o.driver_details,
+    }
