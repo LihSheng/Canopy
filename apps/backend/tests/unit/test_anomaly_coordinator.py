@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.business_rule
+
 from unittest.mock import MagicMock, patch
 
 from analytics.domain import MonthlyDepartmentSpend

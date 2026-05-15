@@ -1,3 +1,6 @@
+import pytest
+
+pytestmark = pytest.mark.api_schema
 
 from api.schemas.anomalies import AnomalyDetailResponse, AnomalyItem
 from api.schemas.common import ApiResponse

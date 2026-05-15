@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.business_rule
+
 from insights.parser import parse_llm_response
 
 

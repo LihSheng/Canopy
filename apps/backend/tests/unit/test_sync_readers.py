@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.business_rule
+
 from datetime import datetime
 
 from sqlalchemy import create_engine

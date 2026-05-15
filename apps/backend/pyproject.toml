@@ -49,3 +49,19 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = ["."]
 addopts = "-v --tb=short"
+markers = [
+    "unit: Tests that run without DB/network (pure logic)",
+    "integration: Tests that use DB or network fixtures",
+    "business_rule: Core business-logic tests that must never regress",
+    "api_schema: API response contract and schema tests",
+    "smoke: End-to-end smoke tests",
+]
+
+[tool.coverage.run]
+source = ["analytics", "anomalies", "sync", "ontology", "insights", "exports", "refresh", "common", "auth"]
+omit = ["*/tests/*", "*/alembic/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 70
+precision = 1

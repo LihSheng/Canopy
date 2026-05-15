@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.business_rule
+
 import uuid
 from datetime import datetime
 

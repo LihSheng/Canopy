@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.business_rule
+
 from anomalies.severity import ANOMALY_THRESHOLDS, classify_severity
 
 

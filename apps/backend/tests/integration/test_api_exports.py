@@ -1,6 +1,8 @@
 import pytest
 from io import BytesIO
 
+pytestmark = pytest.mark.api_schema
+
 
 @pytest.mark.usefixtures("seed_analytics_data")
 class TestExportsIntegration:

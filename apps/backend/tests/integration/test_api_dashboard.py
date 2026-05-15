@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.api_schema
+
 
 @pytest.mark.usefixtures("seed_analytics_data")
 class TestDashboardSummary:

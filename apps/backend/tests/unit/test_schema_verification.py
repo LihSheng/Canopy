@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.api_schema
+
 from sqlalchemy import inspect
 
 from common.database import Base

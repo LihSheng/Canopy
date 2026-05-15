@@ -1,8 +1,11 @@
+import pytest
+
+pytestmark = pytest.mark.business_rule
+
 import json
 from dataclasses import asdict
 
 from ontology.domain import (
-    BudgetCode,
     CostCenter,
     Department,
     Employee,

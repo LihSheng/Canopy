@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.business_rule
+
 from insights.domain import (
     AnomalyFact,
     ClaimTypeFact,

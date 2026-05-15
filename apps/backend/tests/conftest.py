@@ -1,5 +1,23 @@
 import pytest
 from sqlalchemy import create_engine
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "unit: pure logic tests (no DB/network)")
+    config.addinivalue_line("markers", "integration: tests using DB or network fixtures")
+    config.addinivalue_line("markers", "business_rule: core business logic that must never regress")
+    config.addinivalue_line("markers", "api_schema: API response contract and schema tests")
+    config.addinivalue_line("markers", "smoke: end-to-end smoke tests")
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        fspath = str(item.fspath)
+        if "/tests/unit/" in fspath or "\\tests\\unit\\" in fspath:
+            item.add_marker(pytest.mark.unit)
+        elif "/tests/integration/" in fspath or "\\tests\\integration\\" in fspath:
+            item.add_marker(pytest.mark.integration)
+
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from starlette.testclient import TestClient

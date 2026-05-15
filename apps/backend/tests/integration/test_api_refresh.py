@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.api_schema
+
 import time
 
 

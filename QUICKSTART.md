@@ -46,23 +46,53 @@ Open http://localhost:3000
 
 ## Test
 
+### Frontend
+
 ```bash
-# Frontend tests
+# All frontend tests
 cd apps/frontend && npm test
 
-# Backend tests
-cd apps/backend && .venv\Scripts\activate && pytest
+# Unit tests only (components, hooks, mappers, formatters)
+cd apps/frontend && npm run test:unit
 
-# With coverage
-cd apps/backend && pytest --cov=. --cov-report=term
+# Integration tests only (page flows, login, dashboard, navigation)
+cd apps/frontend && npm run test:integration
 ```
 
-## Lint and Typecheck
+### Backend
+
+```bash
+# All backend tests
+cd apps/backend && .venv\Scripts\activate && pytest
+
+# Unit tests only (pure logic — analytics, anomaly rules, mappers, etc.)
+cd apps/backend && .venv\Scripts\activate && pytest -m unit
+
+# Integration tests only (DB, API routes, persistence)
+cd apps/backend && .venv\Scripts\activate && pytest -m integration
+
+# API schema regression gate (response contracts, DB schema)
+cd apps/backend && .venv\Scripts\activate && pytest -m api_schema -x --tb=long
+
+# Core business-rule regression gate (analytics, anomalies, ontology, sync, insights)
+cd apps/backend && .venv\Scripts\activate && pytest -m business_rule -x --tb=long
+
+# End-to-end smoke test
+cd apps/backend && .venv\Scripts\activate && pytest tests/integration/test_smoke.py -v --tb=long
+
+# With coverage (analytics, anomaly, sync, ontology, insights, exports, refresh, common, auth)
+cd apps/backend && .venv\Scripts\activate && pytest --cov=analytics --cov=anomalies --cov=sync --cov=ontology --cov=insights --cov=exports --cov=refresh --cov=common --cov-report=term
+
+# Coverage with XML report
+cd apps/backend && .venv\Scripts\activate && pytest --cov=analytics --cov=anomalies --cov=sync --cov=ontology --cov=insights --cov=exports --cov=refresh --cov=common --cov-report=xml
+```
+
+## Lint, Format, and Typecheck
 
 ```bash
 # Frontend
 cd apps/frontend && npm run lint && npm run typecheck
 
 # Backend
-cd apps/backend && ruff check . && mypy .
+cd apps/backend && .venv\Scripts\activate && ruff check . && ruff format --check && mypy .
 ```
