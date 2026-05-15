@@ -2,7 +2,7 @@
 
 - [x] [Project Bootstrap Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/project-bootstrap.md)
 - [x] [Auth Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/auth.md)
-- [ ] [Frontend Dashboard Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/frontend-dashboard.md)
+- [x] [Frontend Dashboard Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/frontend-dashboard.md)
 - [ ] [API Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/api.md)
 - [ ] [Source Sync Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/source-sync.md)
 - [ ] [Ontology Mapping Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/ontology-mapping.md)
