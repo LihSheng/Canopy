@@ -11,5 +11,5 @@
 - [x] [Insight Generation Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/insight-generation.md)
 - [x] [Refresh Orchestration Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/refresh-orchestration.md)
 - [x] [Reporting And Export Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/reporting-export.md)
-- [ ] [Data Store Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/data-store.md)
+- [x] [Data Store Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/data-store.md)
 - [ ] [Quality Gates And CI Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/quality-gates-ci.md)

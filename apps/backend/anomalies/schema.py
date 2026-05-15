@@ -1,7 +1,7 @@
 import json
 import uuid
 
-from sqlalchemy import Float, String, Text
+from sqlalchemy import Index, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from common.database import Base
@@ -21,18 +21,32 @@ class DetectedAnomalyModel(Base):
     )
     month_key: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     baseline_value: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0
+        Numeric(12, 2, asdecimal=False), nullable=False, default=0.0
     )
     observed_value: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0
+        Numeric(12, 2, asdecimal=False), nullable=False, default=0.0
     )
-    delta_value: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    delta_value: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False, default=0.0)
     delta_percent: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0
+        Numeric(8, 2, asdecimal=False), nullable=False, default=0.0
     )
     severity: Mapped[str] = mapped_column(String(16), nullable=False, default="low")
     driver_payload_json: Mapped[str] = mapped_column(
         Text, nullable=False, default="[]"
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_detected_anomalies_snapshot_month",
+            "snapshot_id",
+            "month_key",
+        ),
+        Index(
+            "ix_detected_anomalies_snapshot_type_month",
+            "snapshot_id",
+            "anomaly_type",
+            "month_key",
+        ),
     )
 
     @classmethod

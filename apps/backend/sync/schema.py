@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from common.database import Base
@@ -25,6 +25,14 @@ class SourceSnapshotModel(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     snapshot_id: Mapped[str] = mapped_column(
         String(36), nullable=False, index=True
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_source_snapshots_batch_entity",
+            "snapshot_id",
+            "entity_type",
+        ),
     )
 
 

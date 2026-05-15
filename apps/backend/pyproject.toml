@@ -23,11 +23,12 @@ dev = [
     "httpx>=0.28.0",
     "ruff>=0.8.0",
     "mypy>=1.14.0",
+    "alembic>=1.14.0",
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["api*", "auth*", "sync*", "ontology*", "analytics*", "anomalies*", "insights*", "exports*", "refresh*", "common*"]
+include = ["api*", "auth*", "sync*", "ontology*", "analytics*", "anomalies*", "insights*", "exports*", "refresh*", "common*", "alembic*"]
 
 [tool.ruff]
 target-version = "py312"

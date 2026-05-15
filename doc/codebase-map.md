@@ -110,6 +110,14 @@ No migration system yet:
 - `init_db()` imports `auth.schema`, `sync.schema`, and `ontology.schema`
 - no Alembic setup is present
 
+Migration system (Data Store):
+
+- Alembic is installed and configured in `apps/backend/alembic/`
+- initial migration at `alembic/versions/a9eb23d92c20_initial_schema.py`
+- run with `alembic upgrade head`
+- ORM models use `Numeric(precision=12, scale=2, asdecimal=False)` for money columns
+- timestamp fields use `DateTime(timezone=True)` with default `datetime.now(UTC)`
+
 ## Backend Routes
 
 Implemented routes:
@@ -278,7 +286,7 @@ From [`doc/tasks/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/
 - not started: insight generation
 - not started: refresh orchestration
 - not started: reporting and export
-- not started: data store
+- done: data store
 - not started: quality gates and CI
 
 Use this as planning context, not proof. Check the touched task doc if scope questions matter.

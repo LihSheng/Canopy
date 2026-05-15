@@ -1,7 +1,8 @@
 import json
 import uuid
+from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Float, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Index, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from common.database import Base
@@ -19,11 +20,24 @@ class GeneratedInsightModel(Base):
     recommendations_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     key_findings_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     is_fallback: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    generated_at: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
     anomaly_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     department_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    total_payroll: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    total_claims: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    total_payroll: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False, default=0.0)
+    total_claims: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False, default=0.0)
+
+    __table_args__ = (
+        Index(
+            "ix_generated_insights_snapshot_month",
+            "snapshot_id",
+            "current_month",
+            unique=True,
+        ),
+    )
 
     @classmethod
     def pack_list(cls, items: list[str]) -> str:

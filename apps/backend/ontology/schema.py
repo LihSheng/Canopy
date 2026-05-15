@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Index, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from common.database import Base
@@ -24,6 +24,14 @@ class DepartmentModel(Base):
     )
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
 
+    __table_args__ = (
+        Index(
+            "ix_departments_snapshot_src",
+            "snapshot_id",
+            "source_department_key",
+        ),
+    )
+
 
 class EmployeeModel(Base):
     __tablename__ = "employees"
@@ -42,6 +50,19 @@ class EmployeeModel(Base):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     employment_status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="active"
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_employees_snapshot_dept",
+            "snapshot_id",
+            "department_id",
+        ),
+        Index(
+            "ix_employees_snapshot_src",
+            "snapshot_id",
+            "source_employee_key",
+        ),
     )
 
 
@@ -95,7 +116,7 @@ class ExpenseClaimModel(Base):
     budget_code_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     claim_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     claim_date: Mapped[str] = mapped_column(String(32), nullable=False)
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
     currency: Mapped[str] = mapped_column(String(8), nullable=False, default="MYR")
     is_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
@@ -118,7 +139,7 @@ class PayrollExpenseModel(Base):
     cost_center_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     budget_code_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     payroll_month: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
     currency: Mapped[str] = mapped_column(String(8), nullable=False, default="MYR")
     pay_component: Mapped[str] = mapped_column(
         String(64), nullable=False, default=""
@@ -141,4 +162,12 @@ class UnresolvedMappingIssueModel(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         nullable=False,
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_unresolved_mapping_snapshot_entity",
+            "snapshot_id",
+            "entity_type",
+        ),
     )

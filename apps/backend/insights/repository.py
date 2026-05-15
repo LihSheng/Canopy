@@ -1,7 +1,20 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
 
 from insights.domain import InsightSummary
 from insights.schema import GeneratedInsightModel
+
+
+def _resolve_generated_at(val: str | datetime) -> datetime:
+    if isinstance(val, datetime):
+        return val
+    if val:
+        try:
+            return datetime.fromisoformat(val)
+        except (ValueError, TypeError):
+            pass
+    return datetime.now(UTC)
 
 
 class InsightRepository:
@@ -17,7 +30,7 @@ class InsightRepository:
             recommendations_json=GeneratedInsightModel.pack_list(summary.recommendations),
             key_findings_json=GeneratedInsightModel.pack_list(summary.key_findings),
             is_fallback=summary.is_fallback,
-            generated_at=summary.generated_at,
+            generated_at=_resolve_generated_at(summary.generated_at),
             anomaly_count=summary.anomaly_count,
             department_count=summary.department_count,
             total_payroll=summary.total_payroll,
@@ -75,7 +88,7 @@ def _model_to_domain(m: GeneratedInsightModel) -> InsightSummary:
         recommendations=GeneratedInsightModel.unpack_list(m.recommendations_json),
         key_findings=GeneratedInsightModel.unpack_list(m.key_findings_json),
         is_fallback=m.is_fallback,
-        generated_at=m.generated_at,
+        generated_at=m.generated_at.isoformat() if m.generated_at is not None else "",
         anomaly_count=m.anomaly_count,
         department_count=m.department_count,
         total_payroll=m.total_payroll,

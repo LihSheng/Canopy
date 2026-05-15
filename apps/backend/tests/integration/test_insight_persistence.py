@@ -1,7 +1,11 @@
+from datetime import UTC, datetime
+
 import pytest
 
 from insights.domain import InsightSummary
 from insights.repository import InsightRepository
+
+_T = "2026-05-15T10:00:00+00:00"
 
 
 class TestInsightPersistence:

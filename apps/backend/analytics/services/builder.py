@@ -20,7 +20,7 @@ from analytics.aggregators.payroll import (
 )
 from analytics.domain import DashboardSummaryCache, DepartmentRanking, MonthlyDepartmentSpend
 from analytics.repositories.analytics import AnalyticsRepository
-from common.clock import iso_now
+from common.clock import utcnow
 from ontology.schema import ExpenseClaimModel, PayrollExpenseModel
 
 
@@ -87,7 +87,7 @@ def _build_summary(
         total_claims=total_claims,
         department_count=dept_count,
         anomaly_count=anomaly_count,
-        created_at=iso_now(),
+        created_at=utcnow(),
     )
 
 

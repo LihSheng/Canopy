@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from common.database import Base
@@ -30,6 +30,18 @@ class RefreshJobModel(Base):
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    __table_args__ = (
+        Index(
+            "ix_refresh_jobs_status",
+            "status",
+        ),
+        Index(
+            "ix_refresh_jobs_status_snapshot",
+            "status",
+            "snapshot_id",
+        ),
+    )
+
 
 class DataSnapshotModel(Base):
     __tablename__ = "data_snapshots"
@@ -44,4 +56,8 @@ class DataSnapshotModel(Base):
         index=True,
     )
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="current")
-    created_at: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )

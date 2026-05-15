@@ -2,7 +2,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from common.clock import iso_now
+from common.clock import utcnow
 from insights.domain import FactBundle, InsightSummary
 from insights.facts import extract_facts
 from insights.fallback import (
@@ -38,7 +38,7 @@ def generate_insight(
                 recommendations=parsed.recommendations,
                 key_findings=parsed.key_findings,
                 is_fallback=False,
-                generated_at=iso_now(),
+                generated_at=utcnow(),
                 anomaly_count=facts.anomaly_count,
                 department_count=facts.department_count,
                 total_payroll=facts.total_payroll,
@@ -69,7 +69,7 @@ def _build_fallback_summary(facts: FactBundle) -> InsightSummary:
         recommendations=build_fallback_recommendations(facts),
         key_findings=build_fallback_findings(facts),
         is_fallback=True,
-        generated_at=iso_now(),
+        generated_at=utcnow(),
         anomaly_count=facts.anomaly_count,
         department_count=facts.department_count,
         total_payroll=facts.total_payroll,

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from common.clock import iso_now
+from common.clock import utcnow
 from refresh.domain import DataSnapshot, RefreshJob
 from refresh.schema import DataSnapshotModel, RefreshJobModel
 
@@ -51,11 +51,15 @@ class RefreshRepository:
         return model
 
     def save_data_snapshot(self, snapshot: DataSnapshot) -> DataSnapshotModel:
+        from datetime import UTC, datetime
+        created_at = snapshot.created_at
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at) if created_at else utcnow()
         model = DataSnapshotModel(
             id=snapshot.id,
             refresh_job_id=snapshot.refresh_job_id,
             status=snapshot.status,
-            created_at=snapshot.created_at,
+            created_at=created_at,
         )
         self._db.add(model)
         self._db.commit()
@@ -82,7 +86,7 @@ class RefreshRepository:
             id=snapshot_id,
             refresh_job_id=job_id,
             status="current",
-            created_at=iso_now(),
+            created_at=utcnow(),
         )
         self._db.add(new_snap)
         self._db.commit()

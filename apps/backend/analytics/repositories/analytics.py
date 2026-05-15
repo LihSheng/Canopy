@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import UTC, datetime
 from typing import Sequence
 
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ from analytics.schema import (
     MonthlyDepartmentSpendModel,
     MonthlyEmployeeSpendModel,
 )
-from common.clock import iso_now
+from common.clock import utcnow
 from ontology.schema import (
     DepartmentModel,
     EmployeeModel,
@@ -108,6 +109,9 @@ class AnalyticsRepository:
     # ---- summary cache ----
 
     def save_summary_cache(self, cache: DashboardSummaryCache) -> DashboardSummaryCacheModel:
+        created_at = cache.created_at
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at) if created_at else utcnow()
         model = DashboardSummaryCacheModel(
             id=cache.snapshot_id,
             snapshot_id=cache.snapshot_id,
@@ -117,7 +121,7 @@ class AnalyticsRepository:
             total_claims=cache.total_claims,
             department_count=cache.department_count,
             anomaly_count=cache.anomaly_count,
-            created_at=cache.created_at,
+            created_at=created_at,
         )
         self._db.add(model)
         self._db.commit()
@@ -139,7 +143,7 @@ class AnalyticsRepository:
             total_claims=model.total_claims,
             department_count=model.department_count,
             anomaly_count=model.anomaly_count,
-            created_at=model.created_at,
+            created_at=model.created_at.isoformat() if model.created_at is not None else "",
         )
 
     def get_summary_cache_for_period(
@@ -164,7 +168,7 @@ class AnalyticsRepository:
             total_claims=model.total_claims,
             department_count=model.department_count,
             anomaly_count=model.anomaly_count,
-            created_at=model.created_at,
+            created_at=model.created_at.isoformat() if model.created_at is not None else "",
         )
 
     # ---- monthly department spends ----
