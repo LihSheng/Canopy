@@ -4,8 +4,14 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from api.routes.anomalies import router as anomalies_router
 from api.routes.auth import router as auth_router
+from api.routes.claims import router as claims_router
+from api.routes.dashboard import router as dashboard_router
+from api.routes.departments import router as departments_router
+from api.routes.exports import router as exports_router
 from api.routes.health import router as health_router
+from api.routes.refresh import router as refresh_router
 from common.database import init_db
 from common.errors import AppError
 
@@ -36,6 +42,12 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router, prefix="/api")
     app.include_router(auth_router)
+    app.include_router(dashboard_router)
+    app.include_router(departments_router)
+    app.include_router(claims_router)
+    app.include_router(anomalies_router)
+    app.include_router(refresh_router)
+    app.include_router(exports_router)
 
     return app
 

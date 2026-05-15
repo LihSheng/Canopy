@@ -13,7 +13,7 @@ import type {
 } from "./types";
 
 export function fetchSummary(): Promise<DashboardSummary> {
-  return request<DashboardSummary>("/api/summary");
+  return request<DashboardSummary>("/api/dashboard/summary");
 }
 
 export function fetchDepartments(params?: MonthFilterParams): Promise<DepartmentSummary[]> {
@@ -23,12 +23,12 @@ export function fetchDepartments(params?: MonthFilterParams): Promise<Department
 
 export function fetchMonthlyTrends(params?: MonthFilterParams): Promise<MonthlyTrend[]> {
   const qs = params ? `?year=${params.year}&month=${params.month}` : "";
-  return request<MonthlyTrend[]>(`/api/trends${qs}`);
+  return request<MonthlyTrend[]>(`/api/dashboard/trends${qs}`);
 }
 
 export function fetchClaimTypeBreakdown(params?: MonthFilterParams): Promise<ClaimTypeBreakdown[]> {
   const qs = params ? `?year=${params.year}&month=${params.month}` : "";
-  return request<ClaimTypeBreakdown[]>(`/api/claims/breakdown${qs}`);
+  return request<ClaimTypeBreakdown[]>(`/api/dashboard/claim-types${qs}`);
 }
 
 export function fetchAnomalies(): Promise<Anomaly[]> {
@@ -60,7 +60,7 @@ export function fetchClaimDetails(
 }
 
 export function fetchRefreshStatus(): Promise<RefreshStatus> {
-  return request<RefreshStatus>("/api/refresh/status");
+  return request<RefreshStatus>("/api/refresh/current");
 }
 
 export function triggerRefresh(): Promise<{ accepted: boolean }> {
