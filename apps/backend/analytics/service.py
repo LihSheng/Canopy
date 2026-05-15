@@ -1,4 +1,13 @@
-# ruff: noqa: E501
+from datetime import datetime
+
+from sqlalchemy.orm import Session
+
+from analytics.aggregators.deltas import (
+    attach_mom_deltas_to_rankings,
+    calculate_mom_deltas,
+    rank_departments,
+)
+from analytics.repositories.analytics import AnalyticsRepository
 from api.schemas.dashboard import (
     ClaimTypeBreakdownItem,
     DashboardSummaryResponse,
@@ -8,45 +17,127 @@ from api.schemas.dashboard import (
 )
 
 
-def get_dashboard_summary() -> DashboardSummaryResponse:
+def get_dashboard_summary(db: Session) -> DashboardSummaryResponse:
+    repo = AnalyticsRepository(db)
+    cache = repo.get_latest_summary_cache()
+
+    if cache is None:
+        return DashboardSummaryResponse(
+            total_payroll=0.0,
+            total_claims=0.0,
+            period=PeriodInfo(year=datetime.now().year, month=datetime.now().month),
+            department_count=0,
+            anomaly_count=0,
+            last_updated="",
+        )
+
     return DashboardSummaryResponse(
-        total_payroll=1245000.00,
-        total_claims=287350.50,
-        period=PeriodInfo(year=2026, month=5),
-        department_count=12,
-        anomaly_count=3,
-        last_updated="2026-05-15T10:30:00Z",
+        total_payroll=cache.total_payroll,
+        total_claims=cache.total_claims,
+        period=PeriodInfo(year=cache.year, month=cache.month),
+        department_count=cache.department_count,
+        anomaly_count=cache.anomaly_count,
+        last_updated=cache.created_at,
     )
 
 
-def get_monthly_trends() -> list[MonthlyTrendItem]:
+def get_monthly_trends(
+    db: Session,
+    year: int | None = None,
+    month: int | None = None,
+) -> list[MonthlyTrendItem]:
+    repo = AnalyticsRepository(db)
+    spends = repo.get_all_monthly_spends()
+
+    month_totals: dict[str, dict[str, float]] = {}
+    for s in spends:
+        if s.month not in month_totals:
+            month_totals[s.month] = {"payroll": 0.0, "claims": 0.0}
+        month_totals[s.month]["payroll"] += s.payroll_total
+        month_totals[s.month]["claims"] += s.claims_total
+
+    trends: list[MonthlyTrendItem] = []
+    for m_key in sorted(month_totals.keys()):
+        values = month_totals[m_key]
+        trends.append(
+            MonthlyTrendItem(
+                month=m_key,
+                payroll=round(values["payroll"], 2),
+                claims=round(values["claims"], 2),
+                total=round(values["payroll"] + values["claims"], 2),
+            )
+        )
+
+    if year is not None and month is not None:
+        target = f"{year:04d}-{month:02d}"
+        trends = [t for t in trends if t.month == target]
+
+    return trends
+
+
+def get_top_departments(db: Session) -> list[TopDepartmentItem]:
+    repo = AnalyticsRepository(db)
+    months = repo.get_distinct_months()
+
+    if not months:
+        return []
+
+    current_month = months[0]
+    snapshot_id = repo.get_snapshot_id_from_aggregates() or ""
+    spends = repo.get_monthly_spends_for_month(current_month)
+    names = repo.get_department_map(snapshot_id)
+
+    rankings = rank_departments(spends, current_month, names)
+
+    previous_month = months[1] if len(months) > 1 else None
+    if previous_month:
+        previous_spends_raw = repo.get_monthly_spends_for_month(previous_month)
+        deltas = calculate_mom_deltas(
+            snapshot_id=snapshot_id,
+            spends=list(spends) + list(previous_spends_raw),
+            current_month=current_month,
+            previous_month=previous_month,
+        )
+        attach_mom_deltas_to_rankings(rankings, deltas)
+
+    top5 = rankings[:5]
     return [
-        MonthlyTrendItem(month="2025-11", payroll=1180000.00, claims=265000.00, total=1445000.00),
-        MonthlyTrendItem(month="2025-12", payroll=1210000.00, claims=272000.00, total=1482000.00),
-        MonthlyTrendItem(month="2026-01", payroll=1195000.00, claims=258000.00, total=1453000.00),
-        MonthlyTrendItem(month="2026-02", payroll=1205000.00, claims=275000.00, total=1480000.00),
-        MonthlyTrendItem(month="2026-03", payroll=1220000.00, claims=280000.00, total=1500000.00),
-        MonthlyTrendItem(month="2026-04", payroll=1235000.00, claims=283000.00, total=1518000.00),
-        MonthlyTrendItem(month="2026-05", payroll=1245000.00, claims=287350.50, total=1532350.50),
+        TopDepartmentItem(
+            id=r.department_id,
+            name=r.department_name,
+            total_spend=r.total_spend,
+            payroll_spend=r.payroll_spend,
+            claims_spend=r.claims_spend,
+            change_pct=r.change_pct,
+        )
+        for r in top5
     ]
 
 
-def get_top_departments() -> list[TopDepartmentItem]:
-    return [
-        TopDepartmentItem(id="dept-1", name="Engineering", total_spend=485000.00, payroll_spend=420000.00, claims_spend=65000.00, change_pct=3.2),
-        TopDepartmentItem(id="dept-2", name="Sales", total_spend=380000.00, payroll_spend=310000.00, claims_spend=70000.00, change_pct=-1.5),
-        TopDepartmentItem(id="dept-3", name="Marketing", total_spend=275000.00, payroll_spend=230000.00, claims_spend=45000.00, change_pct=8.7),
-        TopDepartmentItem(id="dept-4", name="Operations", total_spend=210000.00, payroll_spend=180000.00, claims_spend=30000.00, change_pct=1.1),
-        TopDepartmentItem(id="dept-5", name="Finance", total_spend=182350.50, payroll_spend=155000.00, claims_spend=27350.50, change_pct=-0.8),
-    ]
+def get_claim_type_breakdown(db: Session) -> list[ClaimTypeBreakdownItem]:
+    repo = AnalyticsRepository(db)
+    months = repo.get_distinct_months()
 
+    if not months:
+        return []
 
-def get_claim_type_breakdown() -> list[ClaimTypeBreakdownItem]:
+    current_month = months[0]
+    spends = repo.get_claim_type_spends(month=current_month)
+
+    type_totals: dict[str, dict[str, float | int]] = {}
+    for s in spends:
+        if s.claim_type not in type_totals:
+            type_totals[s.claim_type] = {"amount": 0.0, "count": 0}
+        type_totals[s.claim_type]["amount"] = float(type_totals[s.claim_type]["amount"]) + s.amount
+        type_totals[s.claim_type]["count"] = int(type_totals[s.claim_type]["count"]) + s.claim_count
+
+    sorted_types = sorted(type_totals.items(), key=lambda x: float(x[1]["amount"]), reverse=True)
+
     return [
-        ClaimTypeBreakdownItem(type="Travel", amount=98000.00, count=145),
-        ClaimTypeBreakdownItem(type="Meals", amount=65400.00, count=320),
-        ClaimTypeBreakdownItem(type="Office Supplies", amount=42350.50, count=89),
-        ClaimTypeBreakdownItem(type="Training", amount=38500.00, count=24),
-        ClaimTypeBreakdownItem(type="Equipment", amount=28100.00, count=15),
-        ClaimTypeBreakdownItem(type="Other", amount=15000.00, count=42),
+        ClaimTypeBreakdownItem(
+            type=claim_type,
+            amount=float(values["amount"]),
+            count=int(values["count"]),
+        )
+        for claim_type, values in sorted_types
     ]

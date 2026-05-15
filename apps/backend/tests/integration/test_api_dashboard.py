@@ -1,3 +1,7 @@
+import pytest
+
+
+@pytest.mark.usefixtures("seed_analytics_data")
 class TestDashboardSummary:
     def test_requires_auth(self, client):
         response = client.get("/api/dashboard/summary")

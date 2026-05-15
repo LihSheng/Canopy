@@ -1,4 +1,11 @@
-# ruff: noqa: E501
+from sqlalchemy.orm import Session
+
+from analytics.aggregators.deltas import (
+    attach_mom_deltas_to_rankings,
+    calculate_mom_deltas,
+    rank_departments,
+)
+from analytics.repositories.analytics import AnalyticsRepository
 from api.schemas.dashboard import MonthlyTrendItem
 from api.schemas.departments import (
     ClaimDetailItem,
@@ -8,100 +15,175 @@ from api.schemas.departments import (
     EmployeeContributionItem,
 )
 
-_sample_departments: list[dict] = [
-    {"id": "dept-1", "name": "Engineering", "payroll_spend": 420000.00, "claims_spend": 65000.00, "total_spend": 485000.00, "change_pct": 3.2, "employee_count": 45},
-    {"id": "dept-2", "name": "Sales", "payroll_spend": 310000.00, "claims_spend": 70000.00, "total_spend": 380000.00, "change_pct": -1.5, "employee_count": 32},
-    {"id": "dept-3", "name": "Marketing", "payroll_spend": 230000.00, "claims_spend": 45000.00, "total_spend": 275000.00, "change_pct": 8.7, "employee_count": 18},
-    {"id": "dept-4", "name": "Operations", "payroll_spend": 180000.00, "claims_spend": 30000.00, "total_spend": 210000.00, "change_pct": 1.1, "employee_count": 22},
-    {"id": "dept-5", "name": "Finance", "payroll_spend": 155000.00, "claims_spend": 27350.50, "total_spend": 182350.50, "change_pct": -0.8, "employee_count": 14},
-    {"id": "dept-6", "name": "HR", "payroll_spend": 129500.00, "claims_spend": 30000.00, "total_spend": 159500.00, "change_pct": 12.3, "employee_count": 10},
-]
 
-_employee_data: dict[str, list[dict]] = {
-    "dept-1": [
-        {"id": "emp-1", "name": "Alice Chen", "department": "Engineering", "payroll": 18500.00, "claims": 3200.00, "total": 21700.00},
-        {"id": "emp-2", "name": "Bob Martinez", "department": "Engineering", "payroll": 17200.00, "claims": 1800.00, "total": 19000.00},
-        {"id": "emp-3", "name": "Carol Wu", "department": "Engineering", "payroll": 16500.00, "claims": 4500.00, "total": 21000.00},
-    ],
-    "dept-2": [
-        {"id": "emp-10", "name": "David Park", "department": "Sales", "payroll": 15200.00, "claims": 5200.00, "total": 20400.00},
-        {"id": "emp-11", "name": "Eva Johansson", "department": "Sales", "payroll": 14800.00, "claims": 3800.00, "total": 18600.00},
-    ],
-    "dept-3": [
-        {"id": "emp-20", "name": "Frank Liu", "department": "Marketing", "payroll": 16200.00, "claims": 6100.00, "total": 22300.00},
-        {"id": "emp-21", "name": "Grace Kim", "department": "Marketing", "payroll": 15500.00, "claims": 2800.00, "total": 18300.00},
-    ],
-}
+def get_departments(db: Session) -> list[DepartmentItem]:
+    repo = AnalyticsRepository(db)
+    months = repo.get_distinct_months()
 
-_dept_claim_types: dict[str, list[dict]] = {
-    "dept-1": [{"type": "Equipment", "amount": 28500.00, "count": 12}, {"type": "Travel", "amount": 18500.00, "count": 28}, {"type": "Training", "amount": 12000.00, "count": 8}, {"type": "Meals", "amount": 6000.00, "count": 45}],
-    "dept-2": [{"type": "Travel", "amount": 35000.00, "count": 52}, {"type": "Meals", "amount": 22000.00, "count": 95}, {"type": "Other", "amount": 13000.00, "count": 18}],
-    "dept-3": [{"type": "Travel", "amount": 22000.00, "count": 35}, {"type": "Office Supplies", "amount": 12000.00, "count": 14}, {"type": "Meals", "amount": 11000.00, "count": 40}],
-}
+    if not months:
+        return []
 
-_claims_data: list[dict] = [
-    {"id": "claim-1", "employee_name": "Alice Chen", "department": "Engineering", "type": "Equipment", "amount": 2500.00, "date": "2026-05-03"},
-    {"id": "claim-2", "employee_name": "David Park", "department": "Sales", "type": "Travel", "amount": 3200.00, "date": "2026-05-05"},
-    {"id": "claim-3", "employee_name": "Frank Liu", "department": "Marketing", "type": "Travel", "amount": 4800.00, "date": "2026-05-08"},
-    {"id": "claim-4", "employee_name": "Carol Wu", "department": "Engineering", "type": "Travel", "amount": 1800.00, "date": "2026-05-10"},
-    {"id": "claim-5", "employee_name": "Eva Johansson", "department": "Sales", "type": "Meals", "amount": 350.00, "date": "2026-05-12"},
-    {"id": "claim-6", "employee_name": "Grace Kim", "department": "Marketing", "type": "Office Supplies", "amount": 620.00, "date": "2026-05-14"},
-]
+    current_month = months[0]
+    snapshot_id = repo.get_snapshot_id_from_aggregates() or ""
+    spends = repo.get_monthly_spends_for_month(current_month)
+    names = repo.get_department_map(snapshot_id)
 
+    rankings = rank_departments(spends, current_month, names)
 
-def get_departments() -> list[DepartmentItem]:
+    previous_month = months[1] if len(months) > 1 else None
+    if previous_month:
+        previous_spends_raw = repo.get_monthly_spends_for_month(previous_month)
+        deltas = calculate_mom_deltas(
+            snapshot_id=snapshot_id,
+            spends=list(spends) + list(previous_spends_raw),
+            current_month=current_month,
+            previous_month=previous_month,
+        )
+        attach_mom_deltas_to_rankings(rankings, deltas)
+
     return [
         DepartmentItem(
-            id=d["id"], name=d["name"], total_spend=d["total_spend"],
-            payroll_spend=d["payroll_spend"], claims_spend=d["claims_spend"], change_pct=d["change_pct"],
+            id=r.department_id,
+            name=r.department_name,
+            total_spend=r.total_spend,
+            payroll_spend=r.payroll_spend,
+            claims_spend=r.claims_spend,
+            change_pct=r.change_pct,
         )
-        for d in _sample_departments
+        for r in rankings
     ]
 
 
-def get_department(department_id: str) -> DepartmentDetailResponse | None:
-    for d in _sample_departments:
-        if d["id"] == department_id:
-            return DepartmentDetailResponse(
-                id=d["id"], name=d["name"], payroll_spend=d["payroll_spend"],
-                claims_spend=d["claims_spend"], total_spend=d["total_spend"],
-                change_pct=d["change_pct"], employee_count=d["employee_count"],
-            )
-    return None
+def get_department(db: Session, department_id: str) -> DepartmentDetailResponse | None:
+    repo = AnalyticsRepository(db)
+    months = repo.get_distinct_months()
+    snapshot_id = repo.get_snapshot_id_from_aggregates() or ""
+    names = repo.get_department_map(snapshot_id)
+
+    if department_id not in names:
+        return None
+
+    department_name = names[department_id]
+
+    if not months:
+        return DepartmentDetailResponse(
+            id=department_id,
+            name=department_name,
+            total_spend=0.0,
+            payroll_spend=0.0,
+            claims_spend=0.0,
+            change_pct=0.0,
+            employee_count=0,
+        )
+
+    current_month = months[0]
+    spends = repo.get_monthly_spends_for_month(current_month)
+
+    dept_spend = next((s for s in spends if s.department_id == department_id), None)
+
+    total_spend = dept_spend.total if dept_spend else 0.0
+    payroll_spend = dept_spend.payroll_total if dept_spend else 0.0
+    claims_spend = dept_spend.claims_total if dept_spend else 0.0
+
+    change_pct = 0.0
+    previous_month = months[1] if len(months) > 1 else None
+    if previous_month:
+        prev_spends = repo.get_monthly_spends_for_month(previous_month)
+        prev_dept = next((s for s in prev_spends if s.department_id == department_id), None)
+        if prev_dept and prev_dept.total != 0:
+            change_pct = round(((total_spend - prev_dept.total) / prev_dept.total) * 100, 2)
+
+    employees = repo.get_employee_spends_for_department(department_id, month=current_month)
+
+    return DepartmentDetailResponse(
+        id=department_id,
+        name=department_name,
+        total_spend=total_spend,
+        payroll_spend=payroll_spend,
+        claims_spend=claims_spend,
+        change_pct=change_pct,
+        employee_count=len(employees),
+    )
 
 
-def get_department_employees(department_id: str) -> list[EmployeeContributionItem]:
-    rows = _employee_data.get(department_id, [])
-    return [EmployeeContributionItem(**r) for r in rows]
+def get_department_employees(
+    db: Session, department_id: str
+) -> list[EmployeeContributionItem]:
+    repo = AnalyticsRepository(db)
+    months = repo.get_distinct_months()
 
-
-def get_department_trends(department_id: str) -> list[MonthlyTrendItem]:
-    dept = next((d for d in _sample_departments if d["id"] == department_id), None)
-    if dept is None:
+    if not months:
         return []
-    ratio = dept["total_spend"] / 1532350.50
+
+    current_month = months[0]
+    contributions = repo.get_employee_contributions(department_id, month=current_month)
+
     return [
-        MonthlyTrendItem(month="2025-11", payroll=round(1180000.00 * ratio, 2), claims=round(265000.00 * ratio, 2), total=round(1445000.00 * ratio, 2)),
-        MonthlyTrendItem(month="2025-12", payroll=round(1210000.00 * ratio, 2), claims=round(272000.00 * ratio, 2), total=round(1482000.00 * ratio, 2)),
-        MonthlyTrendItem(month="2026-01", payroll=round(1195000.00 * ratio, 2), claims=round(258000.00 * ratio, 2), total=round(1453000.00 * ratio, 2)),
-        MonthlyTrendItem(month="2026-02", payroll=round(1205000.00 * ratio, 2), claims=round(275000.00 * ratio, 2), total=round(1480000.00 * ratio, 2)),
-        MonthlyTrendItem(month="2026-03", payroll=round(1220000.00 * ratio, 2), claims=round(280000.00 * ratio, 2), total=round(1500000.00 * ratio, 2)),
-        MonthlyTrendItem(month="2026-04", payroll=round(1235000.00 * ratio, 2), claims=round(283000.00 * ratio, 2), total=round(1518000.00 * ratio, 2)),
-        MonthlyTrendItem(month="2026-05", payroll=round(dept["payroll_spend"], 2), claims=round(dept["claims_spend"], 2), total=round(dept["total_spend"], 2)),
+        EmployeeContributionItem(
+            id=c.employee_id,
+            name=c.employee_name,
+            department=c.department_name,
+            payroll=c.payroll,
+            claims=c.claims,
+            total=c.total,
+        )
+        for c in contributions
     ]
 
 
-def get_department_claim_types(department_id: str) -> list[DepartmentClaimTypeItem]:
-    rows = _dept_claim_types.get(department_id, [])
-    return [DepartmentClaimTypeItem(**r) for r in rows]
+def get_department_trends(
+    db: Session, department_id: str
+) -> list[MonthlyTrendItem]:
+    repo = AnalyticsRepository(db)
+    spends = repo.get_monthly_spends_for_department(department_id)
+
+    return [
+        MonthlyTrendItem(
+            month=s.month,
+            payroll=round(s.payroll_total, 2),
+            claims=round(s.claims_total, 2),
+            total=round(s.total, 2),
+        )
+        for s in spends
+    ]
 
 
-_dept_name_by_id = {d["id"]: d["name"] for d in _sample_departments}
+def get_department_claim_types(
+    db: Session, department_id: str
+) -> list[DepartmentClaimTypeItem]:
+    repo = AnalyticsRepository(db)
+    months = repo.get_distinct_months()
+
+    if not months:
+        return []
+
+    current_month = months[0]
+    type_spends = repo.get_claim_type_spends(department_id=department_id, month=current_month)
+
+    return [
+        DepartmentClaimTypeItem(
+            type=s.claim_type,
+            amount=s.amount,
+            count=s.claim_count,
+        )
+        for s in type_spends
+    ]
 
 
-def get_claims(department_id: str | None = None) -> list[ClaimDetailItem]:
-    if department_id:
-        dept_name = _dept_name_by_id.get(department_id)
-        filtered = [c for c in _claims_data if dept_name and c["department"] == dept_name]
-        return [ClaimDetailItem(**c) for c in filtered]
-    return [ClaimDetailItem(**c) for c in _claims_data]
+def get_claims(
+    db: Session, department_id: str | None = None
+) -> list[ClaimDetailItem]:
+    repo = AnalyticsRepository(db)
+    details = repo.get_claim_details(department_id=department_id)
+
+    return [
+        ClaimDetailItem(
+            id=c.claim_id,
+            employee_name=c.employee_name,
+            department=c.department_name,
+            type=c.claim_type,
+            amount=c.amount,
+            date=c.claim_date,
+        )
+        for c in details
+    ]
