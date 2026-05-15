@@ -1,0 +1,15 @@
+# Task Progress
+
+- [x] [Project Bootstrap Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/project-bootstrap.md)
+- [ ] [Auth Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/auth.md)
+- [ ] [Frontend Dashboard Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/frontend-dashboard.md)
+- [ ] [API Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/api.md)
+- [ ] [Source Sync Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/source-sync.md)
+- [ ] [Ontology Mapping Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/ontology-mapping.md)
+- [ ] [Analytics Aggregation Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/analytics-aggregation.md)
+- [ ] [Anomaly Detection Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/anomaly-detection.md)
+- [ ] [Insight Generation Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/insight-generation.md)
+- [ ] [Refresh Orchestration Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/refresh-orchestration.md)
+- [ ] [Reporting And Export Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/reporting-export.md)
+- [ ] [Data Store Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/data-store.md)
+- [ ] [Quality Gates And CI Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/quality-gates-ci.md)
