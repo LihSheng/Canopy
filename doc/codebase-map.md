@@ -8,12 +8,14 @@ If this file conflicts with the code, trust the code and refresh this file.
 - Date: 2026-05-15
 - Verified areas:
   - top-level repo layout
-  - backend implemented routes and auth module
+  - backend implemented routes, auth, sync, and ontology modules
+  - DB schema inventory
   - frontend page structure and API client surface
   - task progress snapshot
 - Confidence:
-  - high for auth and dashboard areas
-  - medium for placeholder modules and progress docs
+  - high for auth, sync, ontology, and dashboard shell areas
+  - medium for placeholder analytics/anomaly/insight/export/refresh modules
+  - medium for progress docs (verified task docs, trusting them)
 
 ## Read This After
 
@@ -42,31 +44,33 @@ Top-level docs:
 
 ## Current Delivery State
 
-Implemented enough to use:
+Implemented and tested:
 
-- backend auth flow
+- backend auth flow (login, logout, session, JWT)
 - backend health endpoint
+- backend source sync (6 entity readers, snapshot persistence, orchestration)
+- backend ontology mapping (domain types, 6 mappers, attribution resolver, persistence, orchestrator)
+- backend API route groups (dashboard, departments, claims, anomalies, exports, refresh) with placeholder service stubs
 - frontend login flow
 - frontend dashboard UI shells, cards, tables, charts, and refresh widgets
 - frontend tests for auth/dashboard components and flows
-- backend tests for auth and health
+- backend tests for auth, health, sync, ontology (126 total)
 
 Mostly placeholders:
 
-- source sync
-- ontology mapping
-- analytics aggregation
-- anomaly detection backend
-- insight generation backend
-- export backend
-- refresh orchestration backend
+- analytics aggregation (hardcoded sample data stubs in `analytics/service.py` and `analytics/departments.py`)
+- anomaly detection backend (hardcoded sample data stubs in `anomalies/service.py`)
+- insight generation backend (`insights/__init__.py` empty)
+- export backend (`exports/service.py` returns "queued" stub)
+- refresh orchestration backend (`refresh/service.py` stub)
 - shared `packages/*`
 - `infra/`
 
 Practical summary:
 
-- backend is only real in auth + health
-- frontend is ahead of backend and already expects dashboard APIs that do not exist yet
+- backend has real auth, sync, and ontology modules
+- analytics, anomalies, insights, exports, and refresh are stubs returning hardcoded data
+- frontend is ahead of backend and already expects real dashboard APIs
 
 ## Backend Map
 
@@ -78,25 +82,32 @@ Implemented backend areas:
 
 - [`apps/backend/common`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/common): config, DB wiring, error classes, clock, logging
 - [`apps/backend/auth`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/auth): domain, repository, password hashing, JWT/session service, ORM user model
-- [`apps/backend/api`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api): health/auth routes, request/response schemas, auth dependency
+- [`apps/backend/api`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api): health/auth/dashboard/departments/claims/anomalies/exports/refresh routes, request/response schemas, auth dependency
+- [`apps/backend/sync`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync): 6 source readers, snapshot repository, sync orchestrator, source DB wiring
+- [`apps/backend/ontology`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology): domain types, 6 mappers (department, employee, cost center, budget code, claim, payroll), attribution resolver, ontology repository, orchestrator
 
-Backend modules not yet implemented:
+Stub/placeholder backend areas (return hardcoded data):
 
-- `apps/backend/sync`
-- `apps/backend/ontology`
-- `apps/backend/analytics`
-- `apps/backend/anomalies`
-- `apps/backend/insights`
-- `apps/backend/exports`
-- `apps/backend/refresh`
+- [`apps/backend/analytics`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/analytics): hardcoded dashboard summary, trends, departments
+- [`apps/backend/anomalies`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/anomalies): hardcoded anomaly list/detail
+- [`apps/backend/insights`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/insights): empty
+- [`apps/backend/exports`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/exports): returns "queued"
+- [`apps/backend/refresh`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/refresh): stub trigger/status/job
 
-Only current DB model:
+Current DB models (all using `Base` from `common/database.py`):
 
-- [`apps/backend/auth/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/auth/schema.py): `users` table
+- [`apps/backend/auth/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/auth/schema.py): `users`
+- [`apps/backend/sync/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/schema.py): `source_snapshots`, `source_snapshot_rows`
+- [`apps/backend/ontology/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/schema.py): `departments`, `employees`, `cost_centers`, `budget_codes`, `expense_claims`, `payroll_expenses`, `unresolved_mapping_issues`
+
+Source-side models (separate `SourceBase`, read-only):
+
+- [`apps/backend/sync/readers/_source_models.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/readers/_source_models.py): `departments`, `employees`, `claims`, `payroll`, `cost_centers`, `budget_codes`
 
 No migration system yet:
 
 - schema is created through `Base.metadata.create_all()`
+- `init_db()` imports `auth.schema`, `sync.schema`, and `ontology.schema`
 - no Alembic setup is present
 
 ## Backend Routes
@@ -108,11 +119,62 @@ Implemented routes:
 - `POST /api/auth/logout`
 - `GET /api/auth/session`
 
+Routes wired with stub services (return hardcoded data):
+
+- `GET /api/dashboard/summary`
+- `GET /api/dashboard/trends`
+- `GET /api/dashboard/top-departments`
+- `GET /api/dashboard/claim-types`
+- `GET /api/departments`
+- `GET /api/departments/{id}`
+- `GET /api/departments/{id}/trends`
+- `GET /api/departments/{id}/employees`
+- `GET /api/departments/{id}/claim-types`
+- `GET /api/departments/{id}/claims`
+- `GET /api/claims`
+- `GET /api/anomalies`
+- `GET /api/anomalies/{id}`
+- `POST /api/exports/executive-summary`
+- `POST /api/refresh`
+- `GET /api/refresh/status`
+- `GET /api/refresh/jobs/{id}`
+
 Main files:
 
 - [`api/routes/health.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/health.py)
 - [`api/routes/auth.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/auth.py)
+- [`api/routes/dashboard.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/dashboard.py)
+- [`api/routes/departments.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/departments.py)
+- [`api/routes/claims.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/claims.py)
+- [`api/routes/anomalies.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/anomalies.py)
+- [`api/routes/exports.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/exports.py)
+- [`api/routes/refresh.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/refresh.py)
 - [`api/dependencies/auth.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/dependencies/auth.py)
+
+## Sync Module
+
+Source sync reads from the internal database and persists snapshots. See [`sync/`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/).
+
+- [`sync/domain.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/domain.py): `SourceReader` ABC, 6 source dataclasses, `EntitySnapshot`, `SyncResult`
+- [`sync/readers/_source_models.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/readers/_source_models.py): separate `SourceBase` ORM with 6 source tables
+- [`sync/readers/`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/readers/): one reader per entity (departments, employees, claims, payroll, cost_centers, budget_codes)
+- [`sync/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/schema.py): `source_snapshots`, `source_snapshot_rows` tables
+- [`sync/repositories/snapshot.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/repositories/snapshot.py): `SnapshotRepository`
+- [`sync/orchestration/service.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/orchestration/service.py): `SyncOrchestrator`
+- [`sync/source_db.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/source_db.py): source DB engine/session factory
+
+## Ontology Mapping Module
+
+Converts raw source rows into normalized business objects with source lineage. See [`ontology/`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/).
+
+- [`ontology/domain.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/domain.py): `OntologyMapper` ABC, 6 ontology dataclasses (`Department`, `Employee`, `CostCenter`, `BudgetCode`, `ExpenseClaim`, `PayrollExpense`), `MappingResult`, `UnresolvedRecord`, `MappingContext`
+- [`ontology/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/schema.py): 7 ORM models including `unresolved_mapping_issues`
+- [`ontology/mappers/departments.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/mappers/departments.py): `DepartmentMapper`, `EmployeeMapper`, `CostCenterMapper`, `BudgetCodeMapper`
+- [`ontology/mappers/claims.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/mappers/claims.py): `ClaimMapper` with attribution
+- [`ontology/mappers/payroll.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/mappers/payroll.py): `PayrollMapper` with attribution
+- [`ontology/mappers/attribution.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/mappers/attribution.py): `AttributionResolver` (direct -> employee-linked -> cost center fallback)
+- [`ontology/repositories/ontology.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/repositories/ontology.py): `OntologyRepository`
+- [`ontology/orchestration/service.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/orchestration/service.py): `OntologyOrchestrator` (runs mappers in dependency order)
 
 ## Frontend Map
 
@@ -149,33 +211,41 @@ Supporting areas:
 The biggest current seam:
 
 - frontend already has dashboard pages and API client methods
-- backend does not yet implement the dashboard data routes those pages call
+- backend dashboard/department/anomaly routes return hardcoded stub data
+- sync and ontology modules are real but not yet plumbed into the API routes
 
-Frontend-anticipated backend routes not yet implemented:
+Frontend-anticipated backend routes:
 
-- `GET /api/summary`
+- `GET /api/dashboard/summary`
+- `GET /api/dashboard/trends`
+- `GET /api/dashboard/top-departments`
+- `GET /api/dashboard/claim-types`
 - `GET /api/departments`
-- `GET /api/trends`
-- `GET /api/claims/breakdown`
-- `GET /api/anomalies`
 - `GET /api/departments/{id}`
+- `GET /api/departments/{id}/trends`
 - `GET /api/departments/{id}/employees`
+- `GET /api/departments/{id}/claim-types`
+- `GET /api/departments/{id}/claims`
 - `GET /api/claims`
-- `GET /api/refresh/status`
+- `GET /api/anomalies`
+- `GET /api/anomalies/{id}`
+- `POST /api/exports/executive-summary`
 - `POST /api/refresh`
+- `GET /api/refresh/status`
+- `GET /api/refresh/jobs/{id}`
 
 Primary file for this expectation:
 
 - [`src/lib/api/dashboard.ts`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/lib/api/dashboard.ts)
 
-When an agent is asked to "make dashboard work", verify this seam first.
+When an agent is asked to "make dashboard work", replace the stub services with real implementations backed by sync + ontology data.
 
 ## Tests Map
 
-Backend tests:
+Backend tests (126 total):
 
-- [`apps/backend/tests/unit`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/unit): health, hashing, auth service
-- [`apps/backend/tests/integration`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/integration): auth and health endpoints
+- [`apps/backend/tests/unit`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/unit): health, hashing, auth service, API schemas, sync orchestration, sync readers, ontology mappers, ontology attribution
+- [`apps/backend/tests/integration`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/integration): health, auth, dashboard API, departments API, anomalies API, error envelope, exports API, refresh API, sync snapshot, ontology persistence
 
 Frontend tests:
 
@@ -185,7 +255,11 @@ Frontend tests:
 Useful first test files:
 
 - [`apps/backend/tests/unit/test_auth_service.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/unit/test_auth_service.py)
+- [`apps/backend/tests/unit/test_sync_readers.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/unit/test_sync_readers.py)
+- [`apps/backend/tests/unit/test_ontology_mappers.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/unit/test_ontology_mappers.py)
+- [`apps/backend/tests/unit/test_ontology_attribution.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/unit/test_ontology_attribution.py)
 - [`apps/backend/tests/integration/test_auth.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/integration/test_auth.py)
+- [`apps/backend/tests/integration/test_ontology_persistence.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/integration/test_ontology_persistence.py)
 - [`apps/frontend/src/tests/integration/dashboard-flow.test.tsx`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/tests/integration/dashboard-flow.test.tsx)
 - [`apps/frontend/src/tests/integration/refresh-ux.test.tsx`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/tests/integration/refresh-ux.test.tsx)
 
@@ -196,9 +270,9 @@ From [`doc/tasks/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/
 - done: project bootstrap
 - done: auth
 - done: frontend dashboard
-- not started: api
-- not started: source sync
-- not started: ontology mapping
+- done: api
+- done: source sync
+- done: ontology mapping
 - not started: analytics aggregation
 - not started: anomaly detection
 - not started: insight generation
@@ -213,11 +287,11 @@ Use this as planning context, not proof. Check the touched task doc if scope que
 
 Verify these before trusting the snapshot:
 
-- backend route inventory
-- frontend API client route list
-- task progress checklist
+- backend route inventory (check all routes in `api/routes/` still match this map)
+- frontend API client route list (check `src/lib/api/dashboard.ts` and siblings)
+- task progress checklist (check `doc/tasks/progress.md`)
 - package versions
-- whether placeholder modules have become real modules
+- whether analytics/anomaly/insight/export/refresh placeholders have become real modules
 
 ## Refresh Rules
 
