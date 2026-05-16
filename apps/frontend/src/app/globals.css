@@ -33,6 +33,18 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-herd-canvas: var(--herd-canvas);
+  --color-herd-primary: var(--herd-primary);
+  --color-herd-surface-soft: var(--herd-surface-soft);
+  --color-herd-surface-card: var(--herd-surface-card);
+  --color-herd-surface-dark: var(--herd-surface-dark);
+  --color-herd-ink: var(--herd-ink);
+  --color-herd-body: var(--herd-body);
+  --color-herd-muted: var(--herd-muted);
+  --color-herd-success: var(--herd-success);
+  --color-herd-warning: var(--herd-warning);
+  --color-herd-error: var(--herd-error);
+  --color-herd-brand-accent: var(--herd-brand-accent);
 }
 
 body {
