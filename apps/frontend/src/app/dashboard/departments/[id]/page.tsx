@@ -1,8 +1,8 @@
 import { Suspense } from "react";
-import { DepartmentDetailShell } from "@/components/dashboard/department-detail-shell";
+import { DepartmentDetailPage } from "@/components/department-detail-v2/department-detail-page";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 
-export default async function DepartmentDetailPage({
+export default async function DepartmentDetailRoute({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -10,10 +10,8 @@ export default async function DepartmentDetailPage({
   const { id } = await params;
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
-      <Suspense fallback={<LoadingSpinner text="Loading department..." />}>
-        <DepartmentDetailShell id={id} />
-      </Suspense>
-    </div>
+    <Suspense fallback={<LoadingSpinner text="Loading department..." />}>
+      <DepartmentDetailPage id={id} />
+    </Suspense>
   );
 }
