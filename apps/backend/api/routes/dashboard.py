@@ -7,6 +7,7 @@ from analytics.service import (
     get_monthly_trends,
     get_top_departments,
 )
+from anomalies.service import get_anomalies_list
 from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
@@ -46,3 +47,22 @@ def dashboard_claim_types(
     current_user: SessionUser = Depends(get_current_user),
 ):
     return get_claim_type_breakdown(db)
+
+
+@router.get("/command-view")
+def dashboard_command_view(
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+):
+    summary = get_dashboard_summary(db)
+    departments = get_top_departments(db)
+    trends = get_monthly_trends(db)
+    claim_types = get_claim_type_breakdown(db)
+    anomalies = get_anomalies_list(db)
+    return {
+        "summary": summary,
+        "departments": departments,
+        "trends": trends,
+        "claim_types": claim_types,
+        "anomalies": anomalies,
+    }

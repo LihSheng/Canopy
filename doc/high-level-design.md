@@ -1,5 +1,10 @@
 # High-Level Design: Executive HR Spend Intelligence Platform
 
+> Historical note:
+> This document describes the approved v1 design baseline.
+> V1 is now complete. Keep this file as the architectural design record for v1,
+> not as an active “next step” planning document.
+
 ## Overview
 
 This system is a read-only executive intelligence platform for HR-related spend. It consolidates internal operational data, maps it into business objects, computes monthly spend views, detects anomalies, and presents both dashboard visuals and AI-generated recommendations.
@@ -10,7 +15,7 @@ The architecture follows the product direction defined in the proposal:
 - Kinetic layer: expose read-only insight and drill-down interfaces
 - Dynamic layer: support daily synchronization and manual refresh
 
-V1 is intentionally optimized for:
+V1 was intentionally optimized for:
 
 - Executive summary consumption
 - Department-level anomaly detection
@@ -37,7 +42,7 @@ V1 is intentionally optimized for:
 
 The recommended architecture is a modular monolith with asynchronous background jobs.
 
-Why this shape fits v1:
+Why this shape fit v1:
 
 - Easier to build and maintain than early microservices
 - Keeps ontology, analytics, and AI logic in one coherent backend
@@ -466,6 +471,10 @@ Tradeoff:
 
 ## Deferred Items For Detailed Design
 
+Historical note:
+These items were deferred at the high-level design stage and have since been
+addressed or superseded by implementation and later docs.
+
 - Exact database schema for normalized ontology and aggregates
 - Exact API route definitions and payload schemas
 - Exact anomaly formulas and threshold tuning
@@ -479,13 +488,12 @@ Tradeoff:
 - Future role-based access design
 - Future near-real-time sync architecture
 
-## Recommended Next Document
+## Status
 
-The next step should be detailed design that defines:
+This document no longer defines the next document to write.
 
-- core data model
-- module interfaces
-- API contracts
-- refresh pipeline stages
-- anomaly computation rules
-- AI summary input and output contracts
+For current-state implementation and repo status, use:
+
+- [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md)
+- [`doc/codebase-map.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/codebase-map.md)
+- [`doc/v2-plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2-plan.md)

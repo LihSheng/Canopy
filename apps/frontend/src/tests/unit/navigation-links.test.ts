@@ -15,7 +15,7 @@ describe("dashboard-links", () => {
   describe("buildDashboardToAnomaliesLink", () => {
     it("builds link with default time range (no query)", () => {
       const link = buildDashboardToAnomaliesLink("this_month");
-      expect(link).toBe("/dashboard/anomalies?");
+      expect(link).toBe("/dashboard/anomalies");
     });
 
     it("builds link with custom time range", () => {

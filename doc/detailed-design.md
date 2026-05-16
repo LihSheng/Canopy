@@ -1,11 +1,17 @@
 # Detailed Design: Executive HR Spend Intelligence Platform
 
+> Historical note:
+> This document is the detailed v1 design baseline. V1 is now complete.
+> Keep it as the implementation design record for v1 and the baseline reference
+> for v2 planning. Do not treat the sequencing sections below as the current
+> active delivery plan.
+
 ## Purpose
 
-This document turns the approved proposal and high-level design into an
-implementation-ready design for v1. It defines module internals, key data
-structures, control flow, public interfaces, persistence boundaries, error
-handling, and test strategy.
+This document captured the implementation-ready design for v1. It defines the
+intended module internals, key data structures, control flow, public
+interfaces, persistence boundaries, error handling, and test strategy that
+shaped the completed v1 system.
 
 This document follows:
 
@@ -22,7 +28,7 @@ behavior.
 
 ## Implementation goals
 
-V1 must let an authenticated executive:
+V1 was designed to let an authenticated executive:
 
 - view monthly payroll and claim spend summaries
 - identify departments with unusual month-over-month changes
@@ -31,7 +37,7 @@ V1 must let an authenticated executive:
 - trigger manual refresh
 - export dashboard-aligned Excel output
 
-V1 must remain:
+V1 was designed to remain:
 
 - read-only against the source system
 - deterministic in analytics and anomaly logic
@@ -1070,7 +1076,11 @@ Exact percentages can be decided later, but the architecture requires:
 
 ## Delivery sequencing
 
-Recommended build order:
+Historical note:
+This was the recommended v1 build order before implementation. It is preserved
+for auditability, not as the active roadmap.
+
+Original recommended build order:
 
 1. backend schema and snapshot model
 2. source sync skeleton and raw snapshot persistence

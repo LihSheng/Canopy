@@ -1,5 +1,10 @@
 # Proposal: Executive HR Spend Intelligence Platform
 
+> Historical note:
+> This document is the original v1 proposal. V1 is now complete.
+> Keep this file as planning history and original scope intent.
+> Do not treat it as the active source of truth for current system status or v2 planning.
+
 ## Goal
 
 Build a Palantir-like web application for C-level users to understand HR-related spend, detect unusual changes, and make better decisions from consolidated operational data.
@@ -21,7 +26,7 @@ The current source of truth is an internal database. Excel import is a later enh
 
 ## Scope
 
-V1 includes:
+V1 originally included:
 
 - A web application with executive dashboard views
 - Simple login with email and password
@@ -34,7 +39,7 @@ V1 includes:
 
 ## Non-goals
 
-V1 does not include:
+V1 originally did not include:
 
 - Write-back into HerdHR or any operational source system
 - Triggering approvals or actions
@@ -61,17 +66,17 @@ The application should resemble a Palantir-style operational intelligence system
 
 ## Inputs
 
-Current v1 inputs:
+Original v1 inputs:
 
 - Internal database
 
-Future inputs, out of scope for v1:
+At proposal time, future inputs out of scope for v1:
 
 - Excel file import
 
 ## Outputs
 
-V1 outputs:
+Planned v1 outputs:
 
 - Executive web dashboard
 - Department-level and trend visualizations
@@ -225,7 +230,7 @@ Reason for recommendation:
 
 ## Acceptance Criteria
 
-V1 is complete when all of the following are true:
+Original v1 acceptance criteria:
 
 - A C-level user can log in successfully
 - The user can open the dashboard and see correct monthly payroll and claim trends
