@@ -2,22 +2,32 @@ import pytest
 
 pytestmark = pytest.mark.api_schema
 
-from api.schemas.anomalies import AnomalyDetailResponse, AnomalyItem
+from api.schemas.anomalies import AnomalyDetailResponse, AnomalyItem, AnomalyListResponse
 from api.schemas.common import ApiResponse
 from api.schemas.dashboard import (
     ClaimTypeBreakdownItem,
+    DashboardCommandViewResponse,
     DashboardSummaryResponse,
+    DashboardTopDepartmentsResponse,
+    DashboardTrendsResponse,
     MonthlyTrendItem,
     PeriodInfo,
     TopDepartmentItem,
 )
 from api.schemas.departments import (
+    AiSummary,
     ClaimDetailItem,
     DepartmentDetailResponse,
     DepartmentItem,
+    DepartmentListResponse,
     EmployeeContributionItem,
 )
-from api.schemas.exports import ExportRequest, ExportResponse
+from api.schemas.exports import (
+    ExportHistoryResponse,
+    ExportJobResponse,
+    ExportTriggerResponse,
+    TriggerExportRequest,
+)
 from api.schemas.refresh import RefreshJobResponse, RefreshRequestResponse, RefreshStatusResponse
 
 
@@ -143,10 +153,115 @@ class TestRefreshSchemas:
 
 class TestExportSchemas:
     def test_export_request_defaults(self):
-        r = ExportRequest()
-        assert r.include_departments is True
-        assert r.include_anomalies is True
+        r = TriggerExportRequest(preset_name="Executive Summary")
+        assert r.include_departments is None
+        assert r.include_anomalies is None
 
-    def test_export_response(self):
-        r = ExportResponse(accepted=True, status="queued")
+    def test_export_trigger_response(self):
+        r = ExportTriggerResponse(accepted=True, job_id="exp-1")
         assert r.accepted is True
+
+    def test_export_job_response(self):
+        j = ExportJobResponse(
+            id="exp-1",
+            status="completed",
+            preset_name="Executive Summary",
+            snapshot_id="snap-1",
+            time_range="this_month",
+            snapshot_timestamp="2026-05-16T10:00:00Z",
+            started_at="2026-05-16T10:00:00Z",
+            finished_at="2026-05-16T10:30:00Z",
+            file_size_bytes=12500,
+        )
+        assert j.preset_name == "Executive Summary"
+
+    def test_export_history_response(self):
+        j = ExportJobResponse(id="exp-1", status="completed", preset_name="Executive Summary")
+        h = ExportHistoryResponse(jobs=[j])
+        assert len(h.jobs) == 1
+
+
+class TestNewV2Schemas:
+    def test_command_view_response(self):
+        summary = DashboardSummaryResponse(
+            total_payroll=1000.0, total_claims=500.0,
+            period=PeriodInfo(year=2026, month=5),
+            department_count=6, anomaly_count=3,
+            last_updated="2026-05-16T10:00:00Z",
+        )
+        dept = TopDepartmentItem(
+            id="d1", name="Engineering", total_spend=1000.0,
+            payroll_spend=800.0, claims_spend=200.0, change_pct=5.5,
+        )
+        trend = MonthlyTrendItem(month="2026-05", payroll=1000.0, claims=200.0, total=1200.0)
+        ct = ClaimTypeBreakdownItem(type="Travel", amount=500.0, count=10)
+        a = AnomalyItem(
+            id="a1", department_id="d1", department_name="Engineering",
+            period="2026-05", description="Spike", severity="high", change_pct=15.0,
+        )
+        view = DashboardCommandViewResponse(
+            summary=summary,
+            departments=[dept],
+            trends=[trend],
+            claim_types=[ct],
+            anomalies=[a],
+        )
+        assert view.summary.total_payroll == 1000.0
+        assert len(view.departments) == 1
+        assert len(view.trends) == 1
+        assert len(view.claim_types) == 1
+        assert len(view.anomalies) == 1
+
+    def test_dashboard_trends_response(self):
+        trend = MonthlyTrendItem(month="2026-05", payroll=1000.0, claims=200.0, total=1200.0)
+        r = DashboardTrendsResponse(trends=[trend])
+        assert len(r.trends) == 1
+
+    def test_dashboard_top_departments_response(self):
+        dept = TopDepartmentItem(
+            id="d1", name="Engineering", total_spend=1000.0,
+            payroll_spend=800.0, claims_spend=200.0, change_pct=5.5,
+        )
+        r = DashboardTopDepartmentsResponse(departments=[dept])
+        assert len(r.departments) == 1
+
+    def test_anomaly_list_response(self):
+        a = AnomalyItem(
+            id="a1", department_id="d1", department_name="Engineering",
+            period="2026-05", description="Spike", severity="high", change_pct=15.0,
+        )
+        r = AnomalyListResponse(anomalies=[a], total=1)
+        assert r.total == 1
+        assert len(r.anomalies) == 1
+
+    def test_department_list_response(self):
+        d = DepartmentItem(
+            id="d1", name="Engineering", total_spend=1000.0,
+            payroll_spend=800.0, claims_spend=200.0, change_pct=5.5,
+        )
+        r = DepartmentListResponse(departments=[d], total=1)
+        assert r.total == 1
+        assert len(r.departments) == 1
+
+    def test_department_detail_with_new_fields(self):
+        d = DepartmentDetailResponse(
+            id="d1", name="Engineering",
+            payroll_spend=800.0, claims_spend=200.0, total_spend=1000.0,
+            change_pct=5.5, employee_count=42,
+        )
+        assert d.attention_state is None
+        assert d.ai_summary is None
+
+    def test_department_detail_with_ai_summary(self):
+        ai = AiSummary(summary_text="Stable spend", key_findings=["No anomalies"])
+        d = DepartmentDetailResponse(
+            id="d1", name="Engineering",
+            payroll_spend=800.0, claims_spend=200.0, total_spend=1000.0,
+            change_pct=5.5, employee_count=42,
+            attention_state="attention",
+            ai_summary=ai,
+        )
+        assert d.attention_state == "attention"
+        assert d.ai_summary is not None
+        assert d.ai_summary.summary_text == "Stable spend"
+        assert d.ai_summary.key_findings == ["No anomalies"]

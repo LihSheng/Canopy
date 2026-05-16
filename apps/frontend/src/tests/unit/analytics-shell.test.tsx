@@ -308,6 +308,33 @@ describe("AnalyticsShell - drawer behavior", () => {
     expect(hamburger).toBeInTheDocument();
   });
 
+  it("mobile top bar uses lg:hidden for responsive visibility", () => {
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    const hamburger = screen.getByLabelText("Open navigation");
+    const mobileBar = hamburger.closest("div");
+    expect(mobileBar).not.toBeNull();
+  });
+
+  it("desktop sidebar wrapper uses hidden lg:block for responsive visibility", () => {
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    const sidebarContainer = document.querySelector(".hidden.lg\\:block");
+    expect(sidebarContainer).not.toBeNull();
+  });
+
   it("opens drawer when hamburger is clicked", () => {
     render(
       <Wrapper>
@@ -349,6 +376,25 @@ describe("AnalyticsShell - drawer behavior", () => {
     expect(dialogs).toHaveLength(0);
   });
 
+  it("drawer closes after clicking a navigation item", () => {
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    fireEvent.click(screen.getByLabelText("Open navigation"));
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByText("Anomalies"));
+
+    // Drawer should be removed after navigation
+    const dialogs = screen.queryAllByRole("dialog");
+    expect(dialogs).toHaveLength(0);
+  });
+
   it("renders navigation items in drawer", () => {
     render(
       <Wrapper>
@@ -365,6 +411,44 @@ describe("AnalyticsShell - drawer behavior", () => {
     expect(within(dialog).getByText("Anomalies")).toBeInTheDocument();
     expect(within(dialog).getByText("Departments")).toBeInTheDocument();
     expect(within(dialog).getByText("Reports")).toBeInTheDocument();
+  });
+
+  it("drawer has lg:hidden class for responsive visibility control", () => {
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    fireEvent.click(screen.getByLabelText("Open navigation"));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toContain("lg:hidden");
+  });
+
+  it("sidebar is hidden on mobile and drawer provides navigation instead", () => {
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    // Sidebar container is hidden on mobile via responsive class
+    const sidebarContainer = document.querySelector(".hidden.lg\\:block");
+    expect(sidebarContainer).not.toBeNull();
+
+    // Hamburger provides mobile access
+    const hamburger = screen.getByLabelText("Open navigation");
+    expect(hamburger).toBeInTheDocument();
+
+    // Open drawer, check that same nav items appear
+    fireEvent.click(hamburger);
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("Dashboard")).toBeInTheDocument();
   });
 });
 

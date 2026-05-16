@@ -36,10 +36,16 @@ def detect_anomalies(
     return outputs
 
 
-def get_anomalies_list(db: Session) -> list[dict]:
+def get_anomalies_list(
+    db: Session,
+    department_id: str | None = None,
+    snapshot_id: str | None = None,
+) -> list[dict]:
     repo = AnomalyRepository(db)
-    outputs = repo.find_all()
-    dept_map = AnalyticsRepository(db).get_department_map()
+    outputs = repo.find_all(snapshot_id=snapshot_id)
+    if department_id:
+        outputs = [o for o in outputs if o.target_entity_id == department_id]
+    dept_map = AnalyticsRepository(db).get_department_map(snapshot_id=snapshot_id)
     return [
         _to_item(o, dept_map) for o in outputs
     ]

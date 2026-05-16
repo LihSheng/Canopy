@@ -78,3 +78,25 @@ export interface MonthFilterParams {
   year: number;
   month: number;
 }
+
+export interface ExportJob {
+  id: string;
+  status: string;
+  preset_name: string;
+  snapshot_id: string | null;
+  time_range: string;
+  snapshot_timestamp: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  file_size_bytes: number | null;
+  error_message: string | null;
+}
+
+export interface ExportHistory {
+  jobs: ExportJob[];
+}
+
+export interface ExportTriggerResponse {
+  accepted: boolean;
+  job_id: string;
+}

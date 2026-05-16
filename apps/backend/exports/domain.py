@@ -1,4 +1,26 @@
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Literal
+
+ExportJobStatus = Literal["pending", "running", "completed", "failed"]
+
+
+@dataclass
+class ExportJob:
+    id: str
+    status: ExportJobStatus = "pending"
+    preset_name: str = ""
+    snapshot_id: str | None = None
+    time_range: str = "this_month"
+    snapshot_timestamp: str | None = None
+    requested_by_user_id: str | None = None
+    include_departments: bool = True
+    include_anomalies: bool = True
+    file_path: str | None = None
+    file_size_bytes: int | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    error_message: str | None = None
 
 
 @dataclass

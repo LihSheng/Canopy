@@ -49,3 +49,40 @@ class TestDashboardSummary:
         assert data[0]["type"] == "Travel"
         assert "amount" in data[0]
         assert "count" in data[0]
+
+    def test_command_view_returns_composite_response(self, client, auth_headers):
+        response = client.get("/api/dashboard/command-view", headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+
+        assert "summary" in data
+        assert "departments" in data
+        assert "trends" in data
+        assert "claim_types" in data
+        assert "anomalies" in data
+
+        summary = data["summary"]
+        assert summary["total_payroll"] > 0
+        assert summary["total_claims"] > 0
+        assert summary["period"]["year"] == 2026
+
+        departments = data["departments"]
+        assert isinstance(departments, list)
+        assert len(departments) == 5
+        assert departments[0]["id"] == "dept-1"
+
+        trends = data["trends"]
+        assert isinstance(trends, list)
+        assert len(trends) > 0
+        assert "payroll" in trends[0]
+
+        claim_types = data["claim_types"]
+        assert isinstance(claim_types, list)
+        assert len(claim_types) == 6
+
+        anomalies = data["anomalies"]
+        assert isinstance(anomalies, list)
+
+    def test_command_view_requires_auth(self, client):
+        response = client.get("/api/dashboard/command-view")
+        assert response.status_code == 401

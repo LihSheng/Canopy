@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from api.schemas.anomalies import AnomalyItem
+
 
 class PeriodInfo(BaseModel):
     year: int
@@ -43,3 +45,11 @@ class DashboardTrendsResponse(BaseModel):
 
 class DashboardTopDepartmentsResponse(BaseModel):
     departments: list[TopDepartmentItem]
+
+
+class DashboardCommandViewResponse(BaseModel):
+    summary: DashboardSummaryResponse
+    departments: list[TopDepartmentItem]
+    trends: list[MonthlyTrendItem]
+    claim_types: list[ClaimTypeBreakdownItem]
+    anomalies: list[AnomalyItem]

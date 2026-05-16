@@ -13,6 +13,9 @@ from analytics.departments import (
 )
 from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
+from api.schemas.departments import (
+    DepartmentDetailResponse,
+)
 from common.database import get_db
 from common.errors import NotFoundError
 
@@ -25,11 +28,12 @@ def list_departments(
     current_user: SessionUser = Depends(get_current_user),
     year: int | None = Query(default=None),
     month: int | None = Query(default=None),
+    sort_by: str | None = Query(default=None, description="Sort: total_spend, change_pct, attention"),
 ):
-    return get_all_departments(db)
+    return get_all_departments(db, sort_by=sort_by)
 
 
-@router.get("/{department_id}")
+@router.get("/{department_id}", response_model=DepartmentDetailResponse)
 def department_detail(
     department_id: str,
     db: Session = Depends(get_db),

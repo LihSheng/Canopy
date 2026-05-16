@@ -24,3 +24,8 @@ class AnomalyDetailResponse(BaseModel):
     delta_value: float
     delta_percent: float
     driver_details: list[str]
+
+
+class AnomalyListResponse(BaseModel):
+    anomalies: list[AnomalyItem]
+    total: int

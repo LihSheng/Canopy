@@ -10,6 +10,16 @@ class DepartmentItem(BaseModel):
     change_pct: float
 
 
+class DepartmentListResponse(BaseModel):
+    departments: list[DepartmentItem]
+    total: int
+
+
+class AiSummary(BaseModel):
+    summary_text: str = ""
+    key_findings: list[str] = []
+
+
 class DepartmentDetailResponse(BaseModel):
     id: str
     name: str
@@ -18,6 +28,8 @@ class DepartmentDetailResponse(BaseModel):
     total_spend: float
     change_pct: float
     employee_count: int
+    attention_state: str | None = None
+    ai_summary: AiSummary | None = None
 
 
 class EmployeeContributionItem(BaseModel):

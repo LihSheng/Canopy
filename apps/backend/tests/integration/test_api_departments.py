@@ -27,6 +27,23 @@ class TestDepartments:
         assert data["name"] == "Engineering"
         assert data["employee_count"] > 0
 
+    def test_get_department_detail_v2_fields(self, client, auth_headers):
+        response = client.get("/api/departments/dept-1", headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert "attention_state" in data
+        assert data["attention_state"] is None
+        assert "ai_summary" in data
+        assert data["ai_summary"] is None
+
+    def test_department_detail_v2_contract_shape(self, client, auth_headers):
+        response = client.get("/api/departments/dept-1", headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        for field in ["id", "name", "total_spend", "payroll_spend", "claims_spend",
+                       "change_pct", "employee_count", "attention_state", "ai_summary"]:
+            assert field in data, f"Missing field: {field}"
+
     def test_department_not_found(self, client, auth_headers):
         response = client.get("/api/departments/dept-999", headers=auth_headers)
         assert response.status_code == 404

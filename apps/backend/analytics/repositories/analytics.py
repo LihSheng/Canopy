@@ -171,6 +171,28 @@ class AnalyticsRepository:
             created_at=model.created_at.isoformat() if model.created_at is not None else "",
         )
 
+    def get_summary_cache_for_snapshot(
+        self, snapshot_id: str
+    ) -> DashboardSummaryCache | None:
+        model = (
+            self._db.query(DashboardSummaryCacheModel)
+            .filter(DashboardSummaryCacheModel.snapshot_id == snapshot_id)
+            .order_by(DashboardSummaryCacheModel.created_at.desc())
+            .first()
+        )
+        if model is None:
+            return None
+        return DashboardSummaryCache(
+            snapshot_id=model.snapshot_id,
+            year=model.year,
+            month=model.month,
+            total_payroll=model.total_payroll,
+            total_claims=model.total_claims,
+            department_count=model.department_count,
+            anomaly_count=model.anomaly_count,
+            created_at=model.created_at.isoformat() if model.created_at is not None else "",
+        )
+
     # ---- monthly department spends ----
 
     def get_monthly_spends_for_month(

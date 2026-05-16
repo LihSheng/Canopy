@@ -16,23 +16,30 @@ from api.schemas.departments import (
 )
 
 
-def get_departments(db: Session) -> list[DepartmentItem]:
+def get_departments(
+    db: Session,
+    sort_by: str | None = None,
+    snapshot_id: str | None = None,
+) -> list[DepartmentItem]:
     repo = AnalyticsRepository(db)
-    months = repo.get_distinct_months()
+    months = repo.get_distinct_months(snapshot_id=snapshot_id)
 
     if not months:
         return []
 
     current_month = months[0]
-    snapshot_id = repo.get_snapshot_id_from_aggregates() or ""
-    spends = repo.get_monthly_spends_for_month(current_month)
+    snapshot_id = snapshot_id or repo.get_snapshot_id_from_aggregates() or ""
+    spends = repo.get_monthly_spends_for_month(current_month, snapshot_id=snapshot_id)
     names = repo.get_department_map(snapshot_id)
 
     rankings = rank_departments(spends, current_month, names)
 
     previous_month = months[1] if len(months) > 1 else None
     if previous_month:
-        previous_spends_raw = repo.get_monthly_spends_for_month(previous_month)
+        previous_spends_raw = repo.get_monthly_spends_for_month(
+            previous_month,
+            snapshot_id=snapshot_id,
+        )
         deltas = calculate_mom_deltas(
             snapshot_id=snapshot_id,
             spends=list(spends) + list(previous_spends_raw),
@@ -41,7 +48,7 @@ def get_departments(db: Session) -> list[DepartmentItem]:
         )
         attach_mom_deltas_to_rankings(rankings, deltas)
 
-    return [
+    items = [
         DepartmentItem(
             id=r.department_id,
             name=r.department_name,
@@ -52,6 +59,15 @@ def get_departments(db: Session) -> list[DepartmentItem]:
         )
         for r in rankings
     ]
+
+    if sort_by == "change_pct":
+        items.sort(key=lambda d: abs(d.change_pct), reverse=True)
+    elif sort_by == "attention":
+        items.sort(key=lambda d: (abs(d.change_pct), d.total_spend), reverse=True)
+    elif sort_by == "total_spend":
+        items.sort(key=lambda d: d.total_spend, reverse=True)
+
+    return items
 
 
 def get_department(db: Session, department_id: str) -> DepartmentDetailResponse | None:
@@ -74,6 +90,8 @@ def get_department(db: Session, department_id: str) -> DepartmentDetailResponse 
             claims_spend=0.0,
             change_pct=0.0,
             employee_count=0,
+            attention_state=None,
+            ai_summary=None,
         )
 
     current_month = months[0]
@@ -103,6 +121,8 @@ def get_department(db: Session, department_id: str) -> DepartmentDetailResponse 
         claims_spend=claims_spend,
         change_pct=change_pct,
         employee_count=len(employees),
+        attention_state=None,
+        ai_summary=None,
     )
 
 
