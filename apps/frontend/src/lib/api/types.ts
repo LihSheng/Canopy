@@ -100,3 +100,82 @@ export interface ExportTriggerResponse {
   accepted: boolean;
   job_id: string;
 }
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourceType {
+  id: string;
+  key: string;
+  label: string;
+  category: string;
+  enabled: boolean;
+  tags: string[];
+  description: string;
+}
+
+export interface Connection {
+  id: string;
+  project_id: string;
+  source_type: string;
+  name: string;
+  status: string;
+  config_json: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Dataset {
+  id: string;
+  project_id: string;
+  connection_id: string;
+  name: string;
+  source_object_name: string;
+  status: string;
+  active_version_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DatasetVersion {
+  id: string;
+  dataset_id: string;
+  run_id: string;
+  version_number: number;
+  status: string;
+  row_count: number;
+  column_count: number;
+  storage_path: string;
+  created_at: string;
+}
+
+export interface Run {
+  id: string;
+  project_id: string;
+  connection_id: string;
+  dataset_id: string;
+  status: string;
+  started_by: string;
+  started_at: string | null;
+  finished_at: string | null;
+  duration_ms: number | null;
+  warning_count: number;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface DatasetHealth {
+  dataset_id: string;
+  row_count: number;
+  column_count: number;
+  missing_required_mappings: boolean;
+  warning_count: number;
+  last_run_status: string | null;
+  last_published_version: number | null;
+  freshness_at: string | null;
+}

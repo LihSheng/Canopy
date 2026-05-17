@@ -13,6 +13,12 @@ from api.routes.exports import router as exports_router
 from api.routes.health import router as health_router
 from api.routes.ingestion import router as ingestion_router
 from api.routes.insights import router as insights_router
+from api.routes.v4_project import router as v4_project_router
+from api.routes.v4_source_type import router as v4_source_type_router
+from api.routes.v4_connection import router as v4_connection_router
+from api.routes.v4_dataset import router as v4_dataset_router
+from api.routes.v4_run import router as v4_run_router
+from api.routes.v4_migration import router as v4_migration_router
 from api.routes.refresh import router as refresh_router
 from common.database import init_db
 from common.errors import AppError
@@ -52,6 +58,12 @@ def create_app() -> FastAPI:
     app.include_router(exports_router)
     app.include_router(ingestion_router)
     app.include_router(insights_router)
+    app.include_router(v4_project_router)
+    app.include_router(v4_source_type_router)
+    app.include_router(v4_connection_router)
+    app.include_router(v4_dataset_router)
+    app.include_router(v4_run_router)
+    app.include_router(v4_migration_router)
 
     return app
 
