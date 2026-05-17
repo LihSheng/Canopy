@@ -213,6 +213,29 @@ class LineageRecord:
     created_at: datetime = field(default_factory=datetime.now)
 
 
+class IngestionWorkflowStatus(StrEnum):
+    started = "started"
+    profiled = "profiled"
+    mapped = "mapped"
+    processing = "processing"
+    processed = "processed"
+    published = "published"
+    failed = "failed"
+
+
+@dataclass
+class WorkflowState:
+    upload_id: str
+    status: IngestionWorkflowStatus
+    error_message: str | None = None
+    cleaned_snapshot_id: str | None = None
+    publish_id: str | None = None
+    completed_steps: list[str] = field(default_factory=list)
+    current_step: str | None = None
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
+
+
 class PublishStatus(StrEnum):
     pending = "pending"
     active = "active"

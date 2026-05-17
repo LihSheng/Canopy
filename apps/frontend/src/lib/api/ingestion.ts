@@ -483,6 +483,29 @@ export async function fetchCleanedSnapshot(uploadId: string): Promise<CleanedSna
   return res.json();
 }
 
+export type WorkflowState = {
+  upload_id: string;
+  status: string;
+  error_message: string | null;
+  cleaned_snapshot_id: string | null;
+  publish_id: string | null;
+  completed_steps: string[];
+  current_step: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function fetchWorkflowState(uploadId: string): Promise<WorkflowState> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/uploads/${uploadId}/workflow`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to fetch workflow state" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function bindPipelineToTemplate(
   pipelineId: string,
   templateVersionId: string,

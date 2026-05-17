@@ -2,10 +2,12 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from common.errors import NotFoundError
 from v3.ingestion.domain import (
     CleanedSnapshot,
     CleaningPipeline,
     CleaningStep,
+    IngestionWorkflowStatus,
     LineageEdge,
     LineageGraph,
     LineageNode,
@@ -18,6 +20,7 @@ from v3.ingestion.domain import (
     TemplateVersion,
     UploadRecord,
     UploadStatus,
+    WorkflowState,
 )
 from v3.ingestion.schema import (
     CleanedSnapshotModel,
@@ -30,6 +33,7 @@ from v3.ingestion.schema import (
     TemplateFamilyModel,
     TemplateVersionModel,
     UploadModel,
+    WorkflowStateModel,
 )
 
 
@@ -158,6 +162,71 @@ class IngestionRepository:
             CleaningStepModel.pipeline_id == pipeline_id
         ).order_by(CleaningStepModel.order).all()
         return self._pipeline_to_domain(model, steps)
+
+    def init_workflow(self, upload_id: str) -> WorkflowState:
+        existing = self._db.query(WorkflowStateModel).filter(WorkflowStateModel.upload_id == upload_id).first()
+        if existing:
+            return self._workflow_to_domain(existing)
+        model = WorkflowStateModel(
+            upload_id=upload_id,
+            status=IngestionWorkflowStatus.started.value,
+            completed_steps=[],
+            current_step="upload",
+        )
+        self._db.add(model)
+        self._db.commit()
+        self._db.refresh(model)
+        return self._workflow_to_domain(model)
+
+    def update_workflow_step(
+        self,
+        upload_id: str,
+        new_status: IngestionWorkflowStatus,
+        step_name: str | None = None,
+        error_message: str | None = None,
+        cleaned_snapshot_id: str | None = None,
+        publish_id: str | None = None,
+    ) -> WorkflowState:
+        model = self._db.query(WorkflowStateModel).filter(WorkflowStateModel.upload_id == upload_id).first()
+        if not model:
+            raise NotFoundError(f"Workflow state not found for upload '{upload_id}'")
+        model.status = new_status.value
+        if step_name is not None:
+            completed = list(model.completed_steps) if model.completed_steps else []
+            if step_name not in completed:
+                completed.append(step_name)
+            model.completed_steps = completed
+            model.current_step = step_name
+        if error_message is not None:
+            model.error_message = error_message
+        if cleaned_snapshot_id is not None:
+            model.cleaned_snapshot_id = cleaned_snapshot_id
+        if publish_id is not None:
+            model.publish_id = publish_id
+        self._db.commit()
+        self._db.refresh(model)
+        return self._workflow_to_domain(model)
+
+    def get_workflow_state(self, upload_id: str) -> WorkflowState | None:
+        model = self._db.query(WorkflowStateModel).filter(WorkflowStateModel.upload_id == upload_id).first()
+        return self._workflow_to_domain(model) if model else None
+
+    def get_workflow_history(self) -> list[WorkflowState]:
+        models = self._db.query(WorkflowStateModel).order_by(WorkflowStateModel.created_at.desc()).all()
+        return [self._workflow_to_domain(m) for m in models]
+
+    def _workflow_to_domain(self, m: WorkflowStateModel) -> WorkflowState:
+        return WorkflowState(
+            upload_id=m.upload_id,
+            status=IngestionWorkflowStatus(m.status),
+            error_message=m.error_message,
+            cleaned_snapshot_id=m.cleaned_snapshot_id,
+            publish_id=m.publish_id,
+            completed_steps=list(m.completed_steps) if m.completed_steps else [],
+            current_step=m.current_step,
+            created_at=m.created_at,
+            updated_at=m.updated_at,
+        )
 
     def _to_model(self, record: UploadRecord) -> UploadModel:
         return UploadModel(

@@ -7,17 +7,17 @@ and publish through thin API endpoints and a deterministic backend flow.
 
 ## Tasks
 
-- [ ] Define the ingestion workflow state machine.
-- [ ] Expose API routes for upload, preview, mapping, processing, lineage, and
+- [x] Define the ingestion workflow state machine.
+- [x] Expose API routes for upload, preview, mapping, processing, lineage, and
   publish.
-- [ ] Wire the backend services in the correct order.
-- [ ] Persist workflow state transitions explicitly.
-- [ ] Keep API handlers thin and business rules in services.
-- [ ] Add failure handling that preserves prior immutable artifacts.
+- [x] Wire the backend services in the correct order.
+- [x] Persist workflow state transitions explicitly.
+- [x] Keep API handlers thin and business rules in services.
+- [x] Add failure handling that preserves prior immutable artifacts.
 
 ## Testing
 
-- [ ] Add integration tests for the upload-to-preview flow.
-- [ ] Add integration tests for the process-to-publish flow.
-- [ ] Add route tests for each ingestion endpoint.
+- [x] Add integration tests for the upload-to-preview flow.
+- [x] Add integration tests for the process-to-publish flow.
+- [x] Add route tests for each ingestion endpoint.
 

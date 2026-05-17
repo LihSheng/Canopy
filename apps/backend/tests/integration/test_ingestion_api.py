@@ -411,6 +411,14 @@ class TestProcessEndpoint:
         )
         upload_id = resp.json()["upload_id"]
 
+        client.get(f"/api/v3/ingestion/uploads/{upload_id}/preview", headers=auth_headers)
+
+        client.post(
+            f"/api/v3/ingestion/uploads/{upload_id}/mapping",
+            json=[{"source_column_name": "name", "target_field_name": "employee", "confirmed": True, "overridden_by_user": False}],
+            headers=auth_headers,
+        )
+
         pipe_resp = client.post(
             "/api/v3/ingestion/templates",
             json={"upload_id": upload_id},
@@ -513,6 +521,14 @@ class TestLineageEndpoint:
             headers=auth_headers,
         )
         upload_id = resp.json()["upload_id"]
+
+        client.get(f"/api/v3/ingestion/uploads/{upload_id}/preview", headers=auth_headers)
+
+        client.post(
+            f"/api/v3/ingestion/uploads/{upload_id}/mapping",
+            json=[{"source_column_name": "name", "target_field_name": "employee", "confirmed": True, "overridden_by_user": False}],
+            headers=auth_headers,
+        )
 
         pipe_resp = client.post(
             "/api/v3/ingestion/templates",
@@ -754,3 +770,85 @@ class TestPublishEndpoint:
     def test_publish_unauthorized(self, client: TestClient):
         resp = client.post("/api/v3/ingestion/uploads/nonexistent/publish")
         assert resp.status_code == 401
+
+
+class TestWorkflowEndpoint:
+    def test_workflow_exists_after_upload(self, client: TestClient, auth_headers):
+        resp = client.post(
+            "/api/v3/ingestion/uploads",
+            files={"file": ("test.csv", io.BytesIO(b"x,y\n1,2"), "text/csv")},
+            data={"source_profile": "herdhr", "dataset_type": "payroll"},
+            headers=auth_headers,
+        )
+        upload_id = resp.json()["upload_id"]
+
+        wf_resp = client.get(f"/api/v3/ingestion/uploads/{upload_id}/workflow", headers=auth_headers)
+        assert wf_resp.status_code == 200
+        data = wf_resp.json()
+        assert data["status"] == "started"
+        assert data["upload_id"] == upload_id
+
+    def test_workflow_tracks_full_flow(self, client: TestClient, auth_headers):
+        buf = _make_xlsx([["name", "amount", "date"], ["Alice", 100, "2024-01-15"], ["Bob", 200, "2024-02-20"]])
+        resp = client.post(
+            "/api/v3/ingestion/uploads",
+            files={"file": ("data.xlsx", buf, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            data={"source_profile": "herdhr", "dataset_type": "payroll"},
+            headers=auth_headers,
+        )
+        upload_id = resp.json()["upload_id"]
+
+        wf = client.get(f"/api/v3/ingestion/uploads/{upload_id}/workflow", headers=auth_headers).json()
+        assert wf["status"] == "started"
+
+        client.get(f"/api/v3/ingestion/uploads/{upload_id}/preview", headers=auth_headers)
+        wf = client.get(f"/api/v3/ingestion/uploads/{upload_id}/workflow", headers=auth_headers).json()
+        assert wf["status"] == "profiled"
+
+        client.post(
+            f"/api/v3/ingestion/uploads/{upload_id}/mapping",
+            json=[
+                {"source_column_name": "name", "target_field_name": "employee", "confirmed": True, "overridden_by_user": False},
+                {"source_column_name": "amount", "target_field_name": "amount", "confirmed": True, "overridden_by_user": False},
+                {"source_column_name": "date", "target_field_name": "date", "confirmed": True, "overridden_by_user": False},
+            ],
+            headers=auth_headers,
+        )
+        wf = client.get(f"/api/v3/ingestion/uploads/{upload_id}/workflow", headers=auth_headers).json()
+        assert wf["status"] == "mapped"
+
+        pipe_resp = client.post("/api/v3/ingestion/templates", json={"upload_id": upload_id}, headers=auth_headers)
+        pipeline_id = pipe_resp.json()["id"]
+        client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/steps",
+            json=[{"step_type": "trim", "order": 0, "parameters": {"columns": ["name"]}, "description": None}],
+            headers=auth_headers,
+        )
+        fam_resp = client.post(
+            "/api/v3/ingestion/template-families",
+            json={"dataset_type": "payroll", "source_profile": "herdhr", "name": "Test", "description": ""},
+            headers=auth_headers,
+        )
+        template_id = fam_resp.json()["id"]
+        ver_resp = client.post(
+            f"/api/v3/ingestion/template-families/{template_id}/versions",
+            json={"spec_json": {"steps": [{"step_type": "trim", "order": 0, "parameters": {"columns": ["name"]}}]}},
+            headers=auth_headers,
+        )
+        version_id = ver_resp.json()["id"]
+        client.post(f"/api/v3/ingestion/template-families/{template_id}/versions/{version_id}/publish", headers=auth_headers)
+        client.put(f"/api/v3/ingestion/templates/{pipeline_id}/bind", json={"template_version_id": version_id}, headers=auth_headers)
+        client.post(f"/api/v3/ingestion/uploads/{upload_id}/process", headers=auth_headers)
+
+        wf = client.get(f"/api/v3/ingestion/uploads/{upload_id}/workflow", headers=auth_headers).json()
+        assert wf["status"] == "processed"
+        assert wf["cleaned_snapshot_id"] is not None
+
+        client.post(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+        wf = client.get(f"/api/v3/ingestion/uploads/{upload_id}/workflow", headers=auth_headers).json()
+        assert wf["status"] == "published"
+        assert wf["publish_id"] is not None
+
+    def test_workflow_not_found(self, client: TestClient, auth_headers):
+        resp = client.get("/api/v3/ingestion/uploads/nonexistent/workflow", headers=auth_headers)
+        assert resp.status_code == 404

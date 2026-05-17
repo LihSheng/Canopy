@@ -30,6 +30,7 @@ type EditableDecision = {
 
 type Props = {
   uploadId: string;
+  onMappingsSaved?: () => void;
 };
 
 const REQUIRED_PATTERNS = /employee_id|name|full_name|amount|salary|payroll|date|department|email|claim_type/i;
@@ -73,7 +74,7 @@ function buildInitialDecisions(columnProfiles: ColumnProfile[]): EditableDecisio
   }));
 }
 
-export function MappingReviewGrid({ uploadId }: Props) {
+export function MappingReviewGrid({ uploadId, onMappingsSaved }: Props) {
   const [state, setState] = useState<GridState>({ status: "loading" });
 
   const load = useCallback(async () => {
@@ -155,13 +156,14 @@ export function MappingReviewGrid({ uploadId }: Props) {
       }));
       await saveMapping(uploadId, decisions);
       setState({ ...state, status: "saved" });
+      onMappingsSaved?.();
     } catch (err) {
       setState({
         status: "error",
         message: err instanceof Error ? err.message : "Failed to save mappings",
       });
     }
-  }, [state, uploadId]);
+  }, [state, uploadId, onMappingsSaved]);
 
   const unmappedRequired = useMemo(() => {
     if (state.status !== "idle") return [];

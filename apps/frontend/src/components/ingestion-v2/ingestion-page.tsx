@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CleaningRuleBuilder } from "./cleaning-rule-builder";
 import { LineageGraph } from "./lineage-graph";
 import { MappingReviewGrid } from "./mapping-review-grid";
 import { PublishReview } from "./publish-review";
 import { TemplateLibrary } from "./template-library";
 import { UploadWizard } from "./upload-wizard";
+import { WorkflowStepper, buildWorkflowSteps } from "./workflow-stepper";
 import { WorkbookPreview } from "./workbook-preview";
+import { fetchWorkflowState } from "@/lib/api/ingestion";
 
 type VisibleSections = {
   preview: boolean;
@@ -25,11 +27,39 @@ export function IngestionPageContent() {
   const [processing, setProcessing] = useState(false);
   const [processedId, setProcessedId] = useState<string | null>(null);
   const [processError, setProcessError] = useState<string | null>(null);
+  const [workflowStatus, setWorkflowStatus] = useState<string | null>(null);
   const [visible, setVisible] = useState<VisibleSections>({ preview: false, mapping: false, cleaning: false, templates: false, lineage: false, publish: false });
+
+  const refreshWorkflow = useCallback(async (id: string) => {
+    try {
+      const state = await fetchWorkflowState(id);
+      setWorkflowStatus(state.status);
+    } catch {
+      // workflow not yet available
+    }
+  }, []);
 
   const handleUploadComplete = (id: string) => {
     setUploadId(id);
     setVisible({ preview: true, mapping: false, cleaning: false, templates: false, lineage: false });
+    refreshWorkflow(id);
+  };
+
+  const handleStepNavigate = (step: string) => {
+    if (step === "mapping") setVisible((v) => ({ ...v, mapping: true }));
+    if (step === "process") {
+      const el = document.getElementById("process-section");
+      el?.scrollIntoView({ behavior: "smooth" });
+    }
+    if (step === "publish") setVisible((v) => ({ ...v, publish: true }));
+  };
+
+  const handlePreviewReady = () => {
+    if (uploadId) refreshWorkflow(uploadId);
+  };
+
+  const handleMappingsSaved = () => {
+    if (uploadId) refreshWorkflow(uploadId);
   };
 
   const handlePipelineReady = (id: string) => {
@@ -56,6 +86,7 @@ export function IngestionPageContent() {
       const data = await res.json();
       setProcessedId(data.cleaned_snapshot_id);
       setVisible((v) => ({ ...v, lineage: true }));
+      if (uploadId) refreshWorkflow(uploadId);
     } catch (err) {
       setProcessError(err instanceof Error ? err.message : "Processing failed");
     } finally {
@@ -63,8 +94,20 @@ export function IngestionPageContent() {
     }
   }, [uploadId]);
 
+  useEffect(() => {
+    if (uploadId) {
+      const timer = setInterval(() => refreshWorkflow(uploadId), 3000);
+      return () => clearInterval(timer);
+    }
+  }, [uploadId, refreshWorkflow]);
+
   return (
     <div className="mx-auto max-w-2xl">
+      {uploadId && (
+        <div className="mb-6 rounded-xl border border-zinc-200 bg-white px-4 py-3">
+          <WorkflowStepper steps={buildWorkflowSteps(workflowStatus, handleStepNavigate)} />
+        </div>
+      )}
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-zinc-900">Upload Workbook</h2>
         <p className="mt-1 text-sm text-zinc-500">
@@ -79,7 +122,7 @@ export function IngestionPageContent() {
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-zinc-700">Workbook Preview</h3>
           </div>
-          <WorkbookPreview uploadId={uploadId} />
+          <WorkbookPreview uploadId={uploadId} onPreviewReady={handlePreviewReady} />
           <div className="mt-4">
             <button
               onClick={() => setVisible((v) => ({ ...v, mapping: true }))}
@@ -96,7 +139,7 @@ export function IngestionPageContent() {
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-zinc-700">Mapping Review</h3>
           </div>
-          <MappingReviewGrid uploadId={uploadId} />
+          <MappingReviewGrid uploadId={uploadId} onMappingsSaved={handleMappingsSaved} />
           <div className="mt-4">
             <button
               onClick={() => setVisible((v) => ({ ...v, cleaning: true }))}

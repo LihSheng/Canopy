@@ -37,6 +37,7 @@ EXPECTED_TABLES = {
     "v3_lineage_nodes",
     "v3_lineage_edges",
     "v3_publish_records",
+    "v3_workflow_state",
 }
 
 

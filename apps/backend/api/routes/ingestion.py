@@ -32,6 +32,7 @@ from api.schemas.ingestion import (
     TemplateVersionResponse,
     UploadResponse,
     WorkbookProfileResponse,
+    WorkflowStateResponse,
 )
 from common.database import get_db
 from common.errors import NotFoundError, ValidationError
@@ -49,6 +50,7 @@ from v3.ingestion.domain import (
 from v3.ingestion.engine import execute_cleaning_pipeline, load_raw_rows, parse_spec_steps, save_cleaned_rows
 from v3.ingestion.lineage import build_lineage_graph
 from v3.ingestion.normalization import normalize_cleaned_rows
+from v3.ingestion.orchestration import IngestionOrchestrator
 from v3.ingestion.profiling import generate_profile
 from v3.ingestion.publish import activate_publish, validate_publish
 from v3.ingestion.repository import IngestionRepository
@@ -72,6 +74,7 @@ def upload_file(
     file_bytes = file.file.read()
 
     repo = IngestionRepository(db)
+    orchestrator = IngestionOrchestrator(repo)
     record = process_upload(
         repo=repo,
         file_bytes=file_bytes,
@@ -79,6 +82,7 @@ def upload_file(
         source_profile=source_profile,
         dataset_type=dataset_type,
     )
+    orchestrator.after_upload(record.id)
 
     return UploadResponse(
         upload_id=record.id,
@@ -97,7 +101,12 @@ def get_upload_preview(
     current_user: SessionUser = Depends(get_current_user),
 ) -> WorkbookProfileResponse:
     repo = IngestionRepository(db)
-    profile = generate_profile(repo, upload_id)
+    orchestrator = IngestionOrchestrator(repo)
+    try:
+        profile = generate_profile(repo, upload_id)
+        orchestrator.after_profiling(upload_id)
+    except Exception:
+        raise
     return WorkbookProfileResponse(
         upload_id=profile.upload_id,
         best_sheet_name=profile.best_sheet_name,
@@ -136,10 +145,10 @@ def save_mappings(
     current_user: SessionUser = Depends(get_current_user),
 ) -> list[MappingDecisionResponse]:
     repo = IngestionRepository(db)
+    orchestrator = IngestionOrchestrator(repo)
 
     record = repo.get_upload(upload_id)
     if record is None:
-        from common.errors import NotFoundError
         raise NotFoundError("Upload not found")
 
     domain_decisions = [
@@ -152,6 +161,10 @@ def save_mappings(
         for d in decisions
     ]
     repo.save_mapping_decisions(upload_id, domain_decisions)
+    try:
+        orchestrator.after_mapping_saved(upload_id)
+    except Exception:
+        raise
     return [MappingDecisionResponse(**asdict(d)) for d in domain_decisions]
 
 
@@ -548,30 +561,45 @@ def process_upload_endpoint(
     current_user: SessionUser = Depends(get_current_user),
 ) -> ProcessUploadResponse:
     repo = IngestionRepository(db)
+    orchestrator = IngestionOrchestrator(repo)
+
+    try:
+        orchestrator.before_processing(upload_id)
+    except Exception:
+        raise
 
     upload = repo.get_upload(upload_id)
     if upload is None:
+        orchestrator.mark_failed(upload_id, "Upload not found")
         raise NotFoundError("Upload not found")
 
     pipeline = repo.get_pipeline_by_upload(upload_id)
     if pipeline is None or pipeline.template_version_id is None:
+        orchestrator.mark_failed(upload_id, "No template version bound to this upload")
         raise ValidationError("No template version bound to this upload")
 
     version = repo.get_template_version(pipeline.template_version_id)
     if version is None or version.state != "published":
+        orchestrator.mark_failed(upload_id, "No published template version found")
         raise ValidationError("No published template version found")
 
     steps = parse_spec_steps(version.spec_json)
     if not steps:
+        orchestrator.mark_failed(upload_id, "Template version spec contains no steps")
         raise ValidationError("Template version spec contains no steps")
 
     raw_rows = load_raw_rows(upload.storage_path)
     if not raw_rows:
+        orchestrator.mark_failed(upload_id, "No raw data found for this upload")
         raise ValidationError("No raw data found for this upload")
 
     raw_columns = list(raw_rows[0].keys()) if raw_rows else []
 
-    result = execute_cleaning_pipeline(raw_rows, steps)
+    try:
+        result = execute_cleaning_pipeline(raw_rows, steps)
+    except Exception as e:
+        orchestrator.mark_failed(upload_id, str(e))
+        raise
 
     mapping_decisions = repo.get_mapping_decisions(upload_id)
     normalized = normalize_cleaned_rows(result.rows, mapping_decisions, result.rename_map)
@@ -611,6 +639,11 @@ def process_upload_endpoint(
         created_at=datetime.now(UTC),
     )
     repo.save_cleaned_snapshot(snapshot)
+
+    try:
+        orchestrator.after_processing(upload_id, snapshot.id)
+    except Exception:
+        raise
 
     return ProcessUploadResponse(
         cleaned_snapshot_id=snapshot.id,
@@ -668,37 +701,47 @@ def publish_upload(
     current_user: SessionUser = Depends(get_current_user),
 ) -> PublishRecordResponse:
     repo = IngestionRepository(db)
+    orchestrator = IngestionOrchestrator(repo)
 
-    upload = repo.get_upload(upload_id)
-    if upload is None:
-        raise NotFoundError("Upload not found")
+    try:
+        upload = repo.get_upload(upload_id)
+        if upload is None:
+            raise NotFoundError("Upload not found")
 
-    mapping_decisions = repo.get_mapping_decisions(upload_id)
-    if not mapping_decisions:
-        raise ValidationError("No mapping decisions saved for this upload")
+        mapping_decisions = repo.get_mapping_decisions(upload_id)
+        if not mapping_decisions:
+            raise ValidationError("No mapping decisions saved for this upload")
 
-    pipeline = repo.get_pipeline_by_upload(upload_id)
-    if pipeline is None or pipeline.template_version_id is None:
-        raise ValidationError("No template version bound to this upload")
+        pipeline = repo.get_pipeline_by_upload(upload_id)
+        if pipeline is None or pipeline.template_version_id is None:
+            raise ValidationError("No template version bound to this upload")
 
-    template_version = repo.get_template_version(pipeline.template_version_id)
-    if template_version is None:
-        raise NotFoundError("Template version not found")
+        template_version = repo.get_template_version(pipeline.template_version_id)
+        if template_version is None:
+            raise NotFoundError("Template version not found")
 
-    cleaned_snapshot = repo.get_cleaned_snapshot_by_upload(upload_id)
-    if cleaned_snapshot is None:
-        raise ValidationError("No cleaned snapshot found; run processing first")
+        cleaned_snapshot = repo.get_cleaned_snapshot_by_upload(upload_id)
+        if cleaned_snapshot is None:
+            raise ValidationError("No cleaned snapshot found; run processing first")
 
-    validation = validate_publish(upload, mapping_decisions, template_version, cleaned_snapshot)
-    if not validation.valid:
-        raise ValidationError(f"Publish validation failed: {'; '.join(validation.errors)}")
+        validation = validate_publish(upload, mapping_decisions, template_version, cleaned_snapshot)
+        if not validation.valid:
+            raise ValidationError(f"Publish validation failed: {'; '.join(validation.errors)}")
 
-    record = activate_publish(
-        repo, upload_id, cleaned_snapshot.id, template_version.id,
-        published_by=current_user.id,
-        validation_errors=validation.errors,
-        validation_warnings=validation.warnings,
-    )
+        record = activate_publish(
+            repo, upload_id, cleaned_snapshot.id, template_version.id,
+            published_by=current_user.id,
+            validation_errors=validation.errors,
+            validation_warnings=validation.warnings,
+        )
+
+        orchestrator.after_publish(upload_id, record.id)
+    except Exception as e:
+        try:
+            orchestrator.mark_failed(upload_id, str(e))
+        except Exception:
+            pass
+        raise
 
     return PublishRecordResponse(
         id=record.id,
@@ -735,6 +778,30 @@ def get_publish_state(
         validation_errors=record.validation_errors,
         validation_warnings=record.validation_warnings,
         created_at=record.created_at,
+    )
+
+
+@router.get("/uploads/{upload_id}/workflow", response_model=WorkflowStateResponse)
+def get_workflow_state(
+    upload_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> WorkflowStateResponse:
+    repo = IngestionRepository(db)
+    orchestrator = IngestionOrchestrator(repo)
+    state = orchestrator.get_state(upload_id)
+    if state is None:
+        raise NotFoundError("No workflow state found for this upload")
+    return WorkflowStateResponse(
+        upload_id=state.upload_id,
+        status=state.status.value,
+        error_message=state.error_message,
+        cleaned_snapshot_id=state.cleaned_snapshot_id,
+        publish_id=state.publish_id,
+        completed_steps=state.completed_steps,
+        current_step=state.current_step,
+        created_at=state.created_at,
+        updated_at=state.updated_at,
     )
 
 

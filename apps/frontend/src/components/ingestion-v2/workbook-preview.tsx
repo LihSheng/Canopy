@@ -12,6 +12,7 @@ type PreviewState =
 
 type Props = {
   uploadId: string;
+  onPreviewReady?: () => void;
 };
 
 function confidenceColor(confidence: number): string {
@@ -20,7 +21,7 @@ function confidenceColor(confidence: number): string {
   return "text-red-600";
 }
 
-export function WorkbookPreview({ uploadId }: Props) {
+export function WorkbookPreview({ uploadId, onPreviewReady }: Props) {
   const [state, setState] = useState<PreviewState>({ status: "loading" });
 
   const load = useCallback(async () => {
@@ -28,13 +29,14 @@ export function WorkbookPreview({ uploadId }: Props) {
     try {
       const profile = await fetchPreview(uploadId);
       setState({ status: "success", profile });
+      onPreviewReady?.();
     } catch (err) {
       setState({
         status: "error",
         message: err instanceof Error ? err.message : "Failed to load preview",
       });
     }
-  }, [uploadId]);
+  }, [uploadId, onPreviewReady]);
 
   useEffect(() => {
     load();

@@ -122,6 +122,20 @@ class LineageEdgeModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
 
 
+class WorkflowStateModel(Base):
+    __tablename__ = "v3_workflow_state"
+
+    upload_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="started")
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cleaned_snapshot_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    publish_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    completed_steps: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    current_step: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False)
+
+
 class PublishRecordModel(Base):
     __tablename__ = "v3_publish_records"
 

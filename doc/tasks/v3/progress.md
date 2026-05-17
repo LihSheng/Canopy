@@ -9,5 +9,5 @@
 - [x] [Cleaning Engine And Normalization](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/cleaning-engine-normalization.md)
 - [x] [Lineage Graph And Storage](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/lineage-graph.md)
 - [x] [Publish Review And Activation](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/publish-review-activation.md)
-- [ ] [Excel Source Adapter](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/xlsx-source-adapter.md) <sub-agent assigned>
-- [ ] [Ingestion Orchestration And API](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/ingestion-orchestration-api.md) <sub-agent assigned>
+- [x] [Excel Source Adapter](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/xlsx-source-adapter.md)
+- [x] [Ingestion Orchestration And API](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/ingestion-orchestration-api.md)

@@ -216,5 +216,17 @@ class PublishRecordResponse(BaseModel):
     created_at: datetime
 
 
+class WorkflowStateResponse(BaseModel):
+    upload_id: str
+    status: str
+    error_message: str | None = None
+    cleaned_snapshot_id: str | None = None
+    publish_id: str | None = None
+    completed_steps: list[str]
+    current_step: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class PublishHistoryResponse(BaseModel):
     records: list[PublishRecordResponse]
