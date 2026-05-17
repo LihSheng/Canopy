@@ -26,6 +26,8 @@ EXPECTED_TABLES = {
     "generated_insights",
     "refresh_jobs",
     "data_snapshots",
+    "export_jobs",
+    "v3_uploads",
 }
 
 

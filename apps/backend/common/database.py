@@ -74,6 +74,7 @@ def init_db(engine_override: Engine | None = None):
     import insights.schema  # noqa: F401  ensure insight models are registered
     import refresh.schema  # noqa: F401  ensure refresh models are registered
     import exports.schema  # noqa: F401  ensure export models are registered
+    import v3.ingestion.schema  # noqa: F401  ensure v3 ingestion models are registered
 
     eng = engine_override or engine()
     Base.metadata.create_all(bind=eng)
