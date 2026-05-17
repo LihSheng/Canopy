@@ -186,3 +186,215 @@ class TestMappingEndpoints:
             headers=auth_headers,
         )
         assert save_resp.status_code == 404
+
+
+class TestCleaningTemplates:
+    def _upload(self, client: TestClient, auth_headers) -> str:
+        resp = client.post(
+            "/api/v3/ingestion/uploads",
+            files={"file": ("data.csv", io.BytesIO(b"name,amount\nAlice,100"), "text/csv")},
+            data={"source_profile": "herdhr", "dataset_type": "payroll"},
+            headers=auth_headers,
+        )
+        return resp.json()["upload_id"]
+
+    def test_create_pipeline(self, client: TestClient, auth_headers):
+        upload_id = self._upload(client, auth_headers)
+        resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["status"] == "draft"
+        assert data["upload_id"] == upload_id
+        assert len(data["steps"]) == 0
+
+    def test_create_pipeline_duplicate_fails(self, client: TestClient, auth_headers):
+        upload_id = self._upload(client, auth_headers)
+        client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 400
+        assert "already exists" in resp.text
+
+    def test_get_pipeline(self, client: TestClient, auth_headers):
+        upload_id = self._upload(client, auth_headers)
+        create_resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        pipeline_id = create_resp.json()["id"]
+
+        resp = client.get(f"/api/v3/ingestion/templates/{pipeline_id}", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == pipeline_id
+        assert data["upload_id"] == upload_id
+
+    def test_get_pipeline_not_found(self, client: TestClient, auth_headers):
+        resp = client.get("/api/v3/ingestion/templates/nonexistent", headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_replace_steps(self, client: TestClient, auth_headers):
+        upload_id = self._upload(client, auth_headers)
+        create_resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        pipeline_id = create_resp.json()["id"]
+
+        steps = [
+            {"step_type": "trim", "order": 0, "parameters": {"columns": ["name"]}, "description": None},
+            {"step_type": "rename", "order": 1, "parameters": {"mappings": {"name": "employee_name"}}, "description": None},
+        ]
+        resp = client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/steps",
+            json=steps,
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+        assert data[0]["step_type"] == "trim"
+        assert data[1]["step_type"] == "rename"
+
+    def test_reorder_steps(self, client: TestClient, auth_headers):
+        upload_id = self._upload(client, auth_headers)
+        create_resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        pipeline_id = create_resp.json()["id"]
+
+        steps_resp = client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/steps",
+            json=[
+                {"step_type": "trim", "order": 0, "parameters": {"columns": ["name"]}, "description": None},
+                {"step_type": "cast", "order": 1, "parameters": {"columns": {"amount": "number"}}, "description": None},
+            ],
+            headers=auth_headers,
+        )
+        step_ids = [s["id"] for s in steps_resp.json()]
+
+        reordered = client.patch(
+            f"/api/v3/ingestion/templates/{pipeline_id}/steps/reorder",
+            json={"step_ids": [step_ids[1], step_ids[0]]},
+            headers=auth_headers,
+        )
+        assert reordered.status_code == 200
+        data = reordered.json()
+        assert data[0]["step_type"] == "cast"
+        assert data[1]["step_type"] == "trim"
+
+    def test_publish_pipeline(self, client: TestClient, auth_headers):
+        upload_id = self._upload(client, auth_headers)
+        create_resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        pipeline_id = create_resp.json()["id"]
+
+        client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/steps",
+            json=[
+                {"step_type": "trim", "order": 0, "parameters": {"columns": ["name"]}, "description": None},
+            ],
+            headers=auth_headers,
+        )
+
+        resp = client.patch(
+            f"/api/v3/ingestion/templates/{pipeline_id}/publish",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "published"
+
+    def test_publish_empty_pipeline_fails(self, client: TestClient, auth_headers):
+        upload_id = self._upload(client, auth_headers)
+        create_resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        pipeline_id = create_resp.json()["id"]
+
+        resp = client.patch(
+            f"/api/v3/ingestion/templates/{pipeline_id}/publish",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_modify_published_pipeline_fails(self, client: TestClient, auth_headers):
+        upload_id = self._upload(client, auth_headers)
+        create_resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        pipeline_id = create_resp.json()["id"]
+
+        client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/steps",
+            json=[
+                {"step_type": "trim", "order": 0, "parameters": {"columns": ["name"]}, "description": None},
+            ],
+            headers=auth_headers,
+        )
+        client.patch(
+            f"/api/v3/ingestion/templates/{pipeline_id}/publish",
+            headers=auth_headers,
+        )
+
+        resp = client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/steps",
+            json=[{"step_type": "cast", "order": 0, "parameters": {"columns": {"amount": "number"}}, "description": None}],
+            headers=auth_headers,
+        )
+        assert resp.status_code == 400
+        assert "published" in resp.text.lower()
+
+    def test_validate_pipeline_endpoint(self, client: TestClient, auth_headers):
+        upload_id = self._upload(client, auth_headers)
+        create_resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        pipeline_id = create_resp.json()["id"]
+
+        client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/steps",
+            json=[
+                {"step_type": "trim", "order": 0, "parameters": {"columns": ["name"]}, "description": None},
+            ],
+            headers=auth_headers,
+        )
+
+        resp = client.post(
+            f"/api/v3/ingestion/templates/{pipeline_id}/validate",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "warnings" in data
+
+    def test_create_pipeline_unauthorized(self, client: TestClient):
+        resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": "test"},
+        )
+        assert resp.status_code == 401

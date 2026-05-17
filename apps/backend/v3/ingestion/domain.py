@@ -9,6 +9,21 @@ class UploadStatus(StrEnum):
     failed = "failed"
 
 
+class CleaningStepType(StrEnum):
+    trim = "trim"
+    rename = "rename"
+    cast = "cast"
+    parse_date = "parse_date"
+    dedupe = "dedupe"
+    normalize_nulls = "normalize_nulls"
+    filter_empty_rows = "filter_empty_rows"
+
+
+class PipelineStatus(StrEnum):
+    draft = "draft"
+    published = "published"
+
+
 @dataclass
 class UploadRecord:
     id: str
@@ -61,4 +76,23 @@ class WorkbookProfile:
     column_profiles: list[ColumnProfile]
     preview_rows: list[list[str | None]]
     warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CleaningStep:
+    id: str
+    step_type: str
+    order: int
+    parameters: dict
+    description: str | None = None
+
+
+@dataclass
+class CleaningPipeline:
+    id: str
+    upload_id: str
+    steps: list[CleaningStep]
+    status: str
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
 

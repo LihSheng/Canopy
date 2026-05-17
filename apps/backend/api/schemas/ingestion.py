@@ -63,3 +63,39 @@ class WorkbookProfileResponse(BaseModel):
     column_profiles: list[ColumnProfileResponse]
     preview_rows: list[list[str | None]]
     warnings: list[str]
+
+
+class CleaningStepRequest(BaseModel):
+    step_type: str
+    order: int
+    parameters: dict
+    description: str | None = None
+
+
+class CleaningStepResponse(BaseModel):
+    id: str
+    step_type: str
+    order: int
+    parameters: dict
+    description: str | None = None
+
+
+class CleaningPipelineResponse(BaseModel):
+    id: str
+    upload_id: str
+    status: str
+    steps: list[CleaningStepResponse]
+    created_at: datetime
+    updated_at: datetime
+
+
+class CreatePipelineRequest(BaseModel):
+    upload_id: str
+
+
+class ReorderStepsRequest(BaseModel):
+    step_ids: list[str]
+
+
+class PipelineValidationResponse(BaseModel):
+    warnings: list[str]
