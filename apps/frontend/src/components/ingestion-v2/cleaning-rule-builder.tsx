@@ -23,6 +23,7 @@ type BuilderState =
 
 type Props = {
   uploadId: string;
+  onPipelineReady?: (pipelineId: string) => void;
 };
 
 const STEP_TYPE_OPTIONS = [
@@ -150,7 +151,7 @@ function renderParametersEditor(
   }
 }
 
-export function CleaningRuleBuilder({ uploadId }: Props) {
+export function CleaningRuleBuilder({ uploadId, onPipelineReady }: Props) {
   const [state, setState] = useState<BuilderState>({ status: "loading" });
   const [pipelineId, setPipelineId] = useState<string | null>(null);
 
@@ -159,12 +160,14 @@ export function CleaningRuleBuilder({ uploadId }: Props) {
     try {
       const pipeline = await createPipeline(uploadId);
       setPipelineId(pipeline.id);
+      onPipelineReady?.(pipeline.id);
       setState({ status: "idle", pipeline, editingStepIndex: null });
     } catch {
       try {
         const existing = await fetchPipeline(pipelineId ?? "");
         if (existing) {
           setPipelineId(existing.id);
+          onPipelineReady?.(existing.id);
           setState({ status: "idle", pipeline: existing, editingStepIndex: null });
           return;
         }
@@ -173,7 +176,7 @@ export function CleaningRuleBuilder({ uploadId }: Props) {
       }
       setState({ status: "idle", pipeline: { id: "", upload_id: uploadId, status: "draft", steps: [], created_at: "", updated_at: "" }, editingStepIndex: null });
     }
-  }, [uploadId, pipelineId]);
+  }, [uploadId, pipelineId, onPipelineReady]);
 
   useEffect(() => {
     const init = async () => {
@@ -181,13 +184,14 @@ export function CleaningRuleBuilder({ uploadId }: Props) {
       try {
         const pipeline = await createPipeline(uploadId);
         setPipelineId(pipeline.id);
+        onPipelineReady?.(pipeline.id);
         setState({ status: "idle", pipeline, editingStepIndex: null });
       } catch {
         setState({ status: "idle", pipeline: { id: "pending", upload_id: uploadId, status: "draft", steps: [], created_at: "", updated_at: "" }, editingStepIndex: null });
       }
     };
     init();
-  }, [uploadId]);
+  }, [uploadId, onPipelineReady]);
 
   const handleAddStep = useCallback(
     (stepType: string) => {

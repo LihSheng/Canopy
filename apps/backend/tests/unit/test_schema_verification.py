@@ -29,6 +29,10 @@ EXPECTED_TABLES = {
     "export_jobs",
     "v3_uploads",
     "v3_mapping_decisions",
+    "v3_cleaning_pipelines",
+    "v3_cleaning_steps",
+    "v3_template_families",
+    "v3_template_versions",
 }
 
 

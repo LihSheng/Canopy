@@ -65,6 +65,61 @@ class WorkbookProfileResponse(BaseModel):
     warnings: list[str]
 
 
+class TemplateFamilyRequest(BaseModel):
+    dataset_type: str
+    source_profile: str
+    name: str
+    description: str = ""
+
+
+class TemplateFamilyResponse(BaseModel):
+    id: str
+    dataset_type: str
+    source_profile: str
+    name: str
+    description: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class TemplateVersionResponse(BaseModel):
+    id: str
+    template_id: str
+    version_number: int
+    state: str
+    spec_json: dict
+    created_at: datetime
+    updated_at: datetime
+    published_at: datetime | None = None
+
+
+class TemplateFamilyDetailResponse(BaseModel):
+    id: str
+    dataset_type: str
+    source_profile: str
+    name: str
+    description: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    versions: list[TemplateVersionResponse]
+
+
+class CreateTemplateVersionRequest(BaseModel):
+    clone_from_version_id: str | None = None
+    spec_json: dict = {}
+
+
+class BindTemplateRequest(BaseModel):
+    template_version_id: str
+
+
+class TemplateVersionListResponse(BaseModel):
+    template_id: str
+    versions: list[TemplateVersionResponse]
+
+
 class CleaningStepRequest(BaseModel):
     step_type: str
     order: int
@@ -85,6 +140,7 @@ class CleaningPipelineResponse(BaseModel):
     upload_id: str
     status: str
     steps: list[CleaningStepResponse]
+    template_version_id: str | None = None
     created_at: datetime
     updated_at: datetime
 

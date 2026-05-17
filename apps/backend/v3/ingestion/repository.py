@@ -1,7 +1,25 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
-from v3.ingestion.domain import CleaningPipeline, CleaningStep, MappingDecision, PipelineStatus, UploadRecord, UploadStatus
-from v3.ingestion.schema import CleaningPipelineModel, CleaningStepModel, MappingDecisionModel, UploadModel
+from v3.ingestion.domain import (
+    CleaningPipeline,
+    CleaningStep,
+    MappingDecision,
+    PipelineStatus,
+    TemplateFamily,
+    TemplateVersion,
+    UploadRecord,
+    UploadStatus,
+)
+from v3.ingestion.schema import (
+    CleaningPipelineModel,
+    CleaningStepModel,
+    MappingDecisionModel,
+    TemplateFamilyModel,
+    TemplateVersionModel,
+    UploadModel,
+)
 
 
 class IngestionRepository:
@@ -160,6 +178,115 @@ class IngestionRepository:
             updated_at=model.updated_at,
         )
 
+    def save_template_family(self, family: TemplateFamily) -> TemplateFamily:
+        model = TemplateFamilyModel(
+            id=family.id,
+            dataset_type=family.dataset_type,
+            source_profile=family.source_profile,
+            name=family.name,
+            description=family.description,
+            status=family.status,
+        )
+        self._db.add(model)
+        self._db.commit()
+        return family
+
+    def get_template_family(self, family_id: str) -> TemplateFamily | None:
+        model = self._db.query(TemplateFamilyModel).filter(TemplateFamilyModel.id == family_id).first()
+        return self._family_to_domain(model) if model else None
+
+    def list_template_families(self, dataset_type: str | None = None, source_profile: str | None = None) -> list[TemplateFamily]:
+        q = self._db.query(TemplateFamilyModel)
+        if dataset_type:
+            q = q.filter(TemplateFamilyModel.dataset_type == dataset_type)
+        if source_profile:
+            q = q.filter(TemplateFamilyModel.source_profile == source_profile)
+        models = q.order_by(TemplateFamilyModel.created_at.desc()).all()
+        return [self._family_to_domain(m) for m in models]
+
+    def update_template_family_status(self, family_id: str, status: str) -> TemplateFamily | None:
+        model = self._db.query(TemplateFamilyModel).filter(TemplateFamilyModel.id == family_id).first()
+        if not model:
+            return None
+        model.status = status
+        self._db.commit()
+        return self._family_to_domain(model)
+
+    def save_template_version(self, version: TemplateVersion) -> TemplateVersion:
+        model = TemplateVersionModel(
+            id=version.id,
+            template_id=version.template_id,
+            version_number=version.version_number,
+            state=version.state,
+            spec_json=version.spec_json,
+            published_at=version.published_at,
+        )
+        self._db.add(model)
+        self._db.commit()
+        return version
+
+    def get_template_version(self, version_id: str) -> TemplateVersion | None:
+        model = self._db.query(TemplateVersionModel).filter(TemplateVersionModel.id == version_id).first()
+        return self._version_to_domain(model) if model else None
+
+    def list_template_versions(self, template_id: str) -> list[TemplateVersion]:
+        models = self._db.query(TemplateVersionModel).filter(
+            TemplateVersionModel.template_id == template_id
+        ).order_by(TemplateVersionModel.version_number.desc()).all()
+        return [self._version_to_domain(m) for m in models]
+
+    def get_latest_published_version(self, template_id: str) -> TemplateVersion | None:
+        model = self._db.query(TemplateVersionModel).filter(
+            TemplateVersionModel.template_id == template_id,
+            TemplateVersionModel.state == "published",
+        ).order_by(TemplateVersionModel.version_number.desc()).first()
+        return self._version_to_domain(model) if model else None
+
+    def update_version_state(self, version_id: str, state: str, published_at: datetime | None = None) -> TemplateVersion | None:
+        model = self._db.query(TemplateVersionModel).filter(TemplateVersionModel.id == version_id).first()
+        if not model:
+            return None
+        model.state = state
+        if published_at is not None:
+            model.published_at = published_at
+        self._db.commit()
+        return self._version_to_domain(model)
+
+    def bind_upload_to_version(self, pipeline_id: str, template_version_id: str) -> CleaningPipeline | None:
+        model = self._db.query(CleaningPipelineModel).filter(CleaningPipelineModel.id == pipeline_id).first()
+        if not model:
+            return None
+        model.template_version_id = template_version_id
+        self._db.commit()
+        steps = self._db.query(CleaningStepModel).filter(
+            CleaningStepModel.pipeline_id == pipeline_id
+        ).order_by(CleaningStepModel.order).all()
+        return self._pipeline_to_domain(model, steps)
+
+    def _family_to_domain(self, m: TemplateFamilyModel) -> TemplateFamily:
+        return TemplateFamily(
+            id=m.id,
+            dataset_type=m.dataset_type,
+            source_profile=m.source_profile,
+            name=m.name,
+            description=m.description,
+            status=m.status,
+            created_at=m.created_at,
+            updated_at=m.updated_at,
+        )
+
+    def _version_to_domain(self, m: TemplateVersionModel) -> TemplateVersion:
+        return TemplateVersion(
+            id=m.id,
+            template_id=m.template_id,
+            version_number=m.version_number,
+            state=m.state,
+            spec_json=dict(m.spec_json) if m.spec_json else {},
+            created_at=m.created_at,
+            updated_at=m.updated_at,
+            published_at=m.published_at,
+        )
+
     def _step_to_domain(self, m: CleaningStepModel) -> CleaningStep:
         return CleaningStep(
             id=m.id,
@@ -174,6 +301,7 @@ class IngestionRepository:
             id=m.id,
             upload_id=m.upload_id,
             status=m.status,
+            template_version_id=m.template_version_id,
             steps=[self._step_to_domain(s) for s in steps],
             created_at=m.created_at,
             updated_at=m.updated_at,

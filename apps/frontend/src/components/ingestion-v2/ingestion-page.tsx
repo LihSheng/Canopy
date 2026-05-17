@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CleaningRuleBuilder } from "./cleaning-rule-builder";
 import { MappingReviewGrid } from "./mapping-review-grid";
+import { TemplateLibrary } from "./template-library";
 import { UploadWizard } from "./upload-wizard";
 import { WorkbookPreview } from "./workbook-preview";
 
@@ -10,15 +11,26 @@ type VisibleSections = {
   preview: boolean;
   mapping: boolean;
   cleaning: boolean;
+  templates: boolean;
 };
 
 export function IngestionPageContent() {
   const [uploadId, setUploadId] = useState<string | null>(null);
-  const [visible, setVisible] = useState<VisibleSections>({ preview: false, mapping: false, cleaning: false });
+  const [pipelineId, setPipelineId] = useState<string | null>(null);
+  const [boundVersionId, setBoundVersionId] = useState<string | null>(null);
+  const [visible, setVisible] = useState<VisibleSections>({ preview: false, mapping: false, cleaning: false, templates: false });
 
   const handleUploadComplete = (id: string) => {
     setUploadId(id);
-    setVisible({ preview: true, mapping: false, cleaning: false });
+    setVisible({ preview: true, mapping: false, cleaning: false, templates: false });
+  };
+
+  const handlePipelineReady = (id: string) => {
+    setPipelineId(id);
+  };
+
+  const handleTemplateBound = (versionId: string) => {
+    setBoundVersionId(versionId);
   };
 
   return (
@@ -71,7 +83,36 @@ export function IngestionPageContent() {
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-zinc-700">Cleaning Rules</h3>
           </div>
-          <CleaningRuleBuilder uploadId={uploadId} />
+          <CleaningRuleBuilder uploadId={uploadId} onPipelineReady={handlePipelineReady} />
+          <div className="mt-4">
+            <button
+              onClick={() => setVisible((v) => ({ ...v, templates: true }))}
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+            >
+              Select Template
+            </button>
+          </div>
+        </div>
+      )}
+
+      {uploadId && pipelineId && visible.templates && (
+        <div className="mt-6">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-zinc-700">Template Library</h3>
+          </div>
+          <TemplateLibrary
+            uploadId={uploadId}
+            pipelineId={pipelineId}
+            onBound={handleTemplateBound}
+            currentBoundVersionId={boundVersionId}
+          />
+          {boundVersionId && (
+            <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+              <p className="text-sm font-semibold text-blue-800">
+                Template version bound to this upload.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

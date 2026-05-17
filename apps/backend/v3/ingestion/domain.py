@@ -24,6 +24,16 @@ class PipelineStatus(StrEnum):
     published = "published"
 
 
+class TemplateFamilyStatus(StrEnum):
+    active = "active"
+    archived = "archived"
+
+
+class TemplateVersionState(StrEnum):
+    draft = "draft"
+    published = "published"
+
+
 @dataclass
 class UploadRecord:
     id: str
@@ -88,11 +98,36 @@ class CleaningStep:
 
 
 @dataclass
+class TemplateFamily:
+    id: str
+    dataset_type: str
+    source_profile: str
+    name: str
+    description: str
+    status: str
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class TemplateVersion:
+    id: str
+    template_id: str
+    version_number: int
+    state: str
+    spec_json: dict
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
+    published_at: datetime | None = None
+
+
+@dataclass
 class CleaningPipeline:
     id: str
     upload_id: str
     steps: list[CleaningStep]
     status: str
+    template_version_id: str | None = None
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
 

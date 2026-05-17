@@ -236,3 +236,153 @@ export async function validatePipeline(pipelineId: string): Promise<{ warnings: 
 
   return res.json();
 }
+
+export type TemplateFamily = {
+  id: string;
+  dataset_type: string;
+  source_profile: string;
+  name: string;
+  description: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TemplateVersion = {
+  id: string;
+  template_id: string;
+  version_number: number;
+  state: string;
+  spec_json: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+};
+
+export type TemplateFamilyDetail = TemplateFamily & {
+  versions: TemplateVersion[];
+};
+
+export type CreateTemplateVersionReq = {
+  clone_from_version_id?: string | null;
+  spec_json?: Record<string, unknown>;
+};
+
+export type BindTemplateReq = {
+  template_version_id: string;
+};
+
+export async function fetchTemplateFamilies(
+  datasetType?: string,
+  sourceProfile?: string,
+): Promise<TemplateFamily[]> {
+  const params = new URLSearchParams();
+  if (datasetType) params.set("dataset_type", datasetType);
+  if (sourceProfile) params.set("source_profile", sourceProfile);
+  const qs = params.toString();
+  const url = `${API_BASE}/api/v3/ingestion/template-families${qs ? "?" + qs : ""}`;
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to fetch template families" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function createTemplateFamily(
+  data: { dataset_type: string; source_profile: string; name: string; description?: string },
+): Promise<TemplateFamily> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/template-families`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to create template family" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchTemplateFamily(templateId: string): Promise<TemplateFamilyDetail> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/template-families/${templateId}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to fetch template family" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchTemplateVersions(templateId: string): Promise<{ template_id: string; versions: TemplateVersion[] }> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/template-families/${templateId}/versions`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to fetch template versions" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchTemplateVersion(templateId: string, versionId: string): Promise<TemplateVersion> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/template-families/${templateId}/versions/${versionId}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to fetch template version" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function createTemplateVersion(
+  templateId: string,
+  data: CreateTemplateVersionReq,
+): Promise<TemplateVersion> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/template-families/${templateId}/versions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to create template version" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function publishTemplateVersion(
+  templateId: string,
+  versionId: string,
+): Promise<TemplateVersion> {
+  const res = await fetch(
+    `${API_BASE}/api/v3/ingestion/template-families/${templateId}/versions/${versionId}/publish`,
+    { method: "POST", credentials: "include" },
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to publish template version" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function bindPipelineToTemplate(
+  pipelineId: string,
+  templateVersionId: string,
+): Promise<CleaningPipeline> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/templates/${pipelineId}/bind`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ template_version_id: templateVersionId } as BindTemplateReq),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to bind pipeline to template" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}

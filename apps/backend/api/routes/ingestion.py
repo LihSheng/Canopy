@@ -7,25 +7,40 @@ from sqlalchemy.orm import Session
 from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from api.schemas.ingestion import (
+    BindTemplateRequest,
     CleaningPipelineResponse,
     CleaningStepRequest,
     CleaningStepResponse,
     CreatePipelineRequest,
+    CreateTemplateVersionRequest,
     MappingDecisionRequest,
     MappingDecisionResponse,
     MappingSuggestionsResponse,
     PipelineValidationResponse,
     ReorderStepsRequest,
+    TemplateFamilyDetailResponse,
+    TemplateFamilyRequest,
+    TemplateFamilyResponse,
+    TemplateVersionListResponse,
+    TemplateVersionResponse,
     UploadResponse,
     WorkbookProfileResponse,
 )
 from common.database import get_db
 from common.errors import NotFoundError, ValidationError
 from v3.ingestion.cleaning import validate_pipeline
-from v3.ingestion.domain import CleaningPipeline, CleaningStep, MappingDecision, PipelineStatus
+from v3.ingestion.domain import (
+    CleaningPipeline,
+    CleaningStep,
+    MappingDecision,
+    PipelineStatus,
+    TemplateFamily,
+    TemplateFamilyStatus,
+)
 from v3.ingestion.profiling import generate_profile
 from v3.ingestion.repository import IngestionRepository
 from v3.ingestion.service import process_upload
+from v3.ingestion.templates import create_draft_version, publish_version, validate_bind
 
 router = APIRouter(prefix="/api/v3/ingestion", tags=["v3-ingestion"])
 
@@ -347,3 +362,167 @@ def validate_pipeline_endpoint(
 
     warnings = validate_pipeline(pipeline.steps, pipeline.status)
     return PipelineValidationResponse(warnings=warnings)
+
+
+@router.get("/template-families", response_model=list[TemplateFamilyResponse])
+def list_template_families(
+    dataset_type: str | None = None,
+    source_profile: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> list[TemplateFamilyResponse]:
+    repo = IngestionRepository(db)
+    families = repo.list_template_families(dataset_type, source_profile)
+    return [TemplateFamilyResponse(**asdict(f)) for f in families]
+
+
+@router.post("/template-families", response_model=TemplateFamilyResponse, status_code=201)
+def create_template_family(
+    body: TemplateFamilyRequest,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> TemplateFamilyResponse:
+    family = TemplateFamily(
+        id=str(uuid.uuid4()),
+        dataset_type=body.dataset_type,
+        source_profile=body.source_profile,
+        name=body.name,
+        description=body.description,
+        status=TemplateFamilyStatus.active.value,
+    )
+    repo = IngestionRepository(db)
+    saved = repo.save_template_family(family)
+    return TemplateFamilyResponse(**asdict(saved))
+
+
+@router.get("/template-families/{template_id}", response_model=TemplateFamilyDetailResponse)
+def get_template_family(
+    template_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> TemplateFamilyDetailResponse:
+    repo = IngestionRepository(db)
+    family = repo.get_template_family(template_id)
+    if family is None:
+        raise NotFoundError("Template family not found")
+
+    versions = repo.list_template_versions(template_id)
+    return TemplateFamilyDetailResponse(
+        **asdict(family),
+        versions=[TemplateVersionResponse(**asdict(v)) for v in versions],
+    )
+
+
+@router.get("/template-families/{template_id}/versions", response_model=TemplateVersionListResponse)
+def list_template_versions(
+    template_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> TemplateVersionListResponse:
+    repo = IngestionRepository(db)
+    family = repo.get_template_family(template_id)
+    if family is None:
+        raise NotFoundError("Template family not found")
+
+    versions = repo.list_template_versions(template_id)
+    return TemplateVersionListResponse(
+        template_id=template_id,
+        versions=[TemplateVersionResponse(**asdict(v)) for v in versions],
+    )
+
+
+@router.get("/template-families/{template_id}/versions/{version_id}", response_model=TemplateVersionResponse)
+def get_template_version(
+    template_id: str,
+    version_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> TemplateVersionResponse:
+    repo = IngestionRepository(db)
+    version = repo.get_template_version(version_id)
+    if version is None or version.template_id != template_id:
+        raise NotFoundError("Template version not found")
+
+    return TemplateVersionResponse(**asdict(version))
+
+
+@router.post("/template-families/{template_id}/versions", response_model=TemplateVersionResponse, status_code=201)
+def create_template_version(
+    template_id: str,
+    body: CreateTemplateVersionRequest,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> TemplateVersionResponse:
+    repo = IngestionRepository(db)
+    family = repo.get_template_family(template_id)
+    if family is None:
+        raise NotFoundError("Template family not found")
+
+    existing_versions = repo.list_template_versions(template_id)
+
+    spec = dict(body.spec_json) if body.spec_json else {}
+    if body.clone_from_version_id:
+        source = repo.get_template_version(body.clone_from_version_id)
+        if source is None or source.template_id != template_id:
+            raise NotFoundError("Source template version not found")
+        spec = dict(source.spec_json)
+
+    version = create_draft_version(template_id, spec, existing_versions)
+    saved = repo.save_template_version(version)
+    return TemplateVersionResponse(**asdict(saved))
+
+
+@router.post("/template-families/{template_id}/versions/{version_id}/publish", response_model=TemplateVersionResponse)
+def publish_template_version(
+    template_id: str,
+    version_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> TemplateVersionResponse:
+    repo = IngestionRepository(db)
+    version = repo.get_template_version(version_id)
+    if version is None or version.template_id != template_id:
+        raise NotFoundError("Template version not found")
+
+    try:
+        publish_version(version)
+    except ValueError as e:
+        raise ValidationError(str(e))
+
+    updated = repo.update_version_state(version.id, version.state, version.published_at)
+    if updated is None:
+        raise NotFoundError("Template version not found")
+
+    return TemplateVersionResponse(**asdict(updated))
+
+
+@router.put("/templates/{pipeline_id}/bind", response_model=CleaningPipelineResponse)
+def bind_pipeline_to_template(
+    pipeline_id: str,
+    body: BindTemplateRequest,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> CleaningPipelineResponse:
+    repo = IngestionRepository(db)
+    pipeline = repo.get_pipeline(pipeline_id)
+    if pipeline is None:
+        raise NotFoundError("Pipeline not found")
+
+    version = repo.get_template_version(body.template_version_id)
+    try:
+        validate_bind(version)
+    except ValueError as e:
+        raise ValidationError(str(e))
+
+    updated = repo.bind_upload_to_version(pipeline_id, body.template_version_id)
+    if updated is None:
+        raise NotFoundError("Pipeline not found")
+
+    return CleaningPipelineResponse(
+        id=updated.id,
+        upload_id=updated.upload_id,
+        status=updated.status,
+        steps=[CleaningStepResponse(**asdict(s)) for s in updated.steps],
+        created_at=updated.created_at,
+        updated_at=updated.updated_at,
+    )
