@@ -43,3 +43,11 @@ htmlcov/
 # Logs
 *.log
 *.db
+
+# Test artifacts
+apps/backend/test_payroll.xlsx
+apps/backend/tests/unit/*.xlsx
+apps/backend/tests/unit/*.xls
+apps/backend/tests/unit/*.xlsm
+apps/backend/tests/unit/*.csv
+*.excalidraw
