@@ -97,3 +97,26 @@ class CleanedSnapshotModel(Base):
     warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     storage_path: Mapped[str] = mapped_column(String(512), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+
+
+class LineageNodeModel(Base):
+    __tablename__ = "v3_lineage_nodes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    upload_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    node_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    label: Mapped[str] = mapped_column(String(256), nullable=False)
+    meta_data: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+
+
+class LineageEdgeModel(Base):
+    __tablename__ = "v3_lineage_edges"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    upload_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    from_node_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    to_node_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    edge_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    meta_data: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)

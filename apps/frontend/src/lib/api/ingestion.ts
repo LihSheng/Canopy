@@ -370,6 +370,38 @@ export async function publishTemplateVersion(
   return res.json();
 }
 
+export type LineageNode = {
+  id: string;
+  node_type: string;
+  label: string;
+  metadata: Record<string, unknown>;
+};
+
+export type LineageEdge = {
+  id: string;
+  from_node_id: string;
+  to_node_id: string;
+  edge_type: string;
+  metadata: Record<string, unknown>;
+};
+
+export type LineageGraphResult = {
+  upload_id: string;
+  nodes: LineageNode[];
+  edges: LineageEdge[];
+};
+
+export async function fetchLineage(uploadId: string): Promise<LineageGraphResult> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/uploads/${uploadId}/lineage`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to load lineage" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function bindPipelineToTemplate(
   pipelineId: string,
   templateVersionId: string,

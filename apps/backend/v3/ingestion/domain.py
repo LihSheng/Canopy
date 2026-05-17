@@ -166,3 +166,49 @@ class CleanedSnapshot:
     storage_path: str
     created_at: datetime = field(default_factory=datetime.now)
 
+
+class LineageNodeType(StrEnum):
+    file = "file"
+    workbook = "workbook"
+    sheet = "sheet"
+    raw_column = "raw_column"
+    cleaned_field = "cleaned_field"
+    ontology_field = "ontology_field"
+
+
+class LineageEdgeType(StrEnum):
+    derived_from = "derived_from"
+    mapped_to = "mapped_to"
+    normalized_to = "normalized_to"
+
+
+@dataclass
+class LineageNode:
+    id: str
+    node_type: LineageNodeType
+    label: str
+    metadata: dict = field(default_factory=dict)
+
+
+@dataclass
+class LineageEdge:
+    id: str
+    from_node_id: str
+    to_node_id: str
+    edge_type: LineageEdgeType
+    metadata: dict = field(default_factory=dict)
+
+
+@dataclass
+class LineageGraph:
+    nodes: list[LineageNode] = field(default_factory=list)
+    edges: list[LineageEdge] = field(default_factory=list)
+
+
+@dataclass
+class LineageRecord:
+    upload_id: str
+    snapshot_id: str
+    graph: LineageGraph
+    created_at: datetime = field(default_factory=datetime.now)
+

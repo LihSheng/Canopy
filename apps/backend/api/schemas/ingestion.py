@@ -174,3 +174,24 @@ class ProcessUploadResponse(BaseModel):
     row_count: int
     warning_count: int
     warnings: list[str]
+
+
+class LineageNodeResponse(BaseModel):
+    id: str
+    node_type: str
+    label: str
+    metadata: dict
+
+
+class LineageEdgeResponse(BaseModel):
+    id: str
+    from_node_id: str
+    to_node_id: str
+    edge_type: str
+    metadata: dict
+
+
+class LineageGraphResponse(BaseModel):
+    upload_id: str
+    nodes: list[LineageNodeResponse]
+    edges: list[LineageEdgeResponse]

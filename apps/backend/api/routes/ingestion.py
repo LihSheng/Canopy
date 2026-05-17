@@ -15,6 +15,7 @@ from api.schemas.ingestion import (
     CleaningStepResponse,
     CreatePipelineRequest,
     CreateTemplateVersionRequest,
+    LineageGraphResponse,
     MappingDecisionRequest,
     MappingDecisionResponse,
     MappingSuggestionsResponse,
@@ -43,6 +44,7 @@ from v3.ingestion.domain import (
     TemplateFamilyStatus,
 )
 from v3.ingestion.engine import execute_cleaning_pipeline, load_raw_rows, parse_spec_steps, save_cleaned_rows
+from v3.ingestion.lineage import build_lineage_graph
 from v3.ingestion.normalization import normalize_cleaned_rows
 from v3.ingestion.profiling import generate_profile
 from v3.ingestion.repository import IngestionRepository
@@ -563,10 +565,25 @@ def process_upload_endpoint(
     if not raw_rows:
         raise ValidationError("No raw data found for this upload")
 
+    raw_columns = list(raw_rows[0].keys()) if raw_rows else []
+
     result = execute_cleaning_pipeline(raw_rows, steps)
 
     mapping_decisions = repo.get_mapping_decisions(upload_id)
     normalized = normalize_cleaned_rows(result.rows, mapping_decisions, result.rename_map)
+
+    step_specs = version.spec_json.get("steps", [])
+    graph = build_lineage_graph(
+        upload_id=upload_id,
+        file_name=upload.file_name,
+        sheet_name="Sheet1",
+        raw_columns=raw_columns,
+        step_specs=step_specs,
+        mapping_decisions=mapping_decisions,
+        normalized_fields=normalized.field_map,
+        rename_map=result.rename_map,
+    )
+    repo.save_lineage_graph(upload_id, graph)
 
     storage_path = save_cleaned_rows(normalized.rows, upload_id)
 
@@ -597,6 +614,23 @@ def process_upload_endpoint(
         row_count=snapshot.row_count,
         warning_count=snapshot.warning_count,
         warnings=snapshot.warnings,
+    )
+
+
+@router.get("/uploads/{upload_id}/lineage", response_model=LineageGraphResponse)
+def get_lineage_graph(
+    upload_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> LineageGraphResponse:
+    repo = IngestionRepository(db)
+    graph = repo.get_lineage_graph(upload_id)
+    if graph is None:
+        raise NotFoundError("No lineage graph found for this upload")
+    return LineageGraphResponse(
+        upload_id=upload_id,
+        nodes=[{"id": n.id, "node_type": n.node_type.value, "label": n.label, "metadata": n.metadata} for n in graph.nodes],
+        edges=[{"id": e.id, "from_node_id": e.from_node_id, "to_node_id": e.to_node_id, "edge_type": e.edge_type.value, "metadata": e.metadata} for e in graph.edges],
     )
 
 

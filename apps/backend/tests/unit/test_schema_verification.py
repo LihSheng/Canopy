@@ -34,6 +34,8 @@ EXPECTED_TABLES = {
     "v3_template_families",
     "v3_template_versions",
     "v3_cleaned_snapshots",
+    "v3_lineage_nodes",
+    "v3_lineage_edges",
 }
 
 

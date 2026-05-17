@@ -6,6 +6,11 @@ from v3.ingestion.domain import (
     CleanedSnapshot,
     CleaningPipeline,
     CleaningStep,
+    LineageEdge,
+    LineageGraph,
+    LineageNode,
+    LineageEdgeType,
+    LineageNodeType,
     MappingDecision,
     PipelineStatus,
     TemplateFamily,
@@ -17,6 +22,8 @@ from v3.ingestion.schema import (
     CleanedSnapshotModel,
     CleaningPipelineModel,
     CleaningStepModel,
+    LineageEdgeModel,
+    LineageNodeModel,
     MappingDecisionModel,
     TemplateFamilyModel,
     TemplateVersionModel,
@@ -335,6 +342,60 @@ class IngestionRepository:
             storage_path=m.storage_path,
             created_at=m.created_at,
         )
+
+    def save_lineage_graph(self, upload_id: str, graph: LineageGraph) -> None:
+        self._db.query(LineageEdgeModel).filter(LineageEdgeModel.upload_id == upload_id).delete()
+        self._db.query(LineageNodeModel).filter(LineageNodeModel.upload_id == upload_id).delete()
+        for node in graph.nodes:
+            self._db.add(LineageNodeModel(
+                id=node.id,
+                upload_id=upload_id,
+                node_type=node.node_type.value,
+                label=node.label,
+                meta_data=node.metadata,
+            ))
+        for edge in graph.edges:
+            self._db.add(LineageEdgeModel(
+                id=edge.id,
+                upload_id=upload_id,
+                from_node_id=edge.from_node_id,
+                to_node_id=edge.to_node_id,
+                edge_type=edge.edge_type.value,
+                meta_data=edge.metadata,
+            ))
+        self._db.commit()
+
+    def get_lineage_graph(self, upload_id: str) -> LineageGraph | None:
+        node_models = self._db.query(LineageNodeModel).filter(LineageNodeModel.upload_id == upload_id).all()
+        edge_models = self._db.query(LineageEdgeModel).filter(LineageEdgeModel.upload_id == upload_id).all()
+        if not node_models:
+            return None
+        return LineageGraph(
+            nodes=[
+                LineageNode(
+                    id=m.id,
+                    node_type=LineageNodeType(m.node_type),
+                    label=m.label,
+                    metadata=dict(m.meta_data) if m.meta_data else {},
+                )
+                for m in node_models
+            ],
+            edges=[
+                LineageEdge(
+                    id=m.id,
+                    from_node_id=m.from_node_id,
+                    to_node_id=m.to_node_id,
+                    edge_type=LineageEdgeType(m.edge_type),
+                    metadata=dict(m.meta_data) if m.meta_data else {},
+                )
+                for m in edge_models
+            ],
+        )
+
+    def delete_lineage_graph(self, upload_id: str) -> None:
+        self._db.query(LineageEdgeModel).filter(LineageEdgeModel.upload_id == upload_id).delete()
+        self._db.query(LineageNodeModel).filter(LineageNodeModel.upload_id == upload_id).delete()
+        self._db.commit()
 
     def _pipeline_to_domain(self, m: CleaningPipelineModel, steps: list[CleaningStepModel]) -> CleaningPipeline:
         return CleaningPipeline(
