@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Fragment } from "react";
 
-type BreadcrumbItem = {
+export type BreadcrumbItem = {
   label: string;
   href?: string;
 };

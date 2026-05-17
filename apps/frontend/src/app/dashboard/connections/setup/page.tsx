@@ -1,8 +1,12 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AnalyticsBreadcrumb } from "@/components/analytics-shell/analytics-breadcrumb";
+import { buildConnectionsBreadcrumbs } from "@/components/analytics-shell/breadcrumb-helpers";
 import { AnalyticsHeader } from "@/components/analytics-shell/analytics-header";
+import { PreviewGrid } from "@/components/v4/preview-grid";
 import {
   previewStaticFile,
   fetchProjects,
@@ -23,6 +27,7 @@ export default function SetupPage() {
   const [preparing, setPreparing] = useState(false);
   const [preview, setPreview] = useState<StaticFilePreview | null>(null);
   const [selectedSheets, setSelectedSheets] = useState<Set<string>>(new Set());
+  const [activeSheetName, setActiveSheetName] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -33,7 +38,9 @@ export default function SetupPage() {
     try {
       const result = await previewStaticFile(dropped, "static_file");
       setPreview(result);
-      setSelectedSheets(new Set(result.sheet_profiles.map((s) => s.sheet_name)));
+      const sheetNames = result.sheet_profiles.map((s) => s.sheet_name);
+      setSelectedSheets(new Set(sheetNames));
+      setActiveSheetName(sheetNames[0] || "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -46,9 +53,14 @@ export default function SetupPage() {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
       else next.add(name);
+      if (activeSheetName === name && !next.has(name)) {
+        setActiveSheetName(next.values().next().value || "");
+      }
       return next;
     });
   };
+
+  const activeSheet = preview?.sheet_profiles.find((sheet) => sheet.sheet_name === activeSheetName) || null;
 
   const handleCreateDatasets = useCallback(async () => {
     if (!preview) return;
@@ -93,9 +105,23 @@ export default function SetupPage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
+      <AnalyticsBreadcrumb
+        items={buildConnectionsBreadcrumbs(
+          { label: "Source Catalog", href: "/dashboard/connections/sources" },
+          { label: "Connection Setup" },
+        )}
+      />
       <AnalyticsHeader
         title="Connection Setup"
         contextText={`Source: ${sourceKey}`}
+        actions={
+          <Link
+            href="/dashboard/connections/sources"
+            className="rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+          >
+            Back to sources
+          </Link>
+        }
       />
       <div className="p-6">
         <div className="mx-auto max-w-2xl space-y-6">
@@ -165,9 +191,25 @@ export default function SetupPage() {
 
               <div className="rounded-lg border border-zinc-200 bg-white">
                 <div className="border-b border-zinc-100 px-4 py-3">
-                  <h3 className="text-sm font-semibold text-zinc-900">
-                    Select Sheets
-                  </h3>
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-zinc-900">
+                      Select Sheets
+                    </h3>
+                    <label className="flex items-center gap-2 text-xs text-zinc-500">
+                      Preview
+                      <select
+                        value={activeSheetName}
+                        onChange={(e) => setActiveSheetName(e.target.value)}
+                        className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-700 focus:border-zinc-400 focus:outline-none"
+                      >
+                        {preview.sheet_profiles.map((sheet) => (
+                          <option key={sheet.sheet_name} value={sheet.sheet_name}>
+                            {sheet.sheet_name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                 </div>
                 <div className="space-y-1 p-2">
                   {preview.sheet_profiles.map((sheet) => (
@@ -186,13 +228,36 @@ export default function SetupPage() {
                           {sheet.sheet_name}
                         </p>
                         <p className="text-xs text-zinc-500">
-                          {sheet.row_count} rows, {sheet.column_count} columns
+                          {sheet.data_row_count} data rows, {sheet.column_count} columns
                         </p>
                       </div>
                     </label>
                   ))}
                 </div>
               </div>
+
+              {activeSheet && (
+                <div className="space-y-2 rounded-lg border border-zinc-200 bg-white p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-zinc-900">
+                        Preview: {activeSheet.sheet_name}
+                      </h3>
+                      <p className="text-xs text-zinc-500">
+                        {activeSheet.preview_rows.length} sample rows of {activeSheet.data_row_count} data rows
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
+                      Read only
+                    </span>
+                  </div>
+                  <PreviewGrid
+                    columns={activeSheet.preview_columns}
+                    rows={activeSheet.preview_rows}
+                    totalRowCount={activeSheet.data_row_count}
+                  />
+                </div>
+              )}
 
               {error && <ErrorState message={error} />}
 

@@ -91,8 +91,8 @@ export function fetchDatasetVersions(datasetId: string): Promise<DatasetVersion[
   return request<DatasetVersion[]>(`/api/v4/datasets/${datasetId}/versions`);
 }
 
-export function fetchDatasetPreview(datasetId: string): Promise<{ columns: string[]; rows: (string | null)[][]; total_row_count: number }> {
-  return request<{ columns: string[]; rows: (string | null)[][]; total_row_count: number }>(
+export function fetchDatasetPreview(datasetId: string): Promise<{ columns: string[]; rows: (string | number | boolean | null)[][]; total_row_count: number }> {
+  return request<{ columns: string[]; rows: (string | number | boolean | null)[][]; total_row_count: number }>(
     `/api/v4/datasets/${datasetId}/preview`,
   );
 }

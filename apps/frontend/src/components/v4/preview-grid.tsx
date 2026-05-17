@@ -2,7 +2,7 @@
 
 type Props = {
   columns: string[];
-  rows: (string | null)[][];
+  rows: (string | number | boolean | null)[][];
   totalRowCount: number;
 };
 

@@ -32,7 +32,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const activeTab = (searchParams.get("tab") as Tab) || "Preview";
 
   const [dataset, setDataset] = useState<Dataset | null>(null);
-  const [preview, setPreview] = useState<{ columns: string[]; rows: (string | null)[][]; total_row_count: number } | null>(null);
+  const [preview, setPreview] = useState<{ columns: string[]; rows: (string | number | boolean | null)[][]; total_row_count: number } | null>(null);
   const [versions, setVersions] = useState<DatasetVersion[]>([]);
   const [health, setHealth] = useState<DatasetHealth | null>(null);
   const [lineage, setLineage] = useState<{ nodes: { id: string; type: string; label: string }[]; edges: { from: string; to: string; type: string }[] } | null>(null);
@@ -109,11 +109,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
 
       <div>
         {activeTab === "Preview" && preview && (
-          <PreviewGrid
-            columns={preview.columns}
-            rows={preview.rows}
-            totalRowCount={preview.total_row_count}
-          />
+          <PreviewGrid columns={preview.columns} rows={preview.rows} totalRowCount={preview.total_row_count} />
         )}
 
         {activeTab === "Schema" && (

@@ -122,10 +122,13 @@ export interface SourceType {
 export interface SheetProfile {
   sheet_name: string;
   row_count: number;
+  data_row_count: number;
   column_count: number;
   header_row_index: number | null;
   confidence: number;
   warnings: string[];
+  preview_columns: string[];
+  preview_rows: (string | number | boolean | null)[][];
 }
 
 export interface StaticFilePreview {

@@ -37,8 +37,11 @@ def test_save_uploaded_file_and_build_profiles(monkeypatch, tmp_path):
     profiles = build_sheet_profiles(storage_path)
     assert [profile["sheet_name"] for profile in profiles] == ["Payroll", "Notes"]
     assert profiles[0]["row_count"] == 3
+    assert profiles[0]["data_row_count"] == 2
     assert profiles[0]["column_count"] == 2
     assert profiles[0]["header_row_index"] == 0
+    assert profiles[0]["preview_columns"] == ["name", "amount"]
+    assert profiles[0]["preview_rows"][0] == ["Alice", 100]
 
 
 def test_materialize_dataset_version_writes_jsonl(monkeypatch, tmp_path):

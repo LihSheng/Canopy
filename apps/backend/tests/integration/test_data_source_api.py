@@ -46,6 +46,9 @@ def test_static_file_preview_and_dataset_creation(client: TestClient, auth_heade
     assert preview["file_name"] == "payroll.xlsx"
     assert preview["sheet_profiles"][0]["sheet_name"] == "Payroll"
     assert preview["sheet_profiles"][0]["row_count"] == 3
+    assert preview["sheet_profiles"][0]["data_row_count"] == 2
+    assert preview["sheet_profiles"][0]["preview_columns"] == ["name", "amount"]
+    assert preview["sheet_profiles"][0]["preview_rows"][0] == ["Alice", 100]
 
     connection_resp = client.post(
         "/api/v4/connections/",

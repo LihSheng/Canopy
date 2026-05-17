@@ -23,10 +23,13 @@ class CreateConnectionRequest(BaseModel):
 class SheetProfileResponse(BaseModel):
     sheet_name: str
     row_count: int
+    data_row_count: int
     column_count: int
     header_row_index: int | None
     confidence: float
     warnings: list[str]
+    preview_columns: list[str]
+    preview_rows: list[list[object | None]]
 
 
 class StaticFilePreviewResponse(BaseModel):
