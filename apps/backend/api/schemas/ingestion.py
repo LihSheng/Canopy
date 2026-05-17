@@ -155,3 +155,22 @@ class ReorderStepsRequest(BaseModel):
 
 class PipelineValidationResponse(BaseModel):
     warnings: list[str]
+
+
+class CleanedSnapshotResponse(BaseModel):
+    id: str
+    upload_id: str
+    template_version_id: str
+    status: str
+    row_count: int
+    warning_count: int
+    warnings: list[str]
+    created_at: datetime
+
+
+class ProcessUploadResponse(BaseModel):
+    cleaned_snapshot_id: str
+    status: str
+    row_count: int
+    warning_count: int
+    warnings: list[str]

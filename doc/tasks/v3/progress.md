@@ -6,7 +6,7 @@
 - [x] [Mapping Review Grid](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/mapping-review-grid.md)
 - [x] [Cleaning Rule Builder](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/cleaning-rule-builder.md)
 - [x] [Template Library And Versioning](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/template-library-versioning.md)
-- [ ] [Cleaning Engine And Normalization](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/cleaning-engine-normalization.md)
+- [x] [Cleaning Engine And Normalization](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/cleaning-engine-normalization.md)
 - [ ] [Lineage Graph And Storage](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/lineage-graph.md)
 - [ ] [Publish Review And Activation](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/publish-review-activation.md)
 - [ ] [Excel Source Adapter](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/xlsx-source-adapter.md)

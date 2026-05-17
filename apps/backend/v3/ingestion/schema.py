@@ -83,3 +83,17 @@ class CleaningStepModel(Base):
     parameters: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     description: Mapped[str | None] = mapped_column(String(256), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+
+
+class CleanedSnapshotModel(Base):
+    __tablename__ = "v3_cleaned_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    upload_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    template_version_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="completed")
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    warning_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    storage_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)

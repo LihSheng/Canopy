@@ -33,6 +33,7 @@ EXPECTED_TABLES = {
     "v3_cleaning_steps",
     "v3_template_families",
     "v3_template_versions",
+    "v3_cleaned_snapshots",
 }
 
 

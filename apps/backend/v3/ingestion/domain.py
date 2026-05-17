@@ -34,6 +34,12 @@ class TemplateVersionState(StrEnum):
     published = "published"
 
 
+class CleanedSnapshotStatus(StrEnum):
+    completed = "completed"
+    completed_with_warnings = "completed_with_warnings"
+    failed = "failed"
+
+
 @dataclass
 class UploadRecord:
     id: str
@@ -130,4 +136,33 @@ class CleaningPipeline:
     template_version_id: str | None = None
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class CleaningResult:
+    rows: list[dict]
+    warnings: list[str]
+    row_count: int
+    status: str
+    rename_map: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class NormalizedOutput:
+    rows: list[dict]
+    field_map: dict[str, str]
+    warnings: list[str]
+
+
+@dataclass
+class CleanedSnapshot:
+    id: str
+    upload_id: str
+    template_version_id: str
+    status: str
+    row_count: int
+    warning_count: int
+    warnings: list[str]
+    storage_path: str
+    created_at: datetime = field(default_factory=datetime.now)
 

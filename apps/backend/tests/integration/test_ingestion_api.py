@@ -398,3 +398,106 @@ class TestCleaningTemplates:
             json={"upload_id": "test"},
         )
         assert resp.status_code == 401
+
+
+class TestProcessEndpoint:
+    def _setup_full(self, client: TestClient, auth_headers) -> tuple[str, str]:
+        buf = _make_xlsx([["name", "amount", "date"], ["Alice", 100, "2024-01-15"], ["Bob", 200, "2024-02-20"]])
+        resp = client.post(
+            "/api/v3/ingestion/uploads",
+            files={"file": ("data.xlsx", buf, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            data={"source_profile": "herdhr", "dataset_type": "payroll"},
+            headers=auth_headers,
+        )
+        upload_id = resp.json()["upload_id"]
+
+        pipe_resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        pipeline_id = pipe_resp.json()["id"]
+
+        client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/steps",
+            json=[
+                {"step_type": "trim", "order": 0, "parameters": {"columns": ["name"]}, "description": None},
+            ],
+            headers=auth_headers,
+        )
+
+        fam_resp = client.post(
+            "/api/v3/ingestion/template-families",
+            json={"dataset_type": "payroll", "source_profile": "herdhr", "name": "Test Family", "description": ""},
+            headers=auth_headers,
+        )
+        template_id = fam_resp.json()["id"]
+
+        ver_resp = client.post(
+            f"/api/v3/ingestion/template-families/{template_id}/versions",
+            json={"spec_json": {"steps": [
+                {"step_type": "trim", "order": 0, "parameters": {"columns": ["name"]}},
+            ]}},
+            headers=auth_headers,
+        )
+        version_id = ver_resp.json()["id"]
+
+        client.post(
+            f"/api/v3/ingestion/template-families/{template_id}/versions/{version_id}/publish",
+            headers=auth_headers,
+        )
+
+        client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/bind",
+            json={"template_version_id": version_id},
+            headers=auth_headers,
+        )
+
+        return upload_id, pipeline_id
+
+    def test_process_endpoint_success(self, client: TestClient, auth_headers):
+        upload_id, _ = self._setup_full(client, auth_headers)
+        resp = client.post(f"/api/v3/ingestion/uploads/{upload_id}/process", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "cleaned_snapshot_id" in data
+        assert data["status"] in ("completed", "completed_with_warnings")
+        assert data["row_count"] > 0
+
+    def test_process_no_template_bound_fails(self, client: TestClient, auth_headers):
+        buf = _make_xlsx([["name"], ["Alice"]])
+        resp = client.post(
+            "/api/v3/ingestion/uploads",
+            files={"file": ("data.xlsx", buf, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            data={"source_profile": "herdhr", "dataset_type": "payroll"},
+            headers=auth_headers,
+        )
+        upload_id = resp.json()["upload_id"]
+
+        resp = client.post(f"/api/v3/ingestion/uploads/{upload_id}/process", headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_process_returns_correct_stats(self, client: TestClient, auth_headers):
+        upload_id, _ = self._setup_full(client, auth_headers)
+        resp = client.post(f"/api/v3/ingestion/uploads/{upload_id}/process", headers=auth_headers)
+        data = resp.json()
+        assert data["row_count"] == 2
+        assert isinstance(data["warning_count"], int)
+        assert isinstance(data["warnings"], list)
+
+    def test_get_cleaned_snapshot(self, client: TestClient, auth_headers):
+        upload_id, _ = self._setup_full(client, auth_headers)
+        client.post(f"/api/v3/ingestion/uploads/{upload_id}/process", headers=auth_headers)
+        resp = client.get(f"/api/v3/ingestion/uploads/{upload_id}/cleaned", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["upload_id"] == upload_id
+        assert data["row_count"] > 0
+
+    def test_get_cleaned_snapshot_not_found(self, client: TestClient, auth_headers):
+        resp = client.get("/api/v3/ingestion/uploads/nonexistent/cleaned", headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_process_unauthorized(self, client: TestClient):
+        resp = client.post("/api/v3/ingestion/uploads/nonexistent/process")
+        assert resp.status_code == 401

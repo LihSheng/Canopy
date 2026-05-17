@@ -1,5 +1,6 @@
 import uuid
 from dataclasses import asdict
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
@@ -8,6 +9,7 @@ from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from api.schemas.ingestion import (
     BindTemplateRequest,
+    CleanedSnapshotResponse,
     CleaningPipelineResponse,
     CleaningStepRequest,
     CleaningStepResponse,
@@ -17,6 +19,7 @@ from api.schemas.ingestion import (
     MappingDecisionResponse,
     MappingSuggestionsResponse,
     PipelineValidationResponse,
+    ProcessUploadResponse,
     ReorderStepsRequest,
     TemplateFamilyDetailResponse,
     TemplateFamilyRequest,
@@ -30,6 +33,8 @@ from common.database import get_db
 from common.errors import NotFoundError, ValidationError
 from v3.ingestion.cleaning import validate_pipeline
 from v3.ingestion.domain import (
+    CleanedSnapshot,
+    CleanedSnapshotStatus,
     CleaningPipeline,
     CleaningStep,
     MappingDecision,
@@ -37,6 +42,8 @@ from v3.ingestion.domain import (
     TemplateFamily,
     TemplateFamilyStatus,
 )
+from v3.ingestion.engine import execute_cleaning_pipeline, load_raw_rows, parse_spec_steps, save_cleaned_rows
+from v3.ingestion.normalization import normalize_cleaned_rows
 from v3.ingestion.profiling import generate_profile
 from v3.ingestion.repository import IngestionRepository
 from v3.ingestion.service import process_upload
@@ -525,4 +532,92 @@ def bind_pipeline_to_template(
         steps=[CleaningStepResponse(**asdict(s)) for s in updated.steps],
         created_at=updated.created_at,
         updated_at=updated.updated_at,
+    )
+
+
+@router.post("/uploads/{upload_id}/process", response_model=ProcessUploadResponse)
+def process_upload_endpoint(
+    upload_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> ProcessUploadResponse:
+    repo = IngestionRepository(db)
+
+    upload = repo.get_upload(upload_id)
+    if upload is None:
+        raise NotFoundError("Upload not found")
+
+    pipeline = repo.get_pipeline_by_upload(upload_id)
+    if pipeline is None or pipeline.template_version_id is None:
+        raise ValidationError("No template version bound to this upload")
+
+    version = repo.get_template_version(pipeline.template_version_id)
+    if version is None or version.state != "published":
+        raise ValidationError("No published template version found")
+
+    steps = parse_spec_steps(version.spec_json)
+    if not steps:
+        raise ValidationError("Template version spec contains no steps")
+
+    raw_rows = load_raw_rows(upload.storage_path)
+    if not raw_rows:
+        raise ValidationError("No raw data found for this upload")
+
+    result = execute_cleaning_pipeline(raw_rows, steps)
+
+    mapping_decisions = repo.get_mapping_decisions(upload_id)
+    normalized = normalize_cleaned_rows(result.rows, mapping_decisions, result.rename_map)
+
+    storage_path = save_cleaned_rows(normalized.rows, upload_id)
+
+    all_warnings = list(result.warnings)
+    all_warnings.extend(normalized.warnings)
+    warning_count = len(all_warnings)
+
+    cleaned_status = result.status
+    if cleaned_status == CleanedSnapshotStatus.completed.value and normalized.warnings:
+        cleaned_status = CleanedSnapshotStatus.completed_with_warnings.value
+
+    snapshot = CleanedSnapshot(
+        id=str(uuid.uuid4()),
+        upload_id=upload_id,
+        template_version_id=version.id,
+        status=cleaned_status,
+        row_count=result.row_count,
+        warning_count=warning_count,
+        warnings=all_warnings,
+        storage_path=storage_path,
+        created_at=datetime.now(UTC),
+    )
+    repo.save_cleaned_snapshot(snapshot)
+
+    return ProcessUploadResponse(
+        cleaned_snapshot_id=snapshot.id,
+        status=snapshot.status,
+        row_count=snapshot.row_count,
+        warning_count=snapshot.warning_count,
+        warnings=snapshot.warnings,
+    )
+
+
+@router.get("/uploads/{upload_id}/cleaned", response_model=CleanedSnapshotResponse)
+def get_cleaned_snapshot(
+    upload_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> CleanedSnapshotResponse:
+    repo = IngestionRepository(db)
+    snapshot = repo.get_cleaned_snapshot_by_upload(upload_id)
+    if snapshot is None:
+        raise NotFoundError("No cleaned snapshot found for this upload")
+
+    return CleanedSnapshotResponse(
+        id=snapshot.id,
+        upload_id=snapshot.upload_id,
+        template_version_id=snapshot.template_version_id,
+        status=snapshot.status,
+        row_count=snapshot.row_count,
+        warning_count=snapshot.warning_count,
+        warnings=snapshot.warnings,
+        created_at=snapshot.created_at,
     )

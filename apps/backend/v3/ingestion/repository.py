@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from v3.ingestion.domain import (
+    CleanedSnapshot,
     CleaningPipeline,
     CleaningStep,
     MappingDecision,
@@ -13,6 +14,7 @@ from v3.ingestion.domain import (
     UploadStatus,
 )
 from v3.ingestion.schema import (
+    CleanedSnapshotModel,
     CleaningPipelineModel,
     CleaningStepModel,
     MappingDecisionModel,
@@ -294,6 +296,44 @@ class IngestionRepository:
             order=m.order,
             parameters=dict(m.parameters) if m.parameters else {},
             description=m.description,
+        )
+
+    def save_cleaned_snapshot(self, snapshot: CleanedSnapshot) -> CleanedSnapshot:
+        model = CleanedSnapshotModel(
+            id=snapshot.id,
+            upload_id=snapshot.upload_id,
+            template_version_id=snapshot.template_version_id,
+            status=snapshot.status,
+            row_count=snapshot.row_count,
+            warning_count=snapshot.warning_count,
+            warnings=snapshot.warnings,
+            storage_path=snapshot.storage_path,
+        )
+        self._db.add(model)
+        self._db.commit()
+        return snapshot
+
+    def get_cleaned_snapshot(self, snapshot_id: str) -> CleanedSnapshot | None:
+        model = self._db.query(CleanedSnapshotModel).filter(CleanedSnapshotModel.id == snapshot_id).first()
+        return self._cleaned_to_domain(model) if model else None
+
+    def get_cleaned_snapshot_by_upload(self, upload_id: str) -> CleanedSnapshot | None:
+        model = self._db.query(CleanedSnapshotModel).filter(
+            CleanedSnapshotModel.upload_id == upload_id
+        ).order_by(CleanedSnapshotModel.created_at.desc()).first()
+        return self._cleaned_to_domain(model) if model else None
+
+    def _cleaned_to_domain(self, m: CleanedSnapshotModel) -> CleanedSnapshot:
+        return CleanedSnapshot(
+            id=m.id,
+            upload_id=m.upload_id,
+            template_version_id=m.template_version_id,
+            status=m.status,
+            row_count=m.row_count,
+            warning_count=m.warning_count,
+            warnings=list(m.warnings) if m.warnings else [],
+            storage_path=m.storage_path,
+            created_at=m.created_at,
         )
 
     def _pipeline_to_domain(self, m: CleaningPipelineModel, steps: list[CleaningStepModel]) -> CleaningPipeline:
