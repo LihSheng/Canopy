@@ -6,12 +6,12 @@ this file.
 
 ## Last Verified
 
-- Date: 2026-05-16
+- Date: 2026-05-17
 - Verified areas:
   - top-level repo layout
   - backend implemented routes and service areas
   - DB schema and migration presence
-  - frontend page structure and API client surface
+  - frontend page structure, API client surface, and canonical component folders
   - task progress snapshot
 - Confidence:
   - high for auth, sync, ontology, analytics, anomalies, exports, refresh, and dashboard shell areas

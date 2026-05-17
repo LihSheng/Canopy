@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapAnomalyListView, filterAnomalies } from "@/components/anomalies-v2/anomaly-mappers";
+import { mapAnomalyListView, filterAnomalies } from "@/components/anomalies/anomaly-mappers";
 import type { Anomaly } from "@/lib/api/types";
 
 const mockAnomalies: Anomaly[] = [

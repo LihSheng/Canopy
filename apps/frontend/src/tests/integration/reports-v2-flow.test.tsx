@@ -22,7 +22,7 @@ vi.mock("@/lib/api/reports-v2", () => ({
   fetchRefreshStatus: vi.fn().mockResolvedValue({ status: "idle", last_refresh: null, last_attempt: null, error_message: null }),
 }));
 
-import { ReportsPage } from "@/components/reports-v2/reports-page";
+import { ReportsPage } from "@/components/reports/reports-page";
 import * as api from "@/lib/api/reports-v2";
 import type { ExportJob } from "@/lib/api/types";
 

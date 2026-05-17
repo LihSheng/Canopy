@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapCommandView } from "@/components/dashboard-v2/dashboard-mappers";
+import { mapCommandView } from "@/components/dashboard/dashboard-mappers";
 import type {
   DashboardSummary,
   DepartmentSummary,

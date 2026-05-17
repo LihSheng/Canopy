@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapDepartmentDetailView } from "@/components/department-detail-v2/department-detail-mappers";
+import { mapDepartmentDetailView } from "@/components/department-detail/department-detail-mappers";
 import type {
   DepartmentDetail,
   EmployeeContribution,

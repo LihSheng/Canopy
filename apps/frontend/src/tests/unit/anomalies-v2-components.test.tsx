@@ -17,10 +17,10 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { AnomalyRow } from "@/components/anomalies-v2/anomaly-row";
-import { AnomaliesGroup } from "@/components/anomalies-v2/anomalies-group";
-import { AnomaliesFilterBar } from "@/components/anomalies-v2/anomalies-filter-bar";
-import type { AnomalyListItem, AnomalyGroup } from "@/components/anomalies-v2/anomaly-mappers";
+import { AnomalyRow } from "@/components/anomalies/anomaly-row";
+import { AnomaliesGroup } from "@/components/anomalies/anomalies-group";
+import { AnomaliesFilterBar } from "@/components/anomalies/anomalies-filter-bar";
+import type { AnomalyListItem, AnomalyGroup } from "@/components/anomalies/anomaly-mappers";
 
 const mockItem: AnomalyListItem = {
   id: "a1",

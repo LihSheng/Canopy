@@ -17,8 +17,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { ProfilePage } from "@/components/profile-v2/profile-page";
-import { ProfileIdentityCard, ProfileIdentityCardSkeleton } from "@/components/profile-v2/profile-identity-card";
+import { ProfilePage } from "@/components/profile/profile-page";
+import { ProfileIdentityCard, ProfileIdentityCardSkeleton } from "@/components/profile/profile-identity-card";
 import type { SessionUser } from "@/lib/api/auth";
 
 const mockUser: SessionUser = { id: "u-001", email: "alice@example.com", display_name: "Alice Tan" };

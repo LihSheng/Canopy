@@ -14,9 +14,9 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { DepartmentRankedRow } from "@/components/departments-v2/department-ranked-row";
-import { DepartmentsFilterBar } from "@/components/departments-v2/departments-filter-bar";
-import type { DepartmentRankingItem } from "@/components/departments-v2/department-list-mappers";
+import { DepartmentRankedRow } from "@/components/departments/department-ranked-row";
+import { DepartmentsFilterBar } from "@/components/departments/departments-filter-bar";
+import type { DepartmentRankingItem } from "@/components/departments/department-list-mappers";
 
 const mockItem: DepartmentRankingItem = {
   id: "d1",

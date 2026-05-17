@@ -3,7 +3,7 @@ import {
   attachAttentionState,
   sortItems,
   filterDepartments,
-} from "@/components/departments-v2/department-list-mappers";
+} from "@/components/departments/department-list-mappers";
 import type { DepartmentSummary, Anomaly } from "@/lib/api/types";
 
 const mockDepartments: DepartmentSummary[] = [

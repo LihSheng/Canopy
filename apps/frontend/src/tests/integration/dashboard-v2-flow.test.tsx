@@ -34,7 +34,7 @@ vi.mock("@/lib/api/dashboard", () => ({
   triggerRefresh: vi.fn(),
 }));
 
-import { DashboardPage } from "@/components/dashboard-v2/dashboard-page";
+import { DashboardPage } from "@/components/dashboard/dashboard-page";
 import * as api from "@/lib/api/dashboard";
 
 const mockSummary = {

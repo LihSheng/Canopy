@@ -14,11 +14,11 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { ReportPresetGrid } from "@/components/reports-v2/report-preset-grid";
-import { ReportHistoryRow } from "@/components/reports-v2/report-history-row";
-import { ReportHistoryList } from "@/components/reports-v2/report-history-list";
-import { EXPORT_PRESETS } from "@/components/reports-v2/report-mappers";
-import type { ExportHistoryItem } from "@/components/reports-v2/report-mappers";
+import { ReportPresetGrid } from "@/components/reports/report-preset-grid";
+import { ReportHistoryRow } from "@/components/reports/report-history-row";
+import { ReportHistoryList } from "@/components/reports/report-history-list";
+import { EXPORT_PRESETS } from "@/components/reports/report-mappers";
+import type { ExportHistoryItem } from "@/components/reports/report-mappers";
 
 const mockCompletedItem: ExportHistoryItem = {
   id: "exp-001",

@@ -35,7 +35,7 @@ vi.mock("@/lib/api/dashboard", () => ({
   triggerRefresh: vi.fn(),
 }));
 
-import { DepartmentDetailPage } from "@/components/department-detail-v2/department-detail-page";
+import { DepartmentDetailPage } from "@/components/department-detail/department-detail-page";
 import * as api from "@/lib/api/dashboard";
 import * as client from "@/lib/api/client";
 

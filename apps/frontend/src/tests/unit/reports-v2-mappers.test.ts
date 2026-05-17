@@ -3,7 +3,7 @@ import {
   mapExportJob,
   mapReportsWorkspace,
   EXPORT_PRESETS,
-} from "@/components/reports-v2/report-mappers";
+} from "@/components/reports/report-mappers";
 import type { ExportJob } from "@/lib/api/types";
 
 const mockCompletedJob: ExportJob = {

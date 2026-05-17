@@ -219,6 +219,10 @@ Rules:
 
 - all data access goes through typed frontend API clients
 - components do not encode business analytics rules
+- component folders stay reusable and canonical; do not create `-v2`,
+  `-v3`, or similar versioned component folders/files
+- when a component evolves, update the existing component in place or remove
+  the obsolete one; keep only the live reusable surface
 - UI follows `DESIGN.md`
 - page containers orchestrate data fetching; presentational components stay
   dumb where possible

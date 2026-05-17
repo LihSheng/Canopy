@@ -14,11 +14,11 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { DepartmentDetailHeader } from "@/components/department-detail-v2/department-detail-header";
-import { DepartmentAiSummary } from "@/components/department-detail-v2/department-ai-summary";
-import { DepartmentTrendPanel } from "@/components/department-detail-v2/department-trend-panel";
-import { DepartmentContributorsSplit } from "@/components/department-detail-v2/department-contributors-split";
-import type { ContributorItem, SummaryBrief, TrendSeries } from "@/components/department-detail-v2/department-detail-mappers";
+import { DepartmentDetailHeader } from "@/components/department-detail/department-detail-header";
+import { DepartmentAiSummary } from "@/components/department-detail/department-ai-summary";
+import { DepartmentTrendPanel } from "@/components/department-detail/department-trend-panel";
+import { DepartmentContributorsSplit } from "@/components/department-detail/department-contributors-split";
+import type { ContributorItem, SummaryBrief, TrendSeries } from "@/components/department-detail/department-detail-mappers";
 
 const mockSummary = {
   departmentName: "Engineering",

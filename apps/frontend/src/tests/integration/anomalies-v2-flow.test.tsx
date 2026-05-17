@@ -32,7 +32,7 @@ vi.mock("@/lib/api/dashboard", () => ({
   triggerRefresh: vi.fn(),
 }));
 
-import { AnomaliesPage } from "@/components/anomalies-v2/anomalies-page";
+import { AnomaliesPage } from "@/components/anomalies/anomalies-page";
 import * as api from "@/lib/api/dashboard";
 
 const mockAnomalies = [

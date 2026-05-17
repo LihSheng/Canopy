@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { DepartmentDetailPage } from "@/components/department-detail-v2/department-detail-page";
+import { DepartmentDetailPage } from "@/components/department-detail/department-detail-page";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 
 export default async function DepartmentDetailRoute({

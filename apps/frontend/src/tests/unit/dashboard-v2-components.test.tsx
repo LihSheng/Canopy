@@ -34,12 +34,12 @@ vi.mock("@/lib/api/dashboard", () => ({
   triggerRefresh: vi.fn(),
 }));
 
-import { DashboardSummaryGrid, DashboardSummaryGridSkeleton } from "@/components/dashboard-v2/dashboard-summary-grid";
-import { DashboardAttentionPanel } from "@/components/dashboard-v2/dashboard-attention-panel";
-import { DashboardAttentionItem } from "@/components/dashboard-v2/dashboard-attention-item";
-import { DashboardAiSummaryPanel } from "@/components/dashboard-v2/dashboard-ai-summary-panel";
-import { DashboardDepartmentPreview } from "@/components/dashboard-v2/dashboard-department-preview";
-import type { AttentionListItem, DepartmentPreviewItem, SummaryBrief } from "@/components/dashboard-v2/dashboard-mappers";
+import { DashboardSummaryGrid, DashboardSummaryGridSkeleton } from "@/components/dashboard/dashboard-summary-grid";
+import { DashboardAttentionPanel } from "@/components/dashboard/dashboard-attention-panel";
+import { DashboardAttentionItem } from "@/components/dashboard/dashboard-attention-item";
+import { DashboardAiSummaryPanel } from "@/components/dashboard/dashboard-ai-summary-panel";
+import { DashboardDepartmentPreview } from "@/components/dashboard/dashboard-department-preview";
+import type { AttentionListItem, DepartmentPreviewItem, SummaryBrief } from "@/components/dashboard/dashboard-mappers";
 
 const mockCards = {
   totalSpend: { label: "Total Spend", value: 1_200_000, clickable: false },

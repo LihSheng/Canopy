@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { ProfilePage } from "@/components/profile-v2/profile-page";
+import { ProfilePage } from "@/components/profile/profile-page";
 
 describe("Profile V2 integration", () => {
   it("renders full profile page with breadcrumb trail", () => {
