@@ -3,9 +3,14 @@
 import { useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnalyticsHeader } from "@/components/analytics-shell/analytics-header";
-import { uploadFile, fetchPreview } from "@/lib/api/ingestion";
-import { fetchProjects, createProject, createConnection, createDataset } from "@/lib/api/v4";
-import type { SheetProfile } from "@/lib/api/ingestion";
+import {
+  previewStaticFile,
+  fetchProjects,
+  createProject,
+  createConnection,
+  createDataset,
+} from "@/lib/api/data-source";
+import type { StaticFilePreview } from "@/lib/api/types";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
 
@@ -15,9 +20,8 @@ export default function SetupPage() {
   const sourceKey = searchParams.get("source") || "static_file";
 
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadId, setUploadId] = useState<string | null>(null);
-  const [sheets, setSheets] = useState<SheetProfile[]>([]);
+  const [preparing, setPreparing] = useState(false);
+  const [preview, setPreview] = useState<StaticFilePreview | null>(null);
   const [selectedSheets, setSelectedSheets] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -25,17 +29,15 @@ export default function SetupPage() {
   const handleFileDrop = useCallback(async (dropped: File) => {
     setFile(dropped);
     setError(null);
-    setUploading(true);
+    setPreparing(true);
     try {
-      const result = await uploadFile(dropped, "static_file", "tabular");
-      setUploadId(result.upload_id);
-      const preview = await fetchPreview(result.upload_id);
-      setSheets(preview.sheet_profiles);
-      setSelectedSheets(new Set(preview.sheet_profiles.map((s) => s.sheet_name)));
+      const result = await previewStaticFile(dropped, "static_file");
+      setPreview(result);
+      setSelectedSheets(new Set(result.sheet_profiles.map((s) => s.sheet_name)));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
-      setUploading(false);
+      setPreparing(false);
     }
   }, []);
 
@@ -49,7 +51,7 @@ export default function SetupPage() {
   };
 
   const handleCreateDatasets = useCallback(async () => {
-    if (!uploadId) return;
+    if (!preview) return;
     setCreating(true);
     setError(null);
     try {
@@ -65,11 +67,14 @@ export default function SetupPage() {
       const connection = await createConnection({
         project_id: projectId,
         source_type: "static_file",
-        name: file?.name || "Excel Upload",
-        config_json: { upload_id: uploadId },
+        name: file?.name || preview.file_name || "Static File",
+        config_json: {
+          file_name: preview.file_name,
+          source_file_path: preview.source_file_path,
+        },
       });
 
-      const selected = sheets.filter((s) => selectedSheets.has(s.sheet_name));
+      const selected = preview.sheet_profiles.filter((s) => selectedSheets.has(s.sheet_name));
       for (const sheet of selected) {
         await createDataset({
           project_id: projectId,
@@ -84,7 +89,7 @@ export default function SetupPage() {
     } finally {
       setCreating(false);
     }
-  }, [uploadId, sheets, selectedSheets, file, router]);
+  }, [preview, selectedSheets, file, router]);
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
@@ -94,7 +99,7 @@ export default function SetupPage() {
       />
       <div className="p-6">
         <div className="mx-auto max-w-2xl space-y-6">
-          {!uploadId ? (
+          {!preview ? (
             <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -119,7 +124,7 @@ export default function SetupPage() {
                   <input
                     type="file"
                     className="hidden"
-                    accept=".xlsx,.xls,.csv"
+                    accept=".xlsx,.csv"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) handleFileDrop(f);
@@ -128,10 +133,10 @@ export default function SetupPage() {
                 </label>
               </p>
               <p className="mt-1 text-xs text-zinc-400">
-                Excel (.xlsx, .xls) or CSV files
+                Excel (.xlsx) or CSV files
               </p>
             </div>
-          ) : uploading ? (
+          ) : preparing ? (
             <LoadingSpinner text="Processing file..." />
           ) : (
             <div className="space-y-4">
@@ -151,7 +156,8 @@ export default function SetupPage() {
                   <div>
                     <p className="text-sm font-medium text-zinc-900">{file?.name}</p>
                     <p className="text-xs text-zinc-500">
-                      {sheets.length} sheet{sheets.length !== 1 ? "s" : ""} detected
+                      {preview.sheet_profiles.length} sheet
+                      {preview.sheet_profiles.length !== 1 ? "s" : ""} detected
                     </p>
                   </div>
                 </div>
@@ -164,7 +170,7 @@ export default function SetupPage() {
                   </h3>
                 </div>
                 <div className="space-y-1 p-2">
-                  {sheets.map((sheet) => (
+                  {preview.sheet_profiles.map((sheet) => (
                     <label
                       key={sheet.sheet_name}
                       className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-zinc-50"

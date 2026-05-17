@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchSourceTypes } from "@/lib/api/v4";
+import { fetchSourceTypes } from "@/lib/api/data-source";
 import type { SourceType } from "@/lib/api/types";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";

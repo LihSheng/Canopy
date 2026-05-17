@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchRun } from "@/lib/api/v4";
+import { fetchRun } from "@/lib/api/data-source";
 import type { Run } from "@/lib/api/types";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";

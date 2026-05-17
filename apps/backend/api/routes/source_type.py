@@ -7,7 +7,7 @@ from common.database import get_db
 from v4.source_type.repository import SourceTypeRepository
 from v4.source_type.service import SourceTypeService
 
-router = APIRouter(prefix="/api/source-types", tags=["source_types"])
+router = APIRouter(prefix="/source-types", tags=["source_types"])
 
 
 @router.get("/")

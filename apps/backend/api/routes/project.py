@@ -9,7 +9,7 @@ from common.errors import NotFoundError
 from v4.project.repository import ProjectRepository
 from v4.project.service import ProjectService
 
-router = APIRouter(prefix="/api/projects", tags=["projects"])
+router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 class CreateProjectRequest(BaseModel):

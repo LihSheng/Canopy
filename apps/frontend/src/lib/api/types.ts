@@ -119,6 +119,21 @@ export interface SourceType {
   description: string;
 }
 
+export interface SheetProfile {
+  sheet_name: string;
+  row_count: number;
+  column_count: number;
+  header_row_index: number | null;
+  confidence: number;
+  warnings: string[];
+}
+
+export interface StaticFilePreview {
+  source_file_path: string;
+  file_name: string;
+  sheet_profiles: SheetProfile[];
+}
+
 export interface Connection {
   id: string;
   project_id: string;

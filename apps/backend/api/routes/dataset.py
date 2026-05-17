@@ -1,3 +1,6 @@
+import uuid
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -6,11 +9,14 @@ from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError
+from v4.connection.importer import materialize_dataset_version
+from v4.connection.repository import ConnectionRepository
+from v4.dataset.domain import DatasetVersion, DatasetVersionStatus
 from v4.dataset.repository import DatasetRepository, DatasetVersionRepository
 from v4.dataset.service import DatasetService, DatasetVersionService
 from v4.run.repository import RunRepository
 
-router = APIRouter(prefix="/api/datasets", tags=["datasets"])
+router = APIRouter(prefix="/datasets", tags=["datasets"])
 
 
 class CreateDatasetRequest(BaseModel):
@@ -36,13 +42,39 @@ def list_datasets(project_id: str = Query(""), db: Session = Depends(get_db), us
 @router.post("/", status_code=201)
 def create_dataset(body: CreateDatasetRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
     version_repo = DatasetVersionRepository(db)
-    service = DatasetService(DatasetRepository(db), version_repo)
-    return service.create_dataset(
+    dataset_repo = DatasetRepository(db)
+    service = DatasetService(dataset_repo, version_repo)
+    dataset = service.create_dataset(
         project_id=body.project_id,
         connection_id=body.connection_id,
         name=body.name,
         source_object_name=body.source_object_name,
     )
+
+    connection = ConnectionRepository(db).get(body.connection_id)
+    if connection is not None:
+        source_file_path = connection.config_json.get("source_file_path")
+        if connection.source_type == "static_file" and isinstance(source_file_path, str) and source_file_path:
+            version_path, row_count, column_count = materialize_dataset_version(
+                storage_path=Path(source_file_path),
+                sheet_name=body.source_object_name or body.name,
+                dataset_id=dataset.id,
+            )
+            version = version_repo.save(
+                DatasetVersion(
+                    id=str(uuid.uuid4()),
+                    dataset_id=dataset.id,
+                    run_id=None,
+                    version_number=1,
+                    status=DatasetVersionStatus.READY.value,
+                    row_count=row_count,
+                    column_count=column_count,
+                    storage_path=str(version_path),
+                ),
+            )
+            dataset = dataset_repo.update_active_version(dataset.id, version.id) or dataset
+
+    return dataset
 
 
 @router.get("/{id}")

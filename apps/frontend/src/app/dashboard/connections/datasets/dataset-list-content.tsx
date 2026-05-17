@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchDatasets } from "@/lib/api/v4";
+import { fetchDatasets } from "@/lib/api/data-source";
 import type { Dataset } from "@/lib/api/types";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
@@ -44,7 +44,7 @@ export default function DatasetListContent() {
     return (
       <EmptyState
         title="No datasets yet"
-        description="Upload a file from the source catalog to create your first dataset."
+        description="Create a dataset from a connected data source."
       />
     );
   }

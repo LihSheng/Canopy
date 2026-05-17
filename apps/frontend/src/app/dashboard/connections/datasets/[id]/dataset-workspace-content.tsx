@@ -9,7 +9,7 @@ import {
   fetchDatasetHealth,
   fetchDatasetLineage,
   fetchRuns,
-} from "@/lib/api/v4";
+} from "@/lib/api/data-source";
 import type { Dataset, DatasetVersion, DatasetHealth, Run } from "@/lib/api/types";
 import { PreviewGrid } from "@/components/v4/preview-grid";
 import { HealthPanel } from "@/components/v4/health-panel";

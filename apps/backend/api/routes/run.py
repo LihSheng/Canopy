@@ -9,7 +9,7 @@ from common.errors import NotFoundError
 from v4.run.repository import RunRepository
 from v4.run.service import RunService
 
-router = APIRouter(prefix="/api/runs", tags=["runs"])
+router = APIRouter(prefix="/runs", tags=["runs"])
 
 
 class CreateRunRequest(BaseModel):

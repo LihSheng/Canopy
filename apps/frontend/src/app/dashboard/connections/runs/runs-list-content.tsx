@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { fetchRuns } from "@/lib/api/v4";
+import { fetchRuns } from "@/lib/api/data-source";
 import type { Run } from "@/lib/api/types";
 import { RunHistory } from "@/components/v4/run-history";
 import { EmptyState } from "@/components/shared/empty-state";

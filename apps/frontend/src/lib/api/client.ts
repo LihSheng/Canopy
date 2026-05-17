@@ -1,13 +1,16 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const has_form_data = typeof FormData !== "undefined" && options.body instanceof FormData;
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers: has_form_data
+      ? options.headers
+      : {
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
   });
 
   if (!res.ok) {
