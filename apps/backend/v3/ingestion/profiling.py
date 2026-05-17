@@ -147,7 +147,7 @@ def generate_profile(repo: IngestionRepository, upload_id: str) -> WorkbookProfi
         from common.errors import NotFoundError
         raise NotFoundError("Upload not found")
 
-    if record.status != "uploaded":
+    if record.status == "failed":
         from common.errors import ValidationError
         raise ValidationError(f"Cannot profile upload in status '{record.status}'")
 
