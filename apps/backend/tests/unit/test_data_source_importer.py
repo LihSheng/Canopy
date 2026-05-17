@@ -6,7 +6,12 @@ from types import SimpleNamespace
 import openpyxl
 
 from common.config import settings
-from v4.connection.importer import build_sheet_profiles, materialize_dataset_version, save_uploaded_file
+from v4.connection.importer import (
+    build_sheet_profiles,
+    delete_uploaded_file,
+    materialize_dataset_version,
+    save_uploaded_file,
+)
 
 
 def _make_xlsx() -> bytes:
@@ -42,6 +47,19 @@ def test_save_uploaded_file_and_build_profiles(monkeypatch, tmp_path):
     assert profiles[0]["header_row_index"] == 0
     assert profiles[0]["preview_columns"] == ["name", "amount"]
     assert profiles[0]["preview_rows"][0] == ["Alice", 100]
+
+
+def test_delete_uploaded_file_removes_preview_artifact(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "export_storage_dir", str(tmp_path), raising=False)
+    upload = SimpleNamespace(filename="sample.csv", file=io.BytesIO(b"name,amount\nAlice,100\n"))
+
+    storage_path = save_uploaded_file(upload)
+
+    assert storage_path.exists()
+
+    delete_uploaded_file(storage_path)
+
+    assert not storage_path.exists()
 
 
 def test_materialize_dataset_version_writes_jsonl(monkeypatch, tmp_path):

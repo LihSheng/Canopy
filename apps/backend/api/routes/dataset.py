@@ -3,6 +3,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from api.dependencies.auth import get_current_user
@@ -30,6 +32,73 @@ class CreateVersionRequest(BaseModel):
     run_id: str | None = None
 
 
+def _resolve_static_source_file_path(connection, db: Session) -> str:
+    source_file_path = connection.config_json.get("source_file_path")
+    if isinstance(source_file_path, str) and source_file_path:
+        return source_file_path
+
+    upload_id = connection.config_json.get("upload_id")
+    if not isinstance(upload_id, str) or not upload_id:
+        return ""
+
+    try:
+        return (
+            db.execute(
+                text("select storage_path from v3_uploads where id = :upload_id"),
+                {"upload_id": upload_id},
+            ).scalar_one_or_none()
+            or ""
+        )
+    except SQLAlchemyError:
+        return ""
+
+
+def _hydrate_dataset_version(
+    dataset,
+    db: Session,
+):
+    version_repo = DatasetVersionRepository(db)
+    dataset_repo = DatasetRepository(db)
+
+    if dataset.active_version_id:
+        return dataset
+
+    latest_version = version_repo.get_latest_by_dataset(dataset.id)
+    if latest_version is not None:
+        return dataset_repo.update_active_version(dataset.id, latest_version.id) or dataset
+
+    connection = ConnectionRepository(db).get(dataset.connection_id)
+    if connection is None:
+        return dataset
+
+    source_file_path = _resolve_static_source_file_path(connection, db)
+    if connection.source_type != "static_file" or not source_file_path:
+        return dataset
+
+    version_path, row_count, column_count = materialize_dataset_version(
+        storage_path=Path(source_file_path),
+        sheet_name=dataset.source_object_name or dataset.name,
+        dataset_id=dataset.id,
+    )
+    version_number = 1
+    if latest_version is not None:
+        version_number = latest_version.version_number + 1
+
+    version = version_repo.save(
+        DatasetVersion(
+            id=str(uuid.uuid4()),
+            dataset_id=dataset.id,
+            run_id=None,
+            version_number=version_number,
+            status=DatasetVersionStatus.READY.value,
+            row_count=row_count,
+            column_count=column_count,
+            storage_path=str(version_path),
+        ),
+    )
+    return dataset_repo.update_active_version(dataset.id, version.id) or dataset
+
+
 @router.get("/")
 def list_datasets(project_id: str = Query(""), db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
     version_repo = DatasetVersionRepository(db)
@@ -53,8 +122,8 @@ def create_dataset(body: CreateDatasetRequest, db: Session = Depends(get_db), us
 
     connection = ConnectionRepository(db).get(body.connection_id)
     if connection is not None:
-        source_file_path = connection.config_json.get("source_file_path")
-        if connection.source_type == "static_file" and isinstance(source_file_path, str) and source_file_path:
+        source_file_path = _resolve_static_source_file_path(connection, db)
+        if connection.source_type == "static_file" and source_file_path:
             version_path, row_count, column_count = materialize_dataset_version(
                 storage_path=Path(source_file_path),
                 sheet_name=body.source_object_name or body.name,
@@ -102,39 +171,34 @@ def create_version(id: str, body: CreateVersionRequest, db: Session = Depends(ge
 
 
 @router.get("/{id}/preview")
-def preview_dataset(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+def preview_dataset(
+    id: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=1000),
+    search: str = Query(""),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
     dataset_repo = DatasetRepository(db)
     version_repo = DatasetVersionRepository(db)
     dataset = dataset_repo.get(id)
     if dataset is None:
         raise NotFoundError("Dataset not found")
 
-    if not dataset.active_version_id:
-        return {"columns": [], "rows": [], "total_row_count": 0}
+    dataset = _hydrate_dataset_version(dataset, db)
 
     version = version_repo.get_active_version(id, dataset.active_version_id)
     if version is None or not version.storage_path:
-        return {"columns": [], "rows": [], "total_row_count": 0}
+        return {"columns": [], "rows": [], "total_row_count": 0, "filtered_row_count": 0, "page": page, "page_size": page_size}
 
-    import json
-    from pathlib import Path
+    from v4.dataset.preview_service import read_dataset_preview
 
-    path = Path(version.storage_path)
-    if not path.exists():
-        return {"columns": [], "rows": [], "total_row_count": 0}
-
-    rows: list[dict] = []
-    columns: list[str] = []
-    with open(str(path), "r") as f:
-        for i, line in enumerate(f):
-            if i >= 100:
-                break
-            row = json.loads(line)
-            if isinstance(row, dict):
-                if not columns:
-                    columns = list(row.keys())
-                rows.append([row.get(c) for c in columns])
-    return {"columns": columns, "rows": rows, "total_row_count": len(rows)}
+    return read_dataset_preview(
+        storage_path=version.storage_path,
+        page=page,
+        page_size=page_size,
+        search=search or None,
+    )
 
 
 @router.get("/{id}/lineage")

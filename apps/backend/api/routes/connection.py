@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -7,7 +9,7 @@ from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError, ValidationError
 from v4.connection.repository import ConnectionRepository
-from v4.connection.importer import build_sheet_profiles, save_uploaded_file
+from v4.connection.importer import build_sheet_profiles, delete_uploaded_file, save_uploaded_file
 from v4.connection.service import ConnectionService
 
 router = APIRouter(prefix="/connections", tags=["connections"])
@@ -36,6 +38,10 @@ class StaticFilePreviewResponse(BaseModel):
     source_file_path: str
     file_name: str
     sheet_profiles: list[SheetProfileResponse]
+
+
+class DeleteStaticFilePreviewRequest(BaseModel):
+    source_file_path: str
 
 
 @router.get("/")
@@ -74,6 +80,16 @@ def preview_static_file(
         file_name=file.filename or storage_path.name,
         sheet_profiles=[SheetProfileResponse(**profile) for profile in sheet_profiles],
     )
+
+
+@router.delete("/preview")
+def delete_static_file_preview(
+    body: DeleteStaticFilePreviewRequest,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    delete_uploaded_file(Path(body.source_file_path))
+    return {"deleted": True}
 
 
 @router.get("/{id}")

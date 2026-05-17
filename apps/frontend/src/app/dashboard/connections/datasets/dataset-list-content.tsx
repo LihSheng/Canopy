@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchDatasets } from "@/lib/api/data-source";
 import type { Dataset } from "@/lib/api/types";
-import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
+import { CompactTable } from "@/components/shared/table";
+import type { ColumnDef } from "@/components/shared/table";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-800",
@@ -14,6 +15,54 @@ const statusColor: Record<string, string> = {
   error: "bg-red-100 text-red-800",
   processing: "bg-blue-100 text-blue-800",
 };
+
+const DATASET_LIST_COLUMNS: ColumnDef[] = [
+  {
+    key: "name",
+    header: "Name",
+    render: (value, row) => (
+      <Link
+        href={`/dashboard/connections/datasets/${row.id}`}
+        className="font-medium text-indigo-600 hover:text-indigo-500"
+      >
+        {String(value ?? "")}
+      </Link>
+    ),
+  },
+  { key: "source_object_name", header: "Source Object" },
+  {
+    key: "status",
+    header: "Status",
+    render: (value) => (
+      <span
+        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+          statusColor[String(value ?? "")] || "bg-zinc-100 text-zinc-600"
+        }`}
+      >
+        {String(value ?? "")}
+      </span>
+    ),
+  },
+  {
+    key: "created_at",
+    header: "Created",
+    render: (value) =>
+      new Date(String(value ?? "")).toLocaleDateString(),
+  },
+  {
+    key: "actions",
+    header: "",
+    align: "right",
+    render: (value, row) => (
+      <Link
+        href={`/dashboard/connections/datasets/${row.id}`}
+        className="text-xs font-medium text-indigo-600 hover:text-indigo-500"
+      >
+        Open
+      </Link>
+    ),
+  },
+];
 
 export default function DatasetListContent() {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -42,69 +91,24 @@ export default function DatasetListContent() {
 
   if (datasets.length === 0) {
     return (
-      <EmptyState
-        title="No datasets yet"
-        description="Create a dataset from a connected data source."
+      <CompactTable
+        columns={DATASET_LIST_COLUMNS}
+        rows={[]}
+        getRowId={(row) => String(row.id)}
+        emptyText="No datasets yet"
       />
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-200">
-      <table className="min-w-full divide-y divide-zinc-200 text-sm">
-        <thead>
-          <tr className="bg-zinc-50">
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Name
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Source Object
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Status
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Created
-            </th>
-            <th className="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-zinc-100">
-          {datasets.map((ds) => (
-            <tr key={ds.id} className="hover:bg-zinc-50">
-              <td className="px-4 py-3">
-                <Link
-                  href={`/dashboard/connections/datasets/${ds.id}`}
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  {ds.name}
-                </Link>
-              </td>
-              <td className="px-4 py-3 text-zinc-700">{ds.source_object_name}</td>
-              <td className="px-4 py-3">
-                <span
-                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                    statusColor[ds.status] || "bg-zinc-100 text-zinc-600"
-                  }`}
-                >
-                  {ds.status}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-zinc-500">
-                {new Date(ds.created_at).toLocaleDateString()}
-              </td>
-              <td className="px-4 py-3 text-right">
-                <Link
-                  href={`/dashboard/connections/datasets/${ds.id}`}
-                  className="text-xs font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  Open
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <CompactTable
+      columns={DATASET_LIST_COLUMNS}
+      rows={datasets as unknown as Record<string, unknown>[]}
+      getRowId={(row) => String(row.id)}
+      loading={loading}
+      error={error}
+      onRetry={load}
+      emptyText="No datasets yet"
+    />
   );
 }

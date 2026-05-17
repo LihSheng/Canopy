@@ -32,6 +32,25 @@ def save_uploaded_file(file: UploadFile) -> Path:
     return storage_path
 
 
+def delete_uploaded_file(storage_path: Path) -> None:
+    resolved_path = storage_path.resolve()
+    root = storage_root().resolve()
+
+    if resolved_path != root and root not in resolved_path.parents:
+        raise ValidationError("Invalid preview file path")
+
+    if resolved_path.exists():
+        resolved_path.unlink()
+
+    current_dir = resolved_path.parent
+    while current_dir != root and current_dir.exists():
+        try:
+            current_dir.rmdir()
+        except OSError:
+            break
+        current_dir = current_dir.parent
+
+
 def build_sheet_profiles(storage_path: Path) -> list[dict]:
     if storage_path.suffix.lower() == ".csv":
         return [_build_csv_profile(storage_path)]

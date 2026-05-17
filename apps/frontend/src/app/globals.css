@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../../node_modules/@glideapps/glide-data-grid/dist/index.css";
 
 :root {
   --background: #ffffff;

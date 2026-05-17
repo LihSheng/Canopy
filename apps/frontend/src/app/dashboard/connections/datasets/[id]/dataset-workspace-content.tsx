@@ -11,10 +11,11 @@ import {
   fetchRuns,
 } from "@/lib/api/data-source";
 import type { Dataset, DatasetVersion, DatasetHealth, Run } from "@/lib/api/types";
-import { PreviewGrid } from "@/components/v4/preview-grid";
-import { HealthPanel } from "@/components/v4/health-panel";
-import { RunHistory } from "@/components/v4/run-history";
-import { LineageView } from "@/components/v4/lineage-view";
+import type { DatasetPreviewResponse } from "@/lib/api/data-source";
+import { DatasetPreviewGrid } from "@/components/dataset-preview-grid";
+import { HealthPanel } from "@/components/health-panel";
+import { RunHistory } from "@/components/run-history";
+import { LineageView } from "@/components/lineage-view";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
 
@@ -32,7 +33,11 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const activeTab = (searchParams.get("tab") as Tab) || "Preview";
 
   const [dataset, setDataset] = useState<Dataset | null>(null);
-  const [preview, setPreview] = useState<{ columns: string[]; rows: (string | number | boolean | null)[][]; total_row_count: number } | null>(null);
+  const [preview, setPreview] = useState<DatasetPreviewResponse | null>(null);
+  const [previewPage, setPreviewPage] = useState(1);
+  const [previewPageSize] = useState(100);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [versions, setVersions] = useState<DatasetVersion[]>([]);
   const [health, setHealth] = useState<DatasetHealth | null>(null);
   const [lineage, setLineage] = useState<{ nodes: { id: string; type: string; label: string }[]; edges: { from: string; to: string; type: string }[] } | null>(null);
@@ -44,17 +49,15 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const [ds, previewData, versionsData, healthData, lineageData, runsData] =
+      const [ds, versionsData, healthData, lineageData, runsData] =
         await Promise.all([
           fetchDataset(datasetId),
-          fetchDatasetPreview(datasetId),
           fetchDatasetVersions(datasetId),
           fetchDatasetHealth(datasetId),
           fetchDatasetLineage(datasetId),
           fetchRuns(datasetId),
         ]);
       setDataset(ds);
-      setPreview(previewData);
       setVersions(versionsData);
       setHealth(healthData);
       setLineage(lineageData);
@@ -66,9 +69,30 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
     }
   }, [datasetId]);
 
+  const loadPreview = useCallback(async () => {
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const previewData = await fetchDatasetPreview(datasetId, {
+        page: previewPage,
+        page_size: previewPageSize,
+      });
+      setPreview(previewData);
+    } catch (err) {
+      setPreviewError(err instanceof Error ? err.message : "Failed to load preview");
+      setPreview(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [datasetId, previewPage, previewPageSize]);
+
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    loadPreview();
+  }, [loadPreview]);
 
   const setTab = (tab: Tab) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -108,8 +132,18 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
       </div>
 
       <div>
-        {activeTab === "Preview" && preview && (
-          <PreviewGrid columns={preview.columns} rows={preview.rows} totalRowCount={preview.total_row_count} />
+        {activeTab === "Preview" && (
+          <DatasetPreviewGrid
+            columns={preview?.columns ?? []}
+            rows={preview?.rows ?? []}
+            totalRowCount={preview?.total_row_count ?? 0}
+            page={previewPage}
+            pageSize={previewPageSize}
+            loading={previewLoading}
+            error={previewError}
+            onPageChange={(page) => setPreviewPage(page)}
+            onRetry={loadPreview}
+          />
         )}
 
         {activeTab === "Schema" && (

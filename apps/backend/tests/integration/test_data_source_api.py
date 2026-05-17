@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import io
+import uuid
 
 import openpyxl
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
+
+from v4.dataset.domain import Dataset
+from v4.dataset.repository import DatasetRepository
 
 
 pytestmark = pytest.mark.api_schema
@@ -92,3 +97,333 @@ def test_static_file_preview_and_dataset_creation(client: TestClient, auth_heade
     preview_dataset = preview_dataset_resp.json()
     assert preview_dataset["columns"] == ["name", "amount"]
     assert preview_dataset["rows"][0] == ["Alice", 100]
+
+    delete_preview_resp = client.request(
+        "DELETE",
+        "/api/v4/connections/preview",
+        json={"source_file_path": preview["source_file_path"]},
+        headers=auth_headers,
+    )
+    assert delete_preview_resp.status_code == 200
+    assert delete_preview_resp.json()["deleted"] is True
+
+
+def test_preview_backfills_legacy_dataset_without_active_version(client: TestClient, auth_headers, monkeypatch, tmp_path, db_session):
+    from common.config import settings
+
+    monkeypatch.setattr(settings, "export_storage_dir", str(tmp_path), raising=False)
+
+    project_resp = client.post(
+        "/api/v4/projects/",
+        json={"name": "Legacy Project", "description": "Test project"},
+        headers=auth_headers,
+    )
+    assert project_resp.status_code == 201
+    project_id = project_resp.json()["id"]
+
+    preview_resp = client.post(
+        "/api/v4/connections/preview",
+        files={"file": ("payroll.xlsx", _make_xlsx_bytes(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers=auth_headers,
+    )
+    assert preview_resp.status_code == 200
+    preview = preview_resp.json()
+
+    connection_resp = client.post(
+        "/api/v4/connections/",
+        json={
+            "project_id": project_id,
+            "source_type": "static_file",
+            "name": "Payroll file",
+            "config_json": {
+                "file_name": preview["file_name"],
+                "source_file_path": preview["source_file_path"],
+            },
+        },
+        headers=auth_headers,
+    )
+    assert connection_resp.status_code == 201
+    connection_id = connection_resp.json()["id"]
+
+    dataset_repo = DatasetRepository(db_session)
+    dataset_repo.save(
+        Dataset(
+            id=str(uuid.uuid4()),
+            project_id=project_id,
+            connection_id=connection_id,
+            name="Payroll Legacy",
+            source_object_name="Payroll",
+        ),
+    )
+
+    datasets_resp = client.get("/api/v4/datasets/", headers=auth_headers)
+    dataset_id = next(item["id"] for item in datasets_resp.json() if item["name"] == "Payroll Legacy")
+
+    preview_dataset_resp = client.get(f"/api/v4/datasets/{dataset_id}/preview", headers=auth_headers)
+    assert preview_dataset_resp.status_code == 200
+    preview_dataset = preview_dataset_resp.json()
+    assert preview_dataset["columns"] == ["name", "amount"]
+    assert preview_dataset["rows"][0] == ["Alice", 100]
+
+    versions_resp = client.get(f"/api/v4/datasets/{dataset_id}/versions", headers=auth_headers)
+    assert versions_resp.status_code == 200
+    versions = versions_resp.json()
+    assert len(versions) == 1
+
+
+def test_preview_backfills_upload_id_connection_without_active_version(client: TestClient, auth_headers, monkeypatch, tmp_path, db_session):
+    from common.config import settings
+
+    monkeypatch.setattr(settings, "export_storage_dir", str(tmp_path), raising=False)
+
+    project_resp = client.post(
+        "/api/v4/projects/",
+        json={"name": "Upload ID Project", "description": "Test project"},
+        headers=auth_headers,
+    )
+    assert project_resp.status_code == 201
+    project_id = project_resp.json()["id"]
+
+    preview_resp = client.post(
+        "/api/v4/connections/preview",
+        files={"file": ("payroll.xlsx", _make_xlsx_bytes(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers=auth_headers,
+    )
+    assert preview_resp.status_code == 200
+    preview = preview_resp.json()
+    upload_id = str(uuid.uuid4())
+
+    db_session.execute(
+        text(
+            """
+            create table if not exists v3_uploads (
+                id varchar primary key,
+                storage_path varchar not null
+            )
+            """,
+        ),
+    )
+    db_session.execute(
+        text("insert into v3_uploads (id, storage_path) values (:id, :storage_path)"),
+        {"id": upload_id, "storage_path": preview["source_file_path"]},
+    )
+    db_session.commit()
+
+    connection_resp = client.post(
+        "/api/v4/connections/",
+        json={
+            "project_id": project_id,
+            "source_type": "static_file",
+            "name": "Payroll file",
+            "config_json": {"upload_id": upload_id},
+        },
+        headers=auth_headers,
+    )
+    assert connection_resp.status_code == 201
+    connection_id = connection_resp.json()["id"]
+
+    dataset_repo = DatasetRepository(db_session)
+    dataset_repo.save(
+        Dataset(
+            id=str(uuid.uuid4()),
+            project_id=project_id,
+            connection_id=connection_id,
+            name="Payroll Upload Legacy",
+            source_object_name="Payroll",
+        ),
+    )
+
+    datasets_resp = client.get("/api/v4/datasets/", headers=auth_headers)
+    dataset_id = next(item["id"] for item in datasets_resp.json() if item["name"] == "Payroll Upload Legacy")
+
+    preview_dataset_resp = client.get(f"/api/v4/datasets/{dataset_id}/preview", headers=auth_headers)
+    assert preview_dataset_resp.status_code == 200
+    preview_dataset = preview_dataset_resp.json()
+    assert preview_dataset["columns"] == ["name", "amount"]
+    assert preview_dataset["rows"][0] == ["Alice", 100]
+
+
+def _create_dataset_via_api(client, auth_headers, monkeypatch, tmp_path, xlsx_buffer, project_name, connection_name, dataset_name, sheet_name="Payroll"):
+    from common.config import settings
+
+    monkeypatch.setattr(settings, "export_storage_dir", str(tmp_path), raising=False)
+
+    project_resp = client.post(
+        "/api/v4/projects/",
+        json={"name": project_name, "description": "Test project"},
+        headers=auth_headers,
+    )
+    assert project_resp.status_code == 201
+    project_id = project_resp.json()["id"]
+
+    preview_resp = client.post(
+        "/api/v4/connections/preview",
+        files={"file": ("data.xlsx", xlsx_buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers=auth_headers,
+    )
+    assert preview_resp.status_code == 200
+    preview = preview_resp.json()
+
+    connection_resp = client.post(
+        "/api/v4/connections/",
+        json={
+            "project_id": project_id,
+            "source_type": "static_file",
+            "name": connection_name,
+            "config_json": {
+                "file_name": preview["file_name"],
+                "source_file_path": preview["source_file_path"],
+            },
+        },
+        headers=auth_headers,
+    )
+    assert connection_resp.status_code == 201
+    connection_id = connection_resp.json()["id"]
+
+    dataset_resp = client.post(
+        "/api/v4/datasets/",
+        json={
+            "project_id": project_id,
+            "connection_id": connection_id,
+            "name": dataset_name,
+            "source_object_name": sheet_name,
+        },
+        headers=auth_headers,
+    )
+    assert dataset_resp.status_code == 201
+    dataset = dataset_resp.json()
+    assert dataset["active_version_id"] is not None
+    return dataset["id"]
+
+
+def _make_two_row_xlsx_bytes() -> io.BytesIO:
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "Payroll"
+    sheet.append(["name", "amount"])
+    sheet.append(["Alice", 100])
+    sheet.append(["Bob", 200])
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def test_dataset_preview_pagination_first_page(client: TestClient, auth_headers, monkeypatch, tmp_path):
+    dataset_id = _create_dataset_via_api(
+        client, auth_headers, monkeypatch, tmp_path,
+        _make_two_row_xlsx_bytes(),
+        "Pagination Project", "Pagination Conn", "Paginated Dataset",
+    )
+
+    resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/preview",
+        params={"page": 1, "page_size": 1},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["columns"] == ["name", "amount"]
+    assert data["rows"] == [["Alice", 100]]
+    assert data["total_row_count"] == 2
+    assert data["filtered_row_count"] == 2
+    assert data["page"] == 1
+    assert data["page_size"] == 1
+
+
+def test_dataset_preview_pagination_second_page(client: TestClient, auth_headers, monkeypatch, tmp_path):
+    dataset_id = _create_dataset_via_api(
+        client, auth_headers, monkeypatch, tmp_path,
+        _make_two_row_xlsx_bytes(),
+        "Pagination2 Project", "Pagination2 Conn", "Paginated2 Dataset",
+    )
+
+    resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/preview",
+        params={"page": 2, "page_size": 1},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["rows"] == [["Bob", 200]]
+    assert data["total_row_count"] == 2
+    assert data["filtered_row_count"] == 2
+    assert data["page"] == 2
+    assert data["page_size"] == 1
+
+
+def _make_large_xlsx_bytes(num_rows: int = 60) -> io.BytesIO:
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "Payroll"
+    sheet.append(["name", "amount"])
+    for i in range(num_rows):
+        if i == 42:
+            sheet.append(["UniqueSearchTarget", 9999])
+        else:
+            sheet.append([f"Person_{i}", i * 10])
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def test_dataset_preview_search_finds_match(client: TestClient, auth_headers, monkeypatch, tmp_path):
+    dataset_id = _create_dataset_via_api(
+        client, auth_headers, monkeypatch, tmp_path,
+        _make_large_xlsx_bytes(60),
+        "Search Project", "Search Conn", "Search Dataset",
+    )
+
+    resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/preview",
+        params={"search": "UniqueSearchTarget", "page_size": 100},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_row_count"] == 60
+    assert data["filtered_row_count"] == 1
+    assert len(data["rows"]) == 1
+    assert data["rows"][0] == ["UniqueSearchTarget", 9999]
+
+
+def test_dataset_preview_search_no_match(client: TestClient, auth_headers, monkeypatch, tmp_path):
+    dataset_id = _create_dataset_via_api(
+        client, auth_headers, monkeypatch, tmp_path,
+        _make_large_xlsx_bytes(60),
+        "SearchNoMatch Project", "SearchNoMatch Conn", "SearchNoMatch Dataset",
+    )
+
+    resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/preview",
+        params={"search": "zzzzzzNotFound"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_row_count"] == 60
+    assert data["filtered_row_count"] == 0
+    assert data["rows"] == []
+
+
+def test_dataset_preview_invalid_page(client: TestClient, auth_headers, monkeypatch, tmp_path):
+    dataset_id = _create_dataset_via_api(
+        client, auth_headers, monkeypatch, tmp_path,
+        _make_two_row_xlsx_bytes(),
+        "InvalidPage Project", "InvalidPage Conn", "InvalidPage Dataset",
+    )
+
+    resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/preview",
+        params={"page": 0},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 422
+
+    resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/preview",
+        params={"page": -1},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 422

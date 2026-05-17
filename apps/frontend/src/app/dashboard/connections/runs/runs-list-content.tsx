@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchRuns } from "@/lib/api/data-source";
 import type { Run } from "@/lib/api/types";
-import { RunHistory } from "@/components/v4/run-history";
+import { RunHistory } from "@/components/run-history";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";

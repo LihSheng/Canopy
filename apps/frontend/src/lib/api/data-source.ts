@@ -10,6 +10,14 @@ import type {
   StaticFilePreview,
 } from "./types";
 
+export interface DatasetPreviewResponse {
+  columns: string[];
+  rows: (string | number | boolean | null)[][];
+  total_row_count: number;
+  page: number;
+  page_size: number;
+}
+
 export function fetchProjects(): Promise<Project[]> {
   return request<Project[]>("/api/v4/projects/");
 }
@@ -59,7 +67,15 @@ export async function previewStaticFile(
   form.append("source_type", sourceType);
 
   return request<StaticFilePreview>("/api/v4/connections/preview", {
+    method: "POST",
     body: form,
+  });
+}
+
+export function deleteStaticFilePreview(sourceFilePath: string): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>("/api/v4/connections/preview", {
+    method: "DELETE",
+    body: JSON.stringify({ source_file_path: sourceFilePath }),
   });
 }
 
@@ -91,9 +107,16 @@ export function fetchDatasetVersions(datasetId: string): Promise<DatasetVersion[
   return request<DatasetVersion[]>(`/api/v4/datasets/${datasetId}/versions`);
 }
 
-export function fetchDatasetPreview(datasetId: string): Promise<{ columns: string[]; rows: (string | number | boolean | null)[][]; total_row_count: number }> {
-  return request<{ columns: string[]; rows: (string | number | boolean | null)[][]; total_row_count: number }>(
-    `/api/v4/datasets/${datasetId}/preview`,
+export function fetchDatasetPreview(
+  datasetId: string,
+  params?: { page?: number; page_size?: number },
+): Promise<DatasetPreviewResponse> {
+  const qs = new URLSearchParams();
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.page_size) qs.set("page_size", String(params.page_size));
+  const query = qs.toString();
+  return request<DatasetPreviewResponse>(
+    `/api/v4/datasets/${datasetId}/preview${query ? `?${query}` : ""}`,
   );
 }
 
