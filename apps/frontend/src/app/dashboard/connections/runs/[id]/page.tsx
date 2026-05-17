@@ -9,13 +9,13 @@ export default async function RunDetailPage(props: { params: Promise<{ id: strin
   const { id } = await props.params;
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
+      <AnalyticsHeader title="Run Detail" />
       <AnalyticsBreadcrumb
         items={buildConnectionsBreadcrumbs(
           { label: "Run History", href: "/dashboard/connections/runs" },
           { label: "Run Detail" },
         )}
       />
-      <AnalyticsHeader title="Run Detail" />
       <div className="flex-1 overflow-auto p-6">
         <Suspense fallback={<LoadingSpinner text="Loading run..." />}>
           <RunDetailContent runId={id} />

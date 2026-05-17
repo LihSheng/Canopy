@@ -8,8 +8,8 @@ import ConnectionsHomeContent from "./connections-home-content";
 export default function ConnectionsPage() {
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
-      <AnalyticsBreadcrumb items={buildConnectionsBreadcrumbs({ label: "Data Connections" })} />
       <AnalyticsHeader title="Data Connections" />
+      <AnalyticsBreadcrumb items={buildConnectionsBreadcrumbs({ label: "Data Connections" })} />
       <div className="p-6">
         <Suspense fallback={<LoadingSpinner text="Loading connections..." />}>
           <ConnectionsHomeContent />

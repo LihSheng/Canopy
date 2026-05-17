@@ -8,11 +8,11 @@ import SourceCatalogContent from "./source-catalog-content";
 export default function SourcesPage() {
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
-      <AnalyticsBreadcrumb items={buildConnectionsBreadcrumbs({ label: "Source Catalog" })} />
       <AnalyticsHeader
         title="Source Catalog"
         contextText="Browse and connect to available data sources"
       />
+      <AnalyticsBreadcrumb items={buildConnectionsBreadcrumbs({ label: "Source Catalog" })} />
       <div className="p-6">
         <Suspense fallback={<LoadingSpinner text="Loading source catalog..." />}>
           <SourceCatalogContent />

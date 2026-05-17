@@ -9,13 +9,13 @@ export default async function DatasetWorkspacePage(props: { params: Promise<{ id
   const { id } = await props.params;
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
+      <AnalyticsHeader title="Dataset Workspace" />
       <AnalyticsBreadcrumb
         items={buildConnectionsBreadcrumbs(
           { label: "Datasets", href: "/dashboard/connections/datasets" },
           { label: "Dataset Workspace" },
         )}
       />
-      <AnalyticsHeader title="Dataset Workspace" />
       <div className="flex-1 overflow-auto p-6">
         <Suspense fallback={<LoadingSpinner text="Loading dataset..." />}>
           <DatasetWorkspaceContent datasetId={id} />

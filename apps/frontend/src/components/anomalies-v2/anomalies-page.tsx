@@ -54,13 +54,13 @@ export function AnomaliesPage() {
   if (data.status === "error") {
     return (
       <>
+        <AnalyticsHeader title="Anomalies" />
         <AnalyticsBreadcrumb
           items={[
             { label: "Dashboard", href: "/dashboard" },
             { label: "Anomalies" },
           ]}
         />
-        <AnalyticsHeader title="Anomalies" />
         <div className="p-6">
           <ErrorState message={data.message} onRetry={load} />
         </div>
@@ -72,15 +72,15 @@ export function AnomaliesPage() {
 
   return (
     <div className="flex flex-col h-full overflow-auto">
+      <AnalyticsHeader
+        title="Anomalies"
+        contextText={`${contextLabel}${state.departmentId ? " \u00b7 Filtered by department" : ""}`}
+      />
       <AnalyticsBreadcrumb
         items={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Anomalies" },
         ]}
-      />
-      <AnalyticsHeader
-        title="Anomalies"
-        contextText={`${contextLabel}${state.departmentId ? " \u00b7 Filtered by department" : ""}`}
       />
 
       <div className="flex-1 overflow-auto p-6">

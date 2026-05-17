@@ -61,13 +61,13 @@ export function DepartmentsPage() {
   if (data.status === "error") {
     return (
       <>
+        <AnalyticsHeader title="Departments" />
         <AnalyticsBreadcrumb
           items={[
             { label: "Dashboard", href: "/dashboard" },
             { label: "Departments" },
           ]}
         />
-        <AnalyticsHeader title="Departments" />
         <div className="p-6">
           <ErrorState message={data.message} onRetry={load} />
         </div>
@@ -79,18 +79,18 @@ export function DepartmentsPage() {
 
   return (
     <div className="flex flex-col h-full overflow-auto">
-      <AnalyticsBreadcrumb
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Departments" },
-        ]}
-      />
       <AnalyticsHeader
         title="Departments"
         contextText={`${contextLabel}${!loading && data.status === "success"
           ? ` \u00b7 ${filteredAndSorted.length} department${filteredAndSorted.length !== 1 ? "s" : ""}`
           : ""
         }`}
+      />
+      <AnalyticsBreadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Departments" },
+        ]}
       />
 
       <div className="flex-1 overflow-auto p-6">

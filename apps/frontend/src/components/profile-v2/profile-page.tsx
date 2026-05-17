@@ -12,13 +12,13 @@ export function ProfilePage() {
   if (error) {
     return (
       <>
+        <AnalyticsHeader title="Profile" />
         <AnalyticsBreadcrumb
           items={[
             { label: "Dashboard", href: "/dashboard" },
             { label: "Profile" },
           ]}
         />
-        <AnalyticsHeader title="Profile" />
         <div className="p-6">
           <ErrorState message={error} onRetry={refetch} />
         </div>
@@ -28,15 +28,15 @@ export function ProfilePage() {
 
   return (
     <div className="flex flex-col h-full overflow-auto">
+      <AnalyticsHeader
+        title="Profile"
+        contextText={user ? user.email : undefined}
+      />
       <AnalyticsBreadcrumb
         items={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Profile" },
         ]}
-      />
-      <AnalyticsHeader
-        title="Profile"
-        contextText={user ? user.email : undefined}
       />
       <div className="flex-1 overflow-auto p-6">
         {loading ? (

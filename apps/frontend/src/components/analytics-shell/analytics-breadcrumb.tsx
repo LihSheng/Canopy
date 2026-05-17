@@ -14,7 +14,7 @@ type Props = {
 
 export function AnalyticsBreadcrumb({ items }: Props) {
   return (
-    <nav aria-label="Breadcrumb" className="px-6 pt-4">
+    <nav aria-label="Breadcrumb" className="px-6 py-1.5">
       <ol className="flex items-center gap-1.5 text-sm text-zinc-500">
         {items.map((item, i) => {
           const isLast = i === items.length - 1;

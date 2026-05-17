@@ -105,12 +105,6 @@ export default function SetupPage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
-      <AnalyticsBreadcrumb
-        items={buildConnectionsBreadcrumbs(
-          { label: "Source Catalog", href: "/dashboard/connections/sources" },
-          { label: "Connection Setup" },
-        )}
-      />
       <AnalyticsHeader
         title="Connection Setup"
         contextText={`Source: ${sourceKey}`}
@@ -122,6 +116,12 @@ export default function SetupPage() {
             Back to sources
           </Link>
         }
+      />
+      <AnalyticsBreadcrumb
+        items={buildConnectionsBreadcrumbs(
+          { label: "Source Catalog", href: "/dashboard/connections/sources" },
+          { label: "Connection Setup" },
+        )}
       />
       <div className="p-6">
         <div className="mx-auto max-w-2xl space-y-6">

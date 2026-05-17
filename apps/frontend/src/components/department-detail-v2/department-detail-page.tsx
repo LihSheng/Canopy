@@ -71,6 +71,7 @@ export function DepartmentDetailPage({ id }: Props) {
   if (data.status === "error") {
     return (
       <>
+        <AnalyticsHeader title="Department Detail" contextText={contextLabel} />
         <AnalyticsBreadcrumb
           items={[
             { label: "Dashboard", href: "/dashboard" },
@@ -78,7 +79,6 @@ export function DepartmentDetailPage({ id }: Props) {
             { label: "Detail" },
           ]}
         />
-        <AnalyticsHeader title="Department Detail" contextText={contextLabel} />
         <div className="p-6">
           <ErrorState message={data.message} onRetry={load} />
         </div>
@@ -91,13 +91,6 @@ export function DepartmentDetailPage({ id }: Props) {
 
   return (
     <div className="flex flex-col h-full overflow-auto">
-      <AnalyticsBreadcrumb
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Departments", href: "/dashboard/departments" },
-          { label: view ? view.department.name : "Loading..." },
-        ]}
-      />
       <DepartmentDetailHeader
         summary={{
           departmentName: view ? view.department.name : "Loading...",
@@ -107,6 +100,13 @@ export function DepartmentDetailPage({ id }: Props) {
         }}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
+      />
+      <AnalyticsBreadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Departments", href: "/dashboard/departments" },
+          { label: view ? view.department.name : "Loading..." },
+        ]}
       />
 
       <div className="flex-1 overflow-auto p-6">

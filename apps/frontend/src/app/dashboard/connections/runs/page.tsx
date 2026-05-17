@@ -8,11 +8,11 @@ import RunsListContent from "./runs-list-content";
 export default function RunsPage() {
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
-      <AnalyticsBreadcrumb items={buildConnectionsBreadcrumbs({ label: "Run History" })} />
       <AnalyticsHeader
         title="Run History"
         contextText="All dataset processing runs"
       />
+      <AnalyticsBreadcrumb items={buildConnectionsBreadcrumbs({ label: "Run History" })} />
       <div className="p-6">
         <Suspense fallback={<LoadingSpinner text="Loading runs..." />}>
           <RunsListContent />
