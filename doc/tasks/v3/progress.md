@@ -3,7 +3,7 @@
 - [x] [V3 UI/UX Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/v3-uiux.md)
 - [x] [Upload Wizard And File Storage](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/upload-wizard.md)
 - [x] [Workbook Profiling And Preview](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/workbook-profiling-preview.md)
-- [ ] [Mapping Review Grid](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/mapping-review-grid.md)
+- [x] [Mapping Review Grid](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/mapping-review-grid.md)
 - [ ] [Cleaning Rule Builder](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/cleaning-rule-builder.md)
 - [ ] [Template Library And Versioning](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/template-library-versioning.md)
 - [ ] [Cleaning Engine And Normalization](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/cleaning-engine-normalization.md)

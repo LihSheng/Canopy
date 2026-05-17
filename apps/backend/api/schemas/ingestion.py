@@ -36,6 +36,26 @@ class SheetProfileResponse(BaseModel):
     warnings: list[str]
 
 
+class MappingDecisionRequest(BaseModel):
+    source_column_name: str
+    target_field_name: str
+    confirmed: bool
+    overridden_by_user: bool
+
+
+class MappingDecisionResponse(BaseModel):
+    source_column_name: str
+    target_field_name: str
+    confirmed: bool
+    overridden_by_user: bool
+
+
+class MappingSuggestionsResponse(BaseModel):
+    upload_id: str
+    decisions: list[MappingDecisionResponse]
+    column_profiles: list[ColumnProfileResponse]
+
+
 class WorkbookProfileResponse(BaseModel):
     upload_id: str
     best_sheet_name: str | None

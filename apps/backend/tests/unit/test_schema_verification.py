@@ -28,6 +28,7 @@ EXPECTED_TABLES = {
     "data_snapshots",
     "export_jobs",
     "v3_uploads",
+    "v3_mapping_decisions",
 }
 
 

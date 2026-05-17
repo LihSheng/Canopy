@@ -72,3 +72,48 @@ export async function fetchPreview(uploadId: string): Promise<WorkbookProfile> {
 
   return res.json();
 }
+
+export type MappingDecision = {
+  source_column_name: string;
+  target_field_name: string;
+  confirmed: boolean;
+  overridden_by_user: boolean;
+};
+
+export type MappingSuggestionsResult = {
+  upload_id: string;
+  decisions: MappingDecision[];
+  column_profiles: ColumnProfile[];
+};
+
+export async function saveMapping(
+  uploadId: string,
+  decisions: MappingDecision[],
+): Promise<MappingDecision[]> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/uploads/${uploadId}/mapping`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(decisions),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to save mappings" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function fetchMappings(uploadId: string): Promise<MappingSuggestionsResult> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/uploads/${uploadId}/mapping`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to load mappings" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}

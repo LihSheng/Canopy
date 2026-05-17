@@ -46,6 +46,14 @@ class ColumnProfile:
 
 
 @dataclass
+class MappingDecision:
+    source_column_name: str
+    target_field_name: str
+    confirmed: bool
+    overridden_by_user: bool
+
+
+@dataclass
 class WorkbookProfile:
     upload_id: str
     best_sheet_name: str | None

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from v3.ingestion.domain import UploadRecord, UploadStatus
-from v3.ingestion.schema import UploadModel
+from v3.ingestion.domain import MappingDecision, UploadRecord, UploadStatus
+from v3.ingestion.schema import MappingDecisionModel, UploadModel
 
 
 class IngestionRepository:
@@ -27,6 +27,30 @@ class IngestionRepository:
             model.error_message = error_message
         self._db.commit()
         return self._to_domain(model)
+
+    def save_mapping_decisions(self, upload_id: str, decisions: list[MappingDecision]) -> None:
+        self._db.query(MappingDecisionModel).filter(MappingDecisionModel.upload_id == upload_id).delete()
+        for d in decisions:
+            self._db.add(MappingDecisionModel(
+                upload_id=upload_id,
+                source_column_name=d.source_column_name,
+                target_field_name=d.target_field_name,
+                confirmed=d.confirmed,
+                overridden_by_user=d.overridden_by_user,
+            ))
+        self._db.commit()
+
+    def get_mapping_decisions(self, upload_id: str) -> list[MappingDecision]:
+        models = self._db.query(MappingDecisionModel).filter(MappingDecisionModel.upload_id == upload_id).all()
+        return [
+            MappingDecision(
+                source_column_name=m.source_column_name,
+                target_field_name=m.target_field_name,
+                confirmed=m.confirmed,
+                overridden_by_user=m.overridden_by_user,
+            )
+            for m in models
+        ]
 
     def _to_model(self, record: UploadRecord) -> UploadModel:
         return UploadModel(
