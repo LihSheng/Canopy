@@ -120,3 +120,18 @@ class LineageEdgeModel(Base):
     edge_type: Mapped[str] = mapped_column(String(32), nullable=False)
     meta_data: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+
+
+class PublishRecordModel(Base):
+    __tablename__ = "v3_publish_records"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    upload_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    cleaned_snapshot_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    template_version_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    published_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    validation_errors: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    validation_warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)

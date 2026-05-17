@@ -36,6 +36,7 @@ EXPECTED_TABLES = {
     "v3_cleaned_snapshots",
     "v3_lineage_nodes",
     "v3_lineage_edges",
+    "v3_publish_records",
 }
 
 

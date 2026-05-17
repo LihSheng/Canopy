@@ -212,3 +212,30 @@ class LineageRecord:
     graph: LineageGraph
     created_at: datetime = field(default_factory=datetime.now)
 
+
+class PublishStatus(StrEnum):
+    pending = "pending"
+    active = "active"
+    revoked = "revoked"
+
+
+@dataclass
+class PublishValidationResult:
+    valid: bool
+    warnings: list[str]
+    errors: list[str]
+
+
+@dataclass
+class PublishRecord:
+    id: str
+    upload_id: str
+    cleaned_snapshot_id: str
+    template_version_id: str
+    status: str
+    validation_errors: list[str]
+    validation_warnings: list[str]
+    published_at: datetime | None = None
+    published_by: str | None = None
+    created_at: datetime = field(default_factory=datetime.now)
+

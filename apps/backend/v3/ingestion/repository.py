@@ -13,6 +13,7 @@ from v3.ingestion.domain import (
     LineageNodeType,
     MappingDecision,
     PipelineStatus,
+    PublishRecord,
     TemplateFamily,
     TemplateVersion,
     UploadRecord,
@@ -25,6 +26,7 @@ from v3.ingestion.schema import (
     LineageEdgeModel,
     LineageNodeModel,
     MappingDecisionModel,
+    PublishRecordModel,
     TemplateFamilyModel,
     TemplateVersionModel,
     UploadModel,
@@ -396,6 +398,60 @@ class IngestionRepository:
         self._db.query(LineageEdgeModel).filter(LineageEdgeModel.upload_id == upload_id).delete()
         self._db.query(LineageNodeModel).filter(LineageNodeModel.upload_id == upload_id).delete()
         self._db.commit()
+
+    def save_publish_record(self, record: PublishRecord) -> PublishRecord:
+        model = PublishRecordModel(
+            id=record.id,
+            upload_id=record.upload_id,
+            cleaned_snapshot_id=record.cleaned_snapshot_id,
+            template_version_id=record.template_version_id,
+            status=record.status,
+            published_at=record.published_at,
+            published_by=record.published_by,
+            validation_errors=record.validation_errors,
+            validation_warnings=record.validation_warnings,
+        )
+        self._db.add(model)
+        self._db.commit()
+        return record
+
+    def get_active_publish(self, upload_id: str) -> PublishRecord | None:
+        model = self._db.query(PublishRecordModel).filter(
+            PublishRecordModel.upload_id == upload_id,
+            PublishRecordModel.status == "active",
+        ).first()
+        return self._publish_to_domain(model) if model else None
+
+    def list_publish_history(self, upload_id: str) -> list[PublishRecord]:
+        models = self._db.query(PublishRecordModel).filter(
+            PublishRecordModel.upload_id == upload_id
+        ).order_by(PublishRecordModel.created_at.desc()).all()
+        return [self._publish_to_domain(m) for m in models]
+
+    def get_publish_record(self, publish_id: str) -> PublishRecord | None:
+        model = self._db.query(PublishRecordModel).filter(PublishRecordModel.id == publish_id).first()
+        return self._publish_to_domain(model) if model else None
+
+    def deactivate_publish(self, upload_id: str) -> None:
+        self._db.query(PublishRecordModel).filter(
+            PublishRecordModel.upload_id == upload_id,
+            PublishRecordModel.status == "active",
+        ).update({"status": "revoked"})
+        self._db.commit()
+
+    def _publish_to_domain(self, m: PublishRecordModel) -> PublishRecord:
+        return PublishRecord(
+            id=m.id,
+            upload_id=m.upload_id,
+            cleaned_snapshot_id=m.cleaned_snapshot_id,
+            template_version_id=m.template_version_id,
+            status=m.status,
+            published_at=m.published_at,
+            published_by=m.published_by,
+            validation_errors=list(m.validation_errors) if m.validation_errors else [],
+            validation_warnings=list(m.validation_warnings) if m.validation_warnings else [],
+            created_at=m.created_at,
+        )
 
     def _pipeline_to_domain(self, m: CleaningPipelineModel, steps: list[CleaningStepModel]) -> CleaningPipeline:
         return CleaningPipeline(

@@ -601,4 +601,156 @@ class TestLineageEndpoint:
         resp3 = client.get(f"/api/v3/ingestion/uploads/{upload_id}/lineage", headers=auth_headers)
         assert resp3.status_code == 200
         second_node_count = len(resp3.json()["nodes"])
-        assert second_node_count == first_node_count  # same structure after reprocess
+        assert second_node_count == first_node_count
+
+
+class TestPublishEndpoint:
+    def _setup_publish_ready(self, client: TestClient, auth_headers) -> str:
+        buf = _make_xlsx([["employee", "amount", "date"], ["Alice", 100, "2024-01-15"], ["Bob", 200, "2024-02-20"]])
+        resp = client.post(
+            "/api/v3/ingestion/uploads",
+            files={"file": ("payroll.xlsx", buf, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            data={"source_profile": "herdhr", "dataset_type": "payroll"},
+            headers=auth_headers,
+        )
+        upload_id = resp.json()["upload_id"]
+
+        client.post(
+            f"/api/v3/ingestion/uploads/{upload_id}/mapping",
+            json=[
+                {"source_column_name": "employee", "target_field_name": "employee", "confirmed": True, "overridden_by_user": False},
+                {"source_column_name": "amount", "target_field_name": "amount", "confirmed": True, "overridden_by_user": False},
+                {"source_column_name": "date", "target_field_name": "date", "confirmed": True, "overridden_by_user": False},
+            ],
+            headers=auth_headers,
+        )
+
+        pipe_resp = client.post(
+            "/api/v3/ingestion/templates",
+            json={"upload_id": upload_id},
+            headers=auth_headers,
+        )
+        pipeline_id = pipe_resp.json()["id"]
+
+        client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/steps",
+            json=[
+                {"step_type": "trim", "order": 0, "parameters": {"columns": ["employee"]}, "description": None},
+            ],
+            headers=auth_headers,
+        )
+
+        fam_resp = client.post(
+            "/api/v3/ingestion/template-families",
+            json={"dataset_type": "payroll", "source_profile": "herdhr", "name": "Publish Test", "description": ""},
+            headers=auth_headers,
+        )
+        template_id = fam_resp.json()["id"]
+
+        ver_resp = client.post(
+            f"/api/v3/ingestion/template-families/{template_id}/versions",
+            json={"spec_json": {"steps": [
+                {"step_type": "trim", "order": 0, "parameters": {"columns": ["employee"]}},
+            ]}},
+            headers=auth_headers,
+        )
+        version_id = ver_resp.json()["id"]
+
+        client.post(
+            f"/api/v3/ingestion/template-families/{template_id}/versions/{version_id}/publish",
+            headers=auth_headers,
+        )
+
+        client.put(
+            f"/api/v3/ingestion/templates/{pipeline_id}/bind",
+            json={"template_version_id": version_id},
+            headers=auth_headers,
+        )
+
+        client.post(f"/api/v3/ingestion/uploads/{upload_id}/process", headers=auth_headers)
+        return upload_id
+
+    def test_full_publish_flow(self, client: TestClient, auth_headers):
+        upload_id = self._setup_publish_ready(client, auth_headers)
+        resp = client.post(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "active"
+        assert data["upload_id"] == upload_id
+        assert data["published_at"] is not None
+
+    def test_publish_with_missing_required_field_fails(self, client: TestClient, auth_headers):
+        buf = _make_xlsx([["employee", "amount"], ["Alice", 100]])
+        resp = client.post(
+            "/api/v3/ingestion/uploads",
+            files={"file": ("payroll.xlsx", buf, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            data={"source_profile": "herdhr", "dataset_type": "payroll"},
+            headers=auth_headers,
+        )
+        upload_id = resp.json()["upload_id"]
+
+        client.post(
+            f"/api/v3/ingestion/uploads/{upload_id}/mapping",
+            json=[
+                {"source_column_name": "employee", "target_field_name": "employee", "confirmed": True, "overridden_by_user": False},
+                {"source_column_name": "amount", "target_field_name": "amount", "confirmed": True, "overridden_by_user": False},
+            ],
+            headers=auth_headers,
+        )
+
+        resp = client.post(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_republish_updates_active_record(self, client: TestClient, auth_headers):
+        upload_id = self._setup_publish_ready(client, auth_headers)
+
+        resp1 = client.post(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+        assert resp1.status_code == 200
+        first_id = resp1.json()["id"]
+
+        resp2 = client.post(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+        assert resp2.status_code == 200
+        second_id = resp2.json()["id"]
+        assert second_id != first_id
+
+        state_resp = client.get(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+        assert state_resp.status_code == 200
+        assert state_resp.json()["id"] == second_id
+
+    def test_publish_state_returns_active(self, client: TestClient, auth_headers):
+        upload_id = self._setup_publish_ready(client, auth_headers)
+        client.post(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+
+        resp = client.get(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "active"
+
+    def test_publish_state_returns_null_if_not_published(self, client: TestClient, auth_headers):
+        upload_id = self._setup_publish_ready(client, auth_headers)
+
+        resp = client.get(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json() is None
+
+    def test_publish_history_returns_records(self, client: TestClient, auth_headers):
+        upload_id = self._setup_publish_ready(client, auth_headers)
+        client.post(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+
+        resp = client.get(f"/api/v3/ingestion/uploads/{upload_id}/publish/history", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["records"]) >= 1
+        assert data["records"][0]["upload_id"] == upload_id
+
+    def test_publish_history_multiple_entries(self, client: TestClient, auth_headers):
+        upload_id = self._setup_publish_ready(client, auth_headers)
+        client.post(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+        client.post(f"/api/v3/ingestion/uploads/{upload_id}/publish", headers=auth_headers)
+
+        resp = client.get(f"/api/v3/ingestion/uploads/{upload_id}/publish/history", headers=auth_headers)
+        data = resp.json()
+        assert len(data["records"]) == 2
+
+    def test_publish_unauthorized(self, client: TestClient):
+        resp = client.post("/api/v3/ingestion/uploads/nonexistent/publish")
+        assert resp.status_code == 401

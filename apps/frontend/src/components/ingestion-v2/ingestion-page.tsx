@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { CleaningRuleBuilder } from "./cleaning-rule-builder";
 import { LineageGraph } from "./lineage-graph";
 import { MappingReviewGrid } from "./mapping-review-grid";
+import { PublishReview } from "./publish-review";
 import { TemplateLibrary } from "./template-library";
 import { UploadWizard } from "./upload-wizard";
 import { WorkbookPreview } from "./workbook-preview";
@@ -14,6 +15,7 @@ type VisibleSections = {
   cleaning: boolean;
   templates: boolean;
   lineage: boolean;
+  publish: boolean;
 };
 
 export function IngestionPageContent() {
@@ -23,7 +25,7 @@ export function IngestionPageContent() {
   const [processing, setProcessing] = useState(false);
   const [processedId, setProcessedId] = useState<string | null>(null);
   const [processError, setProcessError] = useState<string | null>(null);
-  const [visible, setVisible] = useState<VisibleSections>({ preview: false, mapping: false, cleaning: false, templates: false, lineage: false });
+  const [visible, setVisible] = useState<VisibleSections>({ preview: false, mapping: false, cleaning: false, templates: false, lineage: false, publish: false });
 
   const handleUploadComplete = (id: string) => {
     setUploadId(id);
@@ -165,6 +167,20 @@ export function IngestionPageContent() {
             </p>
           </div>
           <LineageGraph uploadId={uploadId} />
+          <div className="mt-6">
+            <button
+              onClick={() => setVisible((v) => ({ ...v, publish: true }))}
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+            >
+              Review &amp; Publish
+            </button>
+          </div>
+        </div>
+      )}
+
+      {uploadId && visible.publish && (
+        <div className="mt-6">
+          <PublishReview uploadId={uploadId} />
         </div>
       )}
     </div>

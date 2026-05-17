@@ -195,3 +195,26 @@ class LineageGraphResponse(BaseModel):
     upload_id: str
     nodes: list[LineageNodeResponse]
     edges: list[LineageEdgeResponse]
+
+
+class PublishValidationResponse(BaseModel):
+    valid: bool
+    warnings: list[str]
+    errors: list[str]
+
+
+class PublishRecordResponse(BaseModel):
+    id: str
+    upload_id: str
+    cleaned_snapshot_id: str
+    template_version_id: str
+    status: str
+    published_at: datetime | None = None
+    published_by: str | None = None
+    validation_errors: list[str]
+    validation_warnings: list[str]
+    created_at: datetime
+
+
+class PublishHistoryResponse(BaseModel):
+    records: list[PublishRecordResponse]

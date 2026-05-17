@@ -402,6 +402,87 @@ export async function fetchLineage(uploadId: string): Promise<LineageGraphResult
   return res.json();
 }
 
+export type PublishValidationResult = {
+  valid: boolean;
+  warnings: string[];
+  errors: string[];
+};
+
+export type PublishRecord = {
+  id: string;
+  upload_id: string;
+  cleaned_snapshot_id: string;
+  template_version_id: string;
+  status: string;
+  published_at: string | null;
+  published_by: string | null;
+  validation_errors: string[];
+  validation_warnings: string[];
+  created_at: string;
+};
+
+export type PublishHistory = {
+  records: PublishRecord[];
+};
+
+export async function publishUpload(uploadId: string): Promise<PublishRecord> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/uploads/${uploadId}/publish`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to publish" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchPublishState(uploadId: string): Promise<PublishRecord | null> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/uploads/${uploadId}/publish`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    const body = await res.json().catch(() => ({ detail: "Failed to fetch publish state" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data;
+}
+
+export async function fetchPublishHistory(uploadId: string): Promise<PublishHistory> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/uploads/${uploadId}/publish/history`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to fetch publish history" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export type CleanedSnapshotResult = {
+  id: string;
+  upload_id: string;
+  template_version_id: string;
+  status: string;
+  row_count: number;
+  warning_count: number;
+  warnings: string[];
+  created_at: string;
+};
+
+export async function fetchCleanedSnapshot(uploadId: string): Promise<CleanedSnapshotResult> {
+  const res = await fetch(`${API_BASE}/api/v3/ingestion/uploads/${uploadId}/cleaned`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Failed to fetch cleaned snapshot" }));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function bindPipelineToTemplate(
   pipelineId: string,
   templateVersionId: string,

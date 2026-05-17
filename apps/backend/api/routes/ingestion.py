@@ -21,6 +21,9 @@ from api.schemas.ingestion import (
     MappingSuggestionsResponse,
     PipelineValidationResponse,
     ProcessUploadResponse,
+    PublishHistoryResponse,
+    PublishRecordResponse,
+    PublishValidationResponse,
     ReorderStepsRequest,
     TemplateFamilyDetailResponse,
     TemplateFamilyRequest,
@@ -47,6 +50,7 @@ from v3.ingestion.engine import execute_cleaning_pipeline, load_raw_rows, parse_
 from v3.ingestion.lineage import build_lineage_graph
 from v3.ingestion.normalization import normalize_cleaned_rows
 from v3.ingestion.profiling import generate_profile
+from v3.ingestion.publish import activate_publish, validate_publish
 from v3.ingestion.repository import IngestionRepository
 from v3.ingestion.service import process_upload
 from v3.ingestion.templates import create_draft_version, publish_version, validate_bind
@@ -654,4 +658,108 @@ def get_cleaned_snapshot(
         warning_count=snapshot.warning_count,
         warnings=snapshot.warnings,
         created_at=snapshot.created_at,
+    )
+
+
+@router.post("/uploads/{upload_id}/publish", response_model=PublishRecordResponse)
+def publish_upload(
+    upload_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> PublishRecordResponse:
+    repo = IngestionRepository(db)
+
+    upload = repo.get_upload(upload_id)
+    if upload is None:
+        raise NotFoundError("Upload not found")
+
+    mapping_decisions = repo.get_mapping_decisions(upload_id)
+    if not mapping_decisions:
+        raise ValidationError("No mapping decisions saved for this upload")
+
+    pipeline = repo.get_pipeline_by_upload(upload_id)
+    if pipeline is None or pipeline.template_version_id is None:
+        raise ValidationError("No template version bound to this upload")
+
+    template_version = repo.get_template_version(pipeline.template_version_id)
+    if template_version is None:
+        raise NotFoundError("Template version not found")
+
+    cleaned_snapshot = repo.get_cleaned_snapshot_by_upload(upload_id)
+    if cleaned_snapshot is None:
+        raise ValidationError("No cleaned snapshot found; run processing first")
+
+    validation = validate_publish(upload, mapping_decisions, template_version, cleaned_snapshot)
+    if not validation.valid:
+        raise ValidationError(f"Publish validation failed: {'; '.join(validation.errors)}")
+
+    record = activate_publish(
+        repo, upload_id, cleaned_snapshot.id, template_version.id,
+        published_by=current_user.id,
+        validation_errors=validation.errors,
+        validation_warnings=validation.warnings,
+    )
+
+    return PublishRecordResponse(
+        id=record.id,
+        upload_id=record.upload_id,
+        cleaned_snapshot_id=record.cleaned_snapshot_id,
+        template_version_id=record.template_version_id,
+        status=record.status,
+        published_at=record.published_at,
+        published_by=record.published_by,
+        validation_errors=record.validation_errors,
+        validation_warnings=record.validation_warnings,
+        created_at=record.created_at,
+    )
+
+
+@router.get("/uploads/{upload_id}/publish", response_model=PublishRecordResponse | None)
+def get_publish_state(
+    upload_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> PublishRecordResponse | None:
+    repo = IngestionRepository(db)
+    record = repo.get_active_publish(upload_id)
+    if record is None:
+        return None
+    return PublishRecordResponse(
+        id=record.id,
+        upload_id=record.upload_id,
+        cleaned_snapshot_id=record.cleaned_snapshot_id,
+        template_version_id=record.template_version_id,
+        status=record.status,
+        published_at=record.published_at,
+        published_by=record.published_by,
+        validation_errors=record.validation_errors,
+        validation_warnings=record.validation_warnings,
+        created_at=record.created_at,
+    )
+
+
+@router.get("/uploads/{upload_id}/publish/history", response_model=PublishHistoryResponse)
+def get_publish_history(
+    upload_id: str,
+    db: Session = Depends(get_db),
+    current_user: SessionUser = Depends(get_current_user),
+) -> PublishHistoryResponse:
+    repo = IngestionRepository(db)
+    records = repo.list_publish_history(upload_id)
+    return PublishHistoryResponse(
+        records=[
+            PublishRecordResponse(
+                id=r.id,
+                upload_id=r.upload_id,
+                cleaned_snapshot_id=r.cleaned_snapshot_id,
+                template_version_id=r.template_version_id,
+                status=r.status,
+                published_at=r.published_at,
+                published_by=r.published_by,
+                validation_errors=r.validation_errors,
+                validation_warnings=r.validation_warnings,
+                created_at=r.created_at,
+            )
+            for r in records
+        ],
     )
