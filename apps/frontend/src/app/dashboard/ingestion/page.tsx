@@ -5,7 +5,7 @@ import { IngestionPageContent } from "@/components/ingestion-v2/ingestion-page";
 
 export default function IngestionPage() {
   return (
-    <div>
+    <div className="flex flex-1 flex-col overflow-y-auto">
       <AnalyticsHeader title="Ingestion" />
       <div className="p-6">
         <Suspense fallback={<LoadingSpinner text="Loading..." />}>
