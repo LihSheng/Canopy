@@ -1,0 +1,10 @@
+# Task Progress Index
+
+Use the versioned trackers below. The project no longer keeps one mixed list
+for all phases.
+
+- [V1 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/progress.md): completed baseline modules
+- [V2 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/progress.md): dashboard shell and navigation work
+- [V3 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/progress.md): ingestion and cleaning work
+- [V4 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v4/progress.md): workspace and dataset work
+

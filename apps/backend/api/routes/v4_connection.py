@@ -20,9 +20,11 @@ class CreateConnectionRequest(BaseModel):
 
 
 @router.get("/")
-def list_connections(project_id: str = Query(...), db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+def list_connections(project_id: str = Query(""), db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
     service = ConnectionService(ConnectionRepository(db))
-    return service.list_connections(project_id)
+    if project_id:
+        return service.list_connections(project_id)
+    return service.list_all_connections()
 
 
 @router.post("/", status_code=201)

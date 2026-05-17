@@ -15,8 +15,8 @@ shaped the completed v1 system.
 
 This document follows:
 
-- `doc/proposal.md`
-- `doc/high-level-design.md`
+- `doc/v1/proposal.md`
+- `doc/v1/high-level-design.md`
 - `ARCHITECTURE.md`
 - `DESIGN.md`
 

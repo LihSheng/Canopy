@@ -105,8 +105,7 @@ V3 planning must preserve:
 
 When v3 scope is chosen, create:
 
-- `doc/v3-uiux-design.md`
-- `doc/v3-high-level-design.md`
-- `doc/v3-detailed-design.md`
+- `doc/v3/uiux-design.md`
+- `doc/v3/high-level-design.md`
+- `doc/v3/detailed-design.md`
 - `doc/tasks/v3/progress.md`
-

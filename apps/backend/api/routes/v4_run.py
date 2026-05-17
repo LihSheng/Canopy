@@ -20,9 +20,13 @@ class CreateRunRequest(BaseModel):
 
 
 @router.get("/")
-def list_runs(project_id: str = Query(...), db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+def list_runs(project_id: str = Query(""), dataset_id: str = Query(""), db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
     service = RunService(RunRepository(db))
-    return service.list_runs_by_project(project_id)
+    if dataset_id:
+        return service.list_runs_by_dataset(dataset_id)
+    if project_id:
+        return service.list_runs_by_project(project_id)
+    return service.list_all_runs()
 
 
 @router.post("/", status_code=201)

@@ -507,4 +507,4 @@ Implementation should stay aligned with:
 
 - [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md)
 - [`DESIGN.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/DESIGN.md)
-- [`doc/v2-plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2-plan.md)
+- [`doc/v2/plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/plan.md)

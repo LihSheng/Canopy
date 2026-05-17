@@ -24,8 +24,8 @@ type Props = {
   datasetId?: string;
 };
 
-export function RunHistory({ runs, datasetId }: Props) {
-  if (runs.length === 0) {
+export function RunHistory({ runs = [], datasetId }: Props) {
+  if (!runs || runs.length === 0) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-zinc-500">
         No runs yet

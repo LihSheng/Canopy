@@ -78,26 +78,31 @@ def preview_dataset(id: str, db: Session = Depends(get_db), user: SessionUser = 
         raise NotFoundError("Dataset not found")
 
     if not dataset.active_version_id:
-        return []
+        return {"columns": [], "rows": [], "total_row_count": 0}
 
     version = version_repo.get_active_version(id, dataset.active_version_id)
     if version is None or not version.storage_path:
-        return []
+        return {"columns": [], "rows": [], "total_row_count": 0}
 
     import json
     from pathlib import Path
 
     path = Path(version.storage_path)
     if not path.exists():
-        return []
+        return {"columns": [], "rows": [], "total_row_count": 0}
 
-    rows = []
+    rows: list[dict] = []
+    columns: list[str] = []
     with open(str(path), "r") as f:
         for i, line in enumerate(f):
             if i >= 100:
                 break
-            rows.append(json.loads(line))
-    return rows
+            row = json.loads(line)
+            if isinstance(row, dict):
+                if not columns:
+                    columns = list(row.keys())
+                rows.append([row.get(c) for c in columns])
+    return {"columns": columns, "rows": rows, "total_row_count": len(rows)}
 
 
 @router.get("/{id}/lineage")
@@ -113,11 +118,20 @@ def get_lineage(id: str, db: Session = Depends(get_db), user: SessionUser = Depe
     version_repo = DatasetVersionRepository(db)
     versions = version_repo.list_by_dataset(id)
 
-    return {
-        "dataset_id": id,
-        "runs": [{"id": r.id, "status": r.status, "started_at": r.started_at, "finished_at": r.finished_at} for r in runs],
-        "versions": [{"id": v.id, "version_number": v.version_number, "status": v.status} for v in versions],
-    }
+    nodes: list[dict] = []
+    edges: list[dict] = []
+
+    nodes.append({"id": f"dataset_{id}", "type": "dataset", "label": dataset.name})
+
+    for v in versions:
+        nodes.append({"id": f"version_{v.id}", "type": "version", "label": f"v{v.version_number}"})
+        edges.append({"from": f"version_{v.id}", "to": f"dataset_{id}", "type": "belongs_to"})
+
+    for r in runs:
+        nodes.append({"id": f"run_{r.id}", "type": "run", "label": r.status})
+        edges.append({"from": f"run_{r.id}", "to": f"dataset_{id}", "type": "produces"})
+
+    return {"nodes": nodes, "edges": edges}
 
 
 @router.get("/{id}/health")

@@ -19,6 +19,10 @@ class ConnectionRepository:
         model = self._db.query(ConnectionModel).filter(ConnectionModel.id == id).first()
         return self._to_domain(model) if model else None
 
+    def list_all(self) -> list[Connection]:
+        models = self._db.query(ConnectionModel).order_by(ConnectionModel.created_at.desc()).all()
+        return [self._to_domain(m) for m in models]
+
     def list_by_project(self, project_id: str) -> list[Connection]:
         models = self._db.query(ConnectionModel).filter(ConnectionModel.project_id == project_id).order_by(ConnectionModel.created_at.desc()).all()
         return [self._to_domain(m) for m in models]

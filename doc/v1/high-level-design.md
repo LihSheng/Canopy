@@ -496,4 +496,4 @@ For current-state implementation and repo status, use:
 
 - [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md)
 - [`doc/codebase-map.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/codebase-map.md)
-- [`doc/v2-plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2-plan.md)
+- [`doc/v2/plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/plan.md)

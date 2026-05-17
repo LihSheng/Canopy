@@ -22,8 +22,8 @@ As of May 16, 2026:
 Baseline references:
 
 - [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md)
-- [`doc/high-level-design.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/high-level-design.md)
-- [`doc/detailed-design.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/detailed-design.md)
+- [`doc/v1/high-level-design.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v1/high-level-design.md)
+- [`doc/v1/detailed-design.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v1/detailed-design.md)
 - [`doc/codebase-map.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/codebase-map.md)
 
 ## What v2 should not do
@@ -105,8 +105,8 @@ V2 planning must preserve:
 
 When v2 scope is chosen, create:
 
-- `doc/v2-uiux-design.md`
-- `doc/v2-detailed-design.md`
+- `doc/v2/uiux-design.md`
+- `doc/v2/detailed-design.md`
 - `doc/v2-requirements.md`
 - `doc/v2-high-level-design.md`
 - `doc/v2-task-breakdown.md`

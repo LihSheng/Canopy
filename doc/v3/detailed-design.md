@@ -14,12 +14,12 @@ replace [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARC
 This design follows:
 
 - [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md)
-- [`doc/v3-plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v3-plan.md)
-- [`doc/v3-high-level-design.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v3-high-level-design.md)
-- [`doc/v3-uiux-design.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v3-uiux-design.md)
+- [`doc/v3/plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v3/plan.md)
+- [`doc/v3/high-level-design.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v3/high-level-design.md)
+- [`doc/v3/uiux-design.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v3/uiux-design.md)
 
 If these documents conflict, `ARCHITECTURE.md` remains the source of truth for
-system boundaries and `doc/v3-plan.md` remains the source of truth for v3
+system boundaries and `doc/v3/plan.md` remains the source of truth for v3
 scope.
 
 ## V3 scope

@@ -24,7 +24,7 @@ test/lint tooling for both frontend and backend.
 - [x] Add base API health or smoke endpoint for startup verification.
 - [x] Add fixture/seed bootstrap strategy for local development and automated tests.
 - [x] Add initial CI workflow skeleton for install, lint, typecheck, and test jobs.
-- [x] Verify the generated structure matches the modular boundaries defined in `ARCHITECTURE.md` and `doc/detailed-design.md`.
+- [x] Verify the generated structure matches the modular boundaries defined in `ARCHITECTURE.md` and `doc/v1/detailed-design.md`.
 
 ## Testing
 

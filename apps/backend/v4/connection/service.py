@@ -28,6 +28,9 @@ class ConnectionService:
     def list_connections(self, project_id: str) -> list[Connection]:
         return self._repo.list_by_project(project_id)
 
+    def list_all_connections(self) -> list[Connection]:
+        return self._repo.list_all()
+
     def create_static_file_connection(self, project_id: str, name: str, allowed_extensions: list[str] | None = None) -> Connection:
         config = {"allowed_extensions": allowed_extensions or [".csv", ".xlsx", ".json", ".parquet"]}
         return self.create_connection(project_id, "static_file", name, config)

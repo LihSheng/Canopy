@@ -19,6 +19,10 @@ class RunRepository:
         model = self._db.query(RunModel).filter(RunModel.id == id).first()
         return self._to_domain(model) if model else None
 
+    def list_all(self) -> list[Run]:
+        models = self._db.query(RunModel).order_by(RunModel.created_at.desc()).all()
+        return [self._to_domain(m) for m in models]
+
     def list_by_dataset(self, dataset_id: str) -> list[Run]:
         models = self._db.query(RunModel).filter(RunModel.dataset_id == dataset_id).order_by(RunModel.created_at.desc()).all()
         return [self._to_domain(m) for m in models]

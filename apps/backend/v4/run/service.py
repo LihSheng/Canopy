@@ -25,6 +25,9 @@ class RunService:
     def get_run(self, id: str) -> Run | None:
         return self._repo.get(id)
 
+    def list_all_runs(self) -> list[Run]:
+        return self._repo.list_all()
+
     def list_runs_by_dataset(self, dataset_id: str) -> list[Run]:
         return self._repo.list_by_dataset(dataset_id)
 

@@ -22,7 +22,7 @@ this file.
 
 1. [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md)
 2. [`QUICKSTART.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/QUICKSTART.md)
-3. [`doc/v2-plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2-plan.md)
+3. [`doc/README.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/README.md)
 
 `ARCHITECTURE.md` explains the architectural source of truth.
 This file explains what is currently built and where to look first.
@@ -34,7 +34,7 @@ Top-level folders:
 - `apps/backend`: FastAPI backend
 - `apps/frontend`: Next.js frontend
 - `packages`: shared-package placeholder area, currently light usage
-- `doc`: proposal, design docs, task breakdowns, v2 plan
+- `doc`: documentation index, versioned plans/design docs, task breakdowns
 - `infra`: infra placeholder area, currently light usage
 
 Top-level docs:
@@ -42,8 +42,9 @@ Top-level docs:
 - [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md): system source of truth
 - [`DESIGN.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/DESIGN.md): visual design source of truth
 - [`QUICKSTART.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/QUICKSTART.md): setup, run, test, lint
-- [`doc/tasks/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/progress.md): module completion checklist
-- [`doc/v2-plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2-plan.md): active post-v1 planning entrypoint
+- [`doc/README.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/README.md): docs index
+- [`doc/tasks/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/progress.md): task index for the versioned trackers
+- [`doc/v2/plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/plan.md): active post-v1 planning entrypoint
 
 ## Current Delivery State
 
@@ -200,7 +201,7 @@ Frontend tests:
 
 ## Progress Snapshot
 
-From [`doc/tasks/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/progress.md):
+From [`doc/tasks/v1/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/progress.md):
 
 - done: project bootstrap
 - done: auth
@@ -215,6 +216,12 @@ From [`doc/tasks/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/
 - done: reporting and export
 - done: data store
 - done: quality gates and CI
+
+Separate versioned trackers:
+
+- [`doc/tasks/v2/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/progress.md): v2 dashboard shell and navigation work
+- [`doc/tasks/v3/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/progress.md): v3 ingestion and cleaning work
+- [`doc/tasks/v4/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v4/progress.md): v4 workspace and dataset work
 
 ## Known Drift Hotspots
 
