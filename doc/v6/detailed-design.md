@@ -100,7 +100,57 @@ Recommended `config_json` keys for static-file imports:
 - upload preview generation
 - upload cleanup
 
-### 3. Import Orchestration Module
+### 3. Connection Lifecycle And Deletion Module
+
+#### Responsibilities
+
+- compute whether a connection can be deleted
+- block delete when downstream dependencies exist
+- delete the app-owned connection record when safe
+- expose a dependency summary for the UI
+
+#### Dependency Check
+
+The delete decision should consider:
+
+- active datasets linked to the connection
+- active or queued runs linked to the connection
+- any modeled downstream usage that depends on the connection record
+
+The delete rule is:
+
+- if dependencies exist, block deletion
+- if no active dependencies exist, allow deletion of the connection record
+
+#### Data Structures
+
+- dependency summary
+  - `connection_id`
+  - `active_dataset_count`
+  - `active_run_count`
+  - `can_delete`
+  - optional modeled downstream counts if available
+
+#### Control Flow
+
+- UI requests dependency summary before enabling delete
+- user confirms delete only when the summary says the connection is safe to remove
+- backend deletes the connection record and records the lifecycle event
+
+#### Error Handling
+
+- missing connection returns not found
+- delete request on a connection with dependencies returns validation error
+- delete request on an already removed connection returns not found
+
+#### Tests
+
+- dependency summary calculation
+- delete blocked when datasets or runs exist
+- delete allowed when no dependencies exist
+- audit or event recording for deletion
+
+### 4. Import Orchestration Module
 
 #### Responsibilities
 
@@ -139,7 +189,7 @@ Recommended `config_json` keys for static-file imports:
 - failed cleaning does not activate version
 - re-import increments version number
 
-### 4. Cleaning and Dataset Version Module
+### 5. Cleaning and Dataset Version Module
 
 #### Responsibilities
 
@@ -203,7 +253,7 @@ Recommended `config_json` keys for static-file imports:
 - type inference
 - version incrementing
 
-### 5. Lineage Module
+### 6. Lineage Module
 
 #### Responsibilities
 
@@ -245,7 +295,7 @@ Recommended edge types:
 - lineage graph stability across re-imports
 - missing-node fallback
 
-### 6. Dataset Workspace Visualization Module
+### 7. Dataset Workspace Visualization Module
 
 #### Responsibilities
 
@@ -286,7 +336,7 @@ Recommended edge types:
 - chart rendering from cleaned data
 - version switching behavior
 
-### 7. MySQL Readiness Module
+### 8. MySQL Readiness Module
 
 #### Responsibilities
 

@@ -148,6 +148,13 @@ export interface Connection {
   updated_at: string;
 }
 
+export interface ConnectionDependencySummary {
+  connection_id: string;
+  active_dataset_count: number;
+  active_run_count: number;
+  can_delete: boolean;
+}
+
 export interface Dataset {
   id: string;
   project_id: string;

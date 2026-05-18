@@ -104,9 +104,6 @@ class ConnectionService:
 
     def permanently_delete_connection(self, id: str, actor_user_id: str) -> dict:
         connection = self._require_connection(id)
-        if connection.status != ConnectionStatus.SOFT_DELETED.value:
-            raise ValidationError("Connection must be soft_deleted before permanent delete")
-
         self._ensure_no_active_dependencies(id)
         deleted = self._repo.delete(id)
         if not deleted:

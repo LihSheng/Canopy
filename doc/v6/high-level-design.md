@@ -44,7 +44,16 @@ Responsibilities:
 - accept uploaded static files
 - capture source object details needed for lineage
 
-### 3. Import Orchestration Module
+### 3. Connection Lifecycle And Deletion Module
+
+Responsibilities:
+
+- evaluate downstream dependency counts before deletion
+- allow deletion only when the connection has no active downstream usage
+- block deletion when the connection is referenced by active datasets, runs, or modeled downstream assets
+- surface a dependency summary to the UI so the user can understand why delete is blocked
+
+### 4. Import Orchestration Module
 
 Responsibilities:
 
@@ -52,7 +61,7 @@ Responsibilities:
 - create a run record for each import attempt
 - ensure re-imports create a new version instead of overwriting the old one
 
-### 4. Cleaning and Dataset Version Module
+### 5. Cleaning and Dataset Version Module
 
 Responsibilities:
 
@@ -61,7 +70,7 @@ Responsibilities:
 - store immutable dataset versions
 - mark the active version for the dataset
 
-### 5. Lineage Module
+### 6. Lineage Module
 
 Responsibilities:
 
@@ -69,7 +78,7 @@ Responsibilities:
 - expose the lineage graph for the dataset workspace
 - keep lineage understandable to users
 
-### 6. Dataset Workspace Visualization Module
+### 7. Dataset Workspace Visualization Module
 
 Responsibilities:
 
@@ -78,7 +87,7 @@ Responsibilities:
 - render a small, deterministic set of charts
 - keep the visualization inside the dataset workspace instead of a separate analytics page
 
-### 7. MySQL Readiness Module
+### 8. MySQL Readiness Module
 
 Responsibilities:
 

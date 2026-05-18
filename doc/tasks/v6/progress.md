@@ -7,6 +7,7 @@
 - [x] [Source Catalog](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v6/source-catalog.md)
 - [x] [Static File Upload And Import Setup](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v6/static-file-upload-and-import-setup.md)
 - [x] [Raw Import Capture And Cleanup](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v6/raw-import-capture-and-cleanup.md)
+- [x] [Connection Deletion And Dependency Check](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v6/connection-deletion-and-dependency-check.md)
 - [x] [Deterministic Cleaning Pipeline](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v6/deterministic-cleaning-pipeline.md)
 - [x] [Immutable Dataset Versioning](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v6/immutable-dataset-versioning.md)
 - [x] [Lineage Graph And Workspace View](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v6/lineage-graph-and-workspace-view.md)

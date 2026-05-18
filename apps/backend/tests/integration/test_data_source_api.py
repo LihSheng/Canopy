@@ -477,6 +477,22 @@ def test_connection_lifecycle_pause_and_audit(client: TestClient, auth_headers, 
     assert connection_id in audit_event.event_payload_json
 
 
+def test_connection_delete_allowed_when_unused(client: TestClient, auth_headers):
+    _, connection_id = _create_project_and_connection(client, auth_headers, "Unused Delete Project")
+
+    delete_resp = client.delete(f"/api/v4/connections/{connection_id}", headers=auth_headers)
+
+    assert delete_resp.status_code == 200
+    assert delete_resp.json() == {"deleted": True, "id": connection_id}
+
+    get_resp = client.get(f"/api/v4/connections/{connection_id}", headers=auth_headers)
+    assert get_resp.status_code == 404
+
+    list_resp = client.get("/api/v4/connections/", headers=auth_headers)
+    assert list_resp.status_code == 200
+    assert all(item["id"] != connection_id for item in list_resp.json())
+
+
 def test_connection_soft_delete_blocks_active_dependencies(client: TestClient, auth_headers):
     project_id, connection_id = _create_project_and_connection(
         client,
@@ -503,8 +519,8 @@ def test_connection_soft_delete_blocks_active_dependencies(client: TestClient, a
     assert dependency_resp.json()["can_delete"] is False
     assert dependency_resp.json()["active_dataset_count"] == 1
 
-    delete_resp = client.post(
-        f"/api/v4/connections/{connection_id}/soft-delete",
+    delete_resp = client.delete(
+        f"/api/v4/connections/{connection_id}",
         headers=auth_headers,
     )
 

@@ -164,6 +164,7 @@ def soft_delete_connection(
 
 
 @router.delete("/{id}/permanent")
+@router.delete("/{id}")
 def permanently_delete_connection(
     id: str,
     db: Session = Depends(get_db),

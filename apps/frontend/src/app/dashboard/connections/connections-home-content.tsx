@@ -2,23 +2,36 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchDatasets, fetchRuns } from "@/lib/api/data-source";
-import type { Dataset, Run } from "@/lib/api/types";
+import {
+  fetchConnections,
+  fetchDatasets,
+  fetchRuns,
+  fetchConnectionDependencies,
+  deleteConnection,
+} from "@/lib/api/data-source";
+import type { Connection, Dataset, Run } from "@/lib/api/types";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 
 export default function ConnectionsHomeContent() {
+  const [connections, setConnections] = useState<Connection[]>([]);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting_id, setDeletingId] = useState<string | null>(null);
+  const [action_error, setActionError] = useState<string | null>(null);
+  const [connection_search, setConnectionSearch] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setActionError(null);
     try {
-      const [ds, rs] = await Promise.all([
+      const [connections_data, ds, rs] = await Promise.all([
+        fetchConnections().catch(() => []),
         fetchDatasets().catch(() => []),
         fetchRuns().catch(() => []),
       ]);
+      setConnections(connections_data);
       setDatasets(ds);
       setRuns(rs);
     } finally {
@@ -26,9 +39,48 @@ export default function ConnectionsHomeContent() {
     }
   }, []);
 
+  const handleDeleteConnection = async (connection: Connection) => {
+    setActionError(null);
+    setDeletingId(connection.id);
+    try {
+      const dependencies = await fetchConnectionDependencies(connection.id);
+      if (!dependencies.can_delete) {
+        setActionError(
+          `Cannot delete "${connection.name}" yet. It still has ${dependencies.active_dataset_count} active dataset(s) and ${dependencies.active_run_count} active run(s).`,
+        );
+        return;
+      }
+
+      const confirmed = window.confirm(`Delete connection "${connection.name}"?`);
+      if (!confirmed) {
+        return;
+      }
+
+      await deleteConnection(connection.id);
+      await load();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to delete connection");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  const filtered_connections = connections.filter((connection) => {
+    const query = connection_search.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+    return (
+      connection.name.toLowerCase().includes(query) ||
+      connection.source_type.toLowerCase().includes(query) ||
+      connection.status.toLowerCase().includes(query)
+    );
+  });
 
   if (loading) return <LoadingSpinner text="Loading..." />;
 
@@ -62,6 +114,57 @@ export default function ConnectionsHomeContent() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-lg border border-zinc-200 bg-white">
+          <div className="border-b border-zinc-100 px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-zinc-900">Connections</h3>
+              <input
+                type="search"
+                value={connection_search}
+                onChange={(e) => setConnectionSearch(e.target.value)}
+                placeholder="Search connections"
+                className="w-40 rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div className="max-h-[28rem] overflow-auto p-4">
+            {filtered_connections.length === 0 ? (
+              <EmptyState title="No connections" description="Create a source to start importing data." />
+            ) : (
+              <ul className="space-y-2">
+                {filtered_connections.map((connection) => (
+                  <li
+                    key={connection.id}
+                    className="flex items-center justify-between gap-3 rounded-md border border-zinc-100 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-zinc-900">
+                        {connection.name}
+                      </div>
+                      <div className="text-xs text-zinc-500">
+                        {connection.source_type} &middot; {connection.status}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteConnection(connection)}
+                      disabled={deleting_id === connection.id}
+                      className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {deleting_id === connection.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {action_error && (
+              <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                {action_error}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="rounded-lg border border-zinc-200 bg-white">
           <div className="border-b border-zinc-100 px-4 py-3">
             <h3 className="text-sm font-semibold text-zinc-900">Recent Datasets</h3>

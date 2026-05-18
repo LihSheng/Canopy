@@ -3,6 +3,7 @@ import type {
   Project,
   SourceType,
   Connection,
+  ConnectionDependencySummary,
   Dataset,
   DatasetVersion,
   Run,
@@ -46,6 +47,10 @@ export function fetchConnection(id: string): Promise<Connection> {
   return request<Connection>(`/api/v4/connections/${id}`);
 }
 
+export function fetchConnectionDependencies(id: string): Promise<ConnectionDependencySummary> {
+  return request<ConnectionDependencySummary>(`/api/v4/connections/${id}/dependencies`);
+}
+
 export function createConnection(data: {
   project_id: string;
   source_type: string;
@@ -55,6 +60,12 @@ export function createConnection(data: {
   return request<Connection>("/api/v4/connections/", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+export function deleteConnection(id: string): Promise<{ deleted: boolean; id: string }> {
+  return request<{ deleted: boolean; id: string }>(`/api/v4/connections/${id}`, {
+    method: "DELETE",
   });
 }
 

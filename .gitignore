@@ -51,3 +51,6 @@ apps/backend/tests/unit/*.xls
 apps/backend/tests/unit/*.xlsm
 apps/backend/tests/unit/*.csv
 *.excalidraw
+
+# Uploaded physical assets
+apps/**/storage/data-sources/

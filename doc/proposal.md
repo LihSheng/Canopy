@@ -31,6 +31,7 @@ This task includes:
 - deterministic cleaning pipeline
 - immutable dataset versioning on every re-import
 - lineage tracking for imported data
+- app-owned connection deletion with dependency checks
 - dataset workspace with read-only visualization
 - summary cards and preview table for cleaned data
 - basic charts derived from cleaned data
@@ -106,6 +107,12 @@ This task does not include:
 - Previous versions remain accessible for inspection.
 - The current active version is explicit in the workspace.
 
+### Connection Deletion
+
+- A user can delete an app-owned connection record when it has no active downstream dependencies.
+- The system blocks deletion when the connection is still referenced by active datasets, runs, or other modeled downstream assets.
+- Deletion applies to the HERD Aggregator record only, not the upstream source system.
+
 ## Non-Functional Requirements
 
 - Read-only source behavior must be preserved.
@@ -122,6 +129,7 @@ This task does not include:
 - The user can view read-only visualization inside the dataset workspace.
 - A re-import creates a new version instead of overwriting the old one.
 - MySQL is visible in the source catalog and fits the same model, even if its working import path is not part of the first slice.
+- An unused connection can be deleted, and a used connection is blocked with a dependency message.
 
 ## Open Questions Resolved
 
