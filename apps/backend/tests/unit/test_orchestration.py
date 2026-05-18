@@ -2,15 +2,15 @@ import pytest
 from sqlalchemy.orm import Session
 
 from common.errors import ValidationError
-from v3.ingestion.domain import (
+from ingestion.domain import (
     IngestionWorkflowStatus,
     MappingDecision,
     UploadRecord,
     UploadStatus,
     WorkflowState,
 )
-from v3.ingestion.orchestration import IngestionOrchestrator
-from v3.ingestion.repository import IngestionRepository
+from ingestion.orchestration import IngestionOrchestrator
+from ingestion.repository import IngestionRepository
 
 
 class TestWorkflowInitialization:
@@ -310,3 +310,4 @@ def _seed_mappings(repo: IngestionRepository, upload_id: str) -> None:
         ),
     ]
     repo.save_mapping_decisions(upload_id, decisions)
+

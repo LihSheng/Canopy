@@ -11,12 +11,12 @@ from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError
-from v4.connection.importer import materialize_dataset_version
-from v4.connection.repository import ConnectionRepository
-from v4.dataset.domain import DatasetVersion, DatasetVersionStatus
-from v4.dataset.repository import DatasetRepository, DatasetVersionRepository
-from v4.dataset.service import DatasetService, DatasetVersionService
-from v4.run.repository import RunRepository
+from connection.importer import materialize_dataset_version
+from connection.repository import ConnectionRepository
+from dataset.domain import DatasetVersion, DatasetVersionStatus
+from dataset.repository import DatasetRepository, DatasetVersionRepository
+from dataset.service import DatasetService, DatasetVersionService
+from run.repository import RunRepository
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
@@ -191,7 +191,7 @@ def preview_dataset(
     if version is None or not version.storage_path:
         return {"columns": [], "rows": [], "total_row_count": 0, "filtered_row_count": 0, "page": page, "page_size": page_size}
 
-    from v4.dataset.preview_service import read_dataset_preview
+    from dataset.preview_service import read_dataset_preview
 
     return read_dataset_preview(
         storage_path=version.storage_path,
@@ -235,3 +235,4 @@ def get_dataset_health(id: str, db: Session = Depends(get_db), user: SessionUser
     version_repo = DatasetVersionRepository(db)
     service = DatasetService(DatasetRepository(db), version_repo)
     return service.get_dataset_health(id)
+

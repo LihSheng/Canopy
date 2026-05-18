@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from v4.dataset.preview_service import read_dataset_preview
+from dataset.preview_service import read_dataset_preview
 
 
 def _write_jsonl(tmp_path, rows: list[dict]) -> str:
@@ -92,3 +92,4 @@ def test_read_jsonl_missing_file():
     assert result["filtered_row_count"] == 0
     assert result["page"] == 1
     assert result["page_size"] == 100
+

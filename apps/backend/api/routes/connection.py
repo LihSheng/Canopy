@@ -8,9 +8,10 @@ from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError, ValidationError
-from v4.connection.repository import ConnectionRepository
-from v4.connection.importer import build_sheet_profiles, delete_uploaded_file, save_uploaded_file
-from v4.connection.service import ConnectionService
+from connection.repository import ConnectionRepository
+from connection.importer import build_sheet_profiles, delete_uploaded_file, save_uploaded_file
+from connection.service import ConnectionService
+from control_plane.audit_service import AuditService
 
 router = APIRouter(prefix="/connections", tags=["connections"])
 
@@ -99,3 +100,39 @@ def get_connection(id: str, db: Session = Depends(get_db), user: SessionUser = D
     if connection is None:
         raise NotFoundError("Connection not found")
     return connection
+
+
+def _lifecycle_service(db: Session) -> ConnectionService:
+    return ConnectionService(ConnectionRepository(db), AuditService(db))
+
+
+@router.get("/{id}/dependencies")
+def get_connection_dependencies(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+    return _lifecycle_service(db).get_dependency_summary(id)
+
+
+@router.post("/{id}/pause")
+def pause_connection(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+    return _lifecycle_service(db).pause_connection(id, user.id)
+
+
+@router.post("/{id}/archive")
+def archive_connection(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+    return _lifecycle_service(db).archive_connection(id, user.id)
+
+
+@router.post("/{id}/restore")
+def restore_connection(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+    return _lifecycle_service(db).restore_connection(id, user.id)
+
+
+@router.post("/{id}/soft-delete")
+def soft_delete_connection(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+    return _lifecycle_service(db).soft_delete_connection(id, user.id)
+
+
+@router.delete("/{id}/permanent")
+def permanently_delete_connection(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+    return _lifecycle_service(db).permanently_delete_connection(id, user.id)
+
+

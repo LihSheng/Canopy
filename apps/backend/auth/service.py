@@ -14,9 +14,9 @@ from auth.hashing import verify_password
 from auth.repository import AuthRepository
 from common.config import settings
 from common.errors import AuthError
-from v5.control_plane.schemas.memberships import TenantMembershipModel
-from v5.control_plane.schemas.tenants import TenantModel
-from v5.context.membership_validator import MembershipValidator
+from control_plane.schemas.memberships import TenantMembershipModel
+from control_plane.schemas.tenants import TenantModel
+from context.membership_validator import MembershipValidator
 
 _TOKEN_EXPIRY_HOURS = 24
 _ALGORITHM = "HS256"
@@ -152,3 +152,4 @@ class AuthService:
 
     def logout(self, token: str) -> None:
         pass
+

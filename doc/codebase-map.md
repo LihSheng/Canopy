@@ -88,19 +88,32 @@ Implemented backend areas:
 - [`apps/backend/common`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/common): config, DB wiring, error classes, clock, logging
 - [`apps/backend/auth`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/auth): domain, repository, password hashing, JWT/session service, ORM user model
 - [`apps/backend/api`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api): health/auth/dashboard/departments/claims/anomalies/exports/refresh routes, request/response schemas, auth dependency
-- [`apps/backend/sync`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync): 6 source readers, snapshot repository, sync orchestrator, source DB wiring
-- [`apps/backend/ontology`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology): domain types, mappers, attribution resolver, ontology repository, orchestrator
+- [`apps/backend/ingestion`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ingestion): workbook profiling, cleaning, normalization, lineage, templates, publish, source adapters
+- [`apps/backend/project`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/project): project workspace domain, repository, service
+- [`apps/backend/source_type`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/source_type): source catalog domain, repository, service
+- [`apps/backend/connection`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/connection): connection setup, preview, materialization, repository, service
+- [`apps/backend/dataset`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/dataset): dataset domain, preview, repository, service
+- [`apps/backend/run`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/run): run domain, repository, service
 - [`apps/backend/analytics`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/analytics): aggregate reads, rankings, deltas, departments, repositories
 - [`apps/backend/anomalies`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/anomalies): anomaly rules, repository, list/detail mapping
 - [`apps/backend/insights`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/insights): domain, service, generation entrypoints
 - [`apps/backend/exports`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/exports): workbook build and export payload composition
 - [`apps/backend/refresh`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/refresh): trigger, status, job reads, orchestration entrypoints
+- [`apps/backend/control_plane`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/control_plane): tenant admin, provisioning, lifecycle, audit, config, membership, tenant repository
+- [`apps/backend/tenant_data`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tenant_data): tenant storage base, RLS, migration pipeline, router, schema bundles
+- [`apps/backend/object_storage`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/object_storage): object storage access guard, adapter layer, key generation, service
+- [`apps/backend/backup`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/backup): backup, restore, clone, policy, lifecycle validation
+- [`apps/backend/cache`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/cache): cache store, config cache, invalidation hooks, routing cache
+- [`apps/backend/quotas`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/quotas): quota registry, evaluator, enforcer, usage tracking
+- [`apps/backend/job_queue`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/job_queue): job registry and tenant queue scheduling
 
 Current DB models:
 
 - [`apps/backend/auth/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/auth/schema.py): `users`
 - [`apps/backend/sync/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/schema.py): source snapshot tables
 - [`apps/backend/ontology/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/schema.py): ontology and unresolved mapping tables
+- [`apps/backend/control_plane/schemas`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/control_plane/schemas): tenant admin, audit, config, membership, and provisioning tables
+- [`apps/backend/tenant_data/schemas`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tenant_data/schemas): tenant data plane tables and schema bundles
 - analytics, anomalies, refresh, and related modules have supporting persistence and repositories in their own areas
 
 Source-side models (separate read-only base):

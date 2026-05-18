@@ -2,13 +2,13 @@ import uuid
 
 import pytest
 
-from v3.ingestion.cleaning import (
+from ingestion.cleaning import (
     validate_pipeline,
     validate_step_order,
     validate_step_parameters,
     validate_step_type,
 )
-from v3.ingestion.domain import CleaningPipeline, CleaningStep, PipelineStatus
+from ingestion.domain import CleaningPipeline, CleaningStep, PipelineStatus
 
 
 def _step(step_type: str, order: int = 0, parameters: dict | None = None, description: str | None = None) -> CleaningStep:
@@ -187,3 +187,4 @@ class TestValidatePipeline:
         steps = [_step("trim", 0)]
         warnings = validate_pipeline(steps, PipelineStatus.published.value)
         assert any("columns" in w for w in warnings)
+

@@ -125,7 +125,7 @@ def get_db():
 
 
 def init_db(engine_override: Engine | None = None):
-    import v3.ingestion.schema  # noqa: F401  ensure v3 ingestion models are registered
+    import ingestion.schema  # noqa: F401  ensure ingestion models are registered
     import auth.schema  # noqa: F401  ensure UserModel is registered
     import sync.schema  # noqa: F401  ensure SourceSnapshotModel is registered
     import ontology.schema  # noqa: F401  ensure ontology models are registered
@@ -134,24 +134,25 @@ def init_db(engine_override: Engine | None = None):
     import insights.schema  # noqa: F401  ensure insight models are registered
     import refresh.schema  # noqa: F401  ensure refresh models are registered
     import exports.schema  # noqa: F401  ensure export models are registered
-    import v4.project.schema  # noqa: F401  ensure v4 project models are registered
-    import v4.source_type.schema  # noqa: F401  ensure v4 source type models are registered
-    import v4.connection.schema  # noqa: F401  ensure v4 connection models are registered
-    import v4.dataset.schema  # noqa: F401  ensure v4 dataset models are registered
-    import v4.run.schema  # noqa: F401  ensure v4 run models are registered
-    import v5.control_plane.schemas.audit  # noqa: F401
-    import v5.control_plane.schemas.config  # noqa: F401
-    import v5.control_plane.schemas.database_targets  # noqa: F401
-    import v5.control_plane.schemas.jobs  # noqa: F401
-    import v5.control_plane.schemas.memberships  # noqa: F401
-    import v5.control_plane.schemas.tenants  # noqa: F401
-    import v5.tenant_data.schemas.clean  # noqa: F401
-    import v5.tenant_data.schemas.metadata  # noqa: F401
-    import v5.tenant_data.schemas.raw  # noqa: F401
-    import v5.tenant_data.schemas.staging  # noqa: F401
-    from v5.tenant_data.base import TenantDataBase
+    import project.schema  # noqa: F401  ensure project models are registered
+    import source_type.schema  # noqa: F401  ensure source type models are registered
+    import connection.schema  # noqa: F401  ensure connection models are registered
+    import dataset.schema  # noqa: F401  ensure dataset models are registered
+    import run.schema  # noqa: F401  ensure run models are registered
+    import control_plane.schemas.audit  # noqa: F401
+    import control_plane.schemas.config  # noqa: F401
+    import control_plane.schemas.database_targets  # noqa: F401
+    import control_plane.schemas.jobs  # noqa: F401
+    import control_plane.schemas.memberships  # noqa: F401
+    import control_plane.schemas.tenants  # noqa: F401
+    import tenant_data.schemas.clean  # noqa: F401
+    import tenant_data.schemas.metadata  # noqa: F401
+    import tenant_data.schemas.raw  # noqa: F401
+    import tenant_data.schemas.staging  # noqa: F401
+    from tenant_data.base import TenantDataBase
 
     control_plane_eng = engine_override or control_plane_engine()
     tenant_data_eng = engine_override or tenant_data_engine()
     Base.metadata.create_all(bind=control_plane_eng)
     TenantDataBase.metadata.create_all(bind=tenant_data_eng)
+

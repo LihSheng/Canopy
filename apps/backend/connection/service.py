@@ -1,0 +1,165 @@
+import uuid
+from datetime import UTC, datetime
+
+from common.errors import NotFoundError, ValidationError
+from control_plane.audit_service import AuditService
+from connection.domain import Connection, ConnectionStatus
+from connection.repository import ConnectionRepository
+
+
+class ConnectionService:
+    def __init__(self, repo: ConnectionRepository, audit: AuditService | None = None):
+        self._repo = repo
+        self._audit = audit
+
+    def create_connection(self, project_id: str, source_type: str, name: str, config_json: dict | None = None) -> Connection:
+        now = datetime.now(UTC)
+        connection = Connection(
+            id=str(uuid.uuid4()),
+            project_id=project_id,
+            source_type=source_type,
+            name=name,
+            status=ConnectionStatus.ACTIVE.value,
+            config_json=config_json or {},
+            created_at=now,
+        )
+        return self._repo.save(connection)
+
+    def get_connection(self, id: str) -> Connection | None:
+        return self._repo.get(id)
+
+    def list_connections(self, project_id: str) -> list[Connection]:
+        return self._repo.list_by_project(project_id)
+
+    def list_all_connections(self) -> list[Connection]:
+        return self._repo.list_all()
+
+    def create_static_file_connection(self, project_id: str, name: str, allowed_extensions: list[str] | None = None) -> Connection:
+        config = {"allowed_extensions": allowed_extensions or [".csv", ".xlsx", ".json", ".parquet"]}
+        return self.create_connection(project_id, "static_file", name, config)
+
+    def pause_connection(self, id: str, actor_user_id: str) -> Connection:
+        return self._transition(
+            id=id,
+            target_status=ConnectionStatus.PAUSED.value,
+            allowed_statuses=[ConnectionStatus.ACTIVE.value, ConnectionStatus.ERROR.value],
+            actor_user_id=actor_user_id,
+            event_type="connection.paused",
+        )
+
+    def archive_connection(self, id: str, actor_user_id: str) -> Connection:
+        return self._transition(
+            id=id,
+            target_status=ConnectionStatus.ARCHIVED.value,
+            allowed_statuses=[ConnectionStatus.ACTIVE.value, ConnectionStatus.PAUSED.value, ConnectionStatus.ERROR.value],
+            actor_user_id=actor_user_id,
+            event_type="connection.archived",
+        )
+
+    def restore_connection(self, id: str, actor_user_id: str) -> Connection:
+        return self._transition(
+            id=id,
+            target_status=ConnectionStatus.ACTIVE.value,
+            allowed_statuses=[
+                ConnectionStatus.PAUSED.value,
+                ConnectionStatus.ARCHIVED.value,
+                ConnectionStatus.SOFT_DELETED.value,
+            ],
+            actor_user_id=actor_user_id,
+            event_type="connection.restored",
+        )
+
+    def soft_delete_connection(self, id: str, actor_user_id: str) -> Connection:
+        self._ensure_no_active_dependencies(id)
+        return self._transition(
+            id=id,
+            target_status=ConnectionStatus.SOFT_DELETED.value,
+            allowed_statuses=[
+                ConnectionStatus.ACTIVE.value,
+                ConnectionStatus.PAUSED.value,
+                ConnectionStatus.ARCHIVED.value,
+                ConnectionStatus.ERROR.value,
+                ConnectionStatus.INACTIVE.value,
+            ],
+            actor_user_id=actor_user_id,
+            event_type="connection.soft_deleted",
+        )
+
+    def permanently_delete_connection(self, id: str, actor_user_id: str) -> dict:
+        connection = self._require_connection(id)
+        if connection.status != ConnectionStatus.SOFT_DELETED.value:
+            raise ValidationError("Connection must be soft_deleted before permanent delete")
+
+        self._ensure_no_active_dependencies(id)
+        deleted = self._repo.delete(id)
+        if not deleted:
+            raise NotFoundError("Connection not found")
+
+        self._record_event(
+            connection=connection,
+            actor_user_id=actor_user_id,
+            event_type="connection.permanently_deleted",
+        )
+        return {"deleted": True, "id": id}
+
+    def get_dependency_summary(self, id: str) -> dict:
+        self._require_connection(id)
+        active_datasets = self._repo.count_active_datasets(id)
+        active_runs = self._repo.count_active_runs(id)
+        return {
+            "connection_id": id,
+            "active_dataset_count": active_datasets,
+            "active_run_count": active_runs,
+            "can_delete": active_datasets == 0 and active_runs == 0,
+        }
+
+    def _transition(
+        self,
+        id: str,
+        target_status: str,
+        allowed_statuses: list[str],
+        actor_user_id: str,
+        event_type: str,
+    ) -> Connection:
+        connection = self._require_connection(id)
+        if connection.status not in allowed_statuses:
+            raise ValidationError(f"Cannot move connection from '{connection.status}' to '{target_status}'")
+
+        updated = self._repo.update_status(id, target_status)
+        if updated is None:
+            raise NotFoundError("Connection not found")
+
+        self._record_event(connection=updated, actor_user_id=actor_user_id, event_type=event_type)
+        return updated
+
+    def _require_connection(self, id: str) -> Connection:
+        connection = self._repo.get(id)
+        if connection is None:
+            raise NotFoundError("Connection not found")
+        return connection
+
+    def _ensure_no_active_dependencies(self, id: str) -> None:
+        active_datasets = self._repo.count_active_datasets(id)
+        active_runs = self._repo.count_active_runs(id)
+        if active_datasets > 0 or active_runs > 0:
+            raise ValidationError(
+                "Connection has active dependencies: "
+                f"{active_datasets} active dataset(s), {active_runs} queued/running run(s)"
+            )
+
+    def _record_event(self, connection: Connection, actor_user_id: str, event_type: str) -> None:
+        if self._audit is None:
+            return
+
+        self._audit.record_event(
+            tenant_id=None,
+            actor_user_id=actor_user_id,
+            event_type=event_type,
+            payload={
+                "connection_id": connection.id,
+                "project_id": connection.project_id,
+                "source_type": connection.source_type,
+                "status": connection.status,
+            },
+        )
+

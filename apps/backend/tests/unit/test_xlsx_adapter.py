@@ -3,7 +3,7 @@ from pathlib import Path
 import openpyxl
 import pytest
 
-from v3.ingestion.sources.xlsx import (
+from ingestion.sources.xlsx import (
     SheetData,
     WorkbookData,
     _propagate_merged_headers,
@@ -318,3 +318,4 @@ class TestPropagateMergedHeaders:
     def test_propagate_no_rows(self):
         result = _propagate_merged_headers([], ["A1:B1"])
         assert result == []
+

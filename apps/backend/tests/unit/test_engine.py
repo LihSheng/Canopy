@@ -3,9 +3,9 @@ from datetime import datetime
 
 import pytest
 
-from v3.ingestion.cleaning import validate_step_parameters, validate_step_type
-from v3.ingestion.domain import CleaningResult, CleaningStep, MappingDecision
-from v3.ingestion.engine import (
+from ingestion.cleaning import validate_step_parameters, validate_step_type
+from ingestion.domain import CleaningResult, CleaningStep, MappingDecision
+from ingestion.engine import (
     _apply_cast,
     _apply_dedupe,
     _apply_filter_empty_rows,
@@ -16,7 +16,7 @@ from v3.ingestion.engine import (
     execute_cleaning_pipeline,
     parse_spec_steps,
 )
-from v3.ingestion.normalization import normalize_cleaned_rows
+from ingestion.normalization import normalize_cleaned_rows
 
 
 def _step(step_type: str, order: int = 0, parameters: dict | None = None) -> CleaningStep:
@@ -380,3 +380,4 @@ class TestNormalization:
         output = normalize_cleaned_rows([], [])
         assert output.rows == []
         assert output.field_map == {}
+

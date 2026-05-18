@@ -6,8 +6,8 @@ from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError
-from v4.run.repository import RunRepository
-from v4.run.service import RunService
+from run.repository import RunRepository
+from run.service import RunService
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
@@ -47,3 +47,4 @@ def get_run(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(
     if run is None:
         raise NotFoundError("Run not found")
     return run
+

@@ -16,7 +16,7 @@ from ontology.schema import (
     PayrollExpenseModel,
 )
 from analytics.services.builder import run_aggregation_pipeline
-from v5.tenant_data.base import TenantDataBase
+from tenant_data.base import TenantDataBase
 
 _TEST_SERVER_URL = os.environ.get(
     "HERD_AGGREGATOR_TEST_SERVER_URL",
@@ -303,3 +303,4 @@ def seed_analytics_data(db_session):
     )
 
     return db_session
+

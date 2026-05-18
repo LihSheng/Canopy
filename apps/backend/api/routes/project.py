@@ -6,8 +6,8 @@ from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError
-from v4.project.repository import ProjectRepository
-from v4.project.service import ProjectService
+from project.repository import ProjectRepository
+from project.service import ProjectService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -36,3 +36,4 @@ def get_project(id: str, db: Session = Depends(get_db), user: SessionUser = Depe
     if project is None:
         raise NotFoundError("Project not found")
     return project
+

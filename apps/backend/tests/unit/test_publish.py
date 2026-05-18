@@ -5,7 +5,7 @@ import pytest
 
 pytestmark = pytest.mark.business_rule
 
-from v3.ingestion.domain import (
+from ingestion.domain import (
     CleanedSnapshot,
     CleanedSnapshotStatus,
     MappingDecision,
@@ -17,7 +17,7 @@ from v3.ingestion.domain import (
     UploadRecord,
     UploadStatus,
 )
-from v3.ingestion.publish import activate_publish, validate_publish
+from ingestion.publish import activate_publish, validate_publish
 
 
 def _make_upload(dataset_type: str = "payroll") -> UploadRecord:
@@ -290,3 +290,4 @@ class TestActivatePublish:
         repo = FakeRepo()
         repo.deactivate_publish("nonexistent")
         assert len(repo.records) == 0
+

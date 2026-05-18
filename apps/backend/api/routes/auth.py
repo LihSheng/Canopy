@@ -17,7 +17,7 @@ from api.schemas.auth import (
 from auth.domain import LoginInput, TenantInfo as DomainTenantInfo
 from auth.service import AuthService
 from common.database import get_db
-from v5.context.tenant_context import (
+from context.tenant_context import (
     TenantContext,
     get_current_tenant_context,
     set_current_tenant_context,
@@ -134,3 +134,4 @@ def switch_tenant(
         ],
         "token": new_token,
     }
+

@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from v3.ingestion.domain import TemplateFamily, TemplateFamilyStatus, TemplateVersion, TemplateVersionState
-from v3.ingestion.templates import (
+from ingestion.domain import TemplateFamily, TemplateFamilyStatus, TemplateVersion, TemplateVersionState
+from ingestion.templates import (
     clone_version,
     create_draft_version,
     next_version_number,
@@ -175,3 +175,4 @@ class TestTemplateVersionDomain:
     def test_draft_version_no_published_at(self):
         version = _version()
         assert version.published_at is None
+

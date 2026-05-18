@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from common.errors import ValidationError
-from v3.ingestion.domain import UploadRecord, UploadStatus
-from v3.ingestion.service import process_upload
+from ingestion.domain import UploadRecord, UploadStatus
+from ingestion.service import process_upload
 
 
 class TestProcessUpload:
@@ -34,8 +34,8 @@ class TestProcessUpload:
             )
         mock_repo.save_upload.assert_not_called()
 
-    @patch("v3.ingestion.service._get_upload_dir")
-    @patch("v3.ingestion.service._compute_checksum")
+    @patch("ingestion.service._get_upload_dir")
+    @patch("ingestion.service._compute_checksum")
     def test_stores_file_and_returns_record(self, mock_checksum, mock_get_dir, tmp_path):
         mock_get_dir.return_value = tmp_path
         mock_checksum.return_value = "abc123"
@@ -71,8 +71,8 @@ class TestProcessUpload:
         mock_repo.save_upload.side_effect = fake_save
 
         for ext in [".xlsx", ".xls", ".xlsm", ".csv"]:
-            with patch("v3.ingestion.service._get_upload_dir", return_value=Path(__file__).parent):
-                with patch("v3.ingestion.service._compute_checksum", return_value="x"):
+            with patch("ingestion.service._get_upload_dir", return_value=Path(__file__).parent):
+                with patch("ingestion.service._compute_checksum", return_value="x"):
                     result = process_upload(
                         repo=mock_repo,
                         file_bytes=b"test",
@@ -81,3 +81,4 @@ class TestProcessUpload:
                         dataset_type="payroll",
                     )
                     assert result.status == UploadStatus.uploaded
+

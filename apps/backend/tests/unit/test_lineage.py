@@ -4,12 +4,12 @@ pytestmark = pytest.mark.unit
 
 import uuid
 
-from v3.ingestion.domain import (
+from ingestion.domain import (
     LineageEdgeType,
     LineageNodeType,
     MappingDecision,
 )
-from v3.ingestion.lineage import build_lineage_graph
+from ingestion.lineage import build_lineage_graph
 
 
 _UPLOAD_ID = "test-upload-1"
@@ -298,3 +298,4 @@ class TestBuildLineageGraph:
         assert len(raw_nodes) == 3
         assert len(cleaned_nodes) == 3
         assert len(onto_nodes) == 3
+

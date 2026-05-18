@@ -8,8 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
-from v4.dataset.domain import Dataset
-from v4.dataset.repository import DatasetRepository
+from dataset.domain import Dataset
+from dataset.repository import DatasetRepository
 
 
 pytestmark = pytest.mark.api_schema
@@ -427,3 +427,103 @@ def test_dataset_preview_invalid_page(client: TestClient, auth_headers, monkeypa
         headers=auth_headers,
     )
     assert resp.status_code == 422
+
+
+def _create_project_and_connection(client: TestClient, auth_headers, project_name: str = "Lifecycle Project"):
+    project_resp = client.post(
+        "/api/v4/projects/",
+        json={"name": project_name, "description": "Test project"},
+        headers=auth_headers,
+    )
+    assert project_resp.status_code == 201
+    project_id = project_resp.json()["id"]
+
+    connection_resp = client.post(
+        "/api/v4/connections/",
+        json={
+            "project_id": project_id,
+            "source_type": "static_file",
+            "name": "Lifecycle file",
+            "config_json": {"file_name": "source.xlsx"},
+        },
+        headers=auth_headers,
+    )
+    assert connection_resp.status_code == 201
+    return project_id, connection_resp.json()["id"]
+
+
+def test_connection_lifecycle_pause_and_audit(client: TestClient, auth_headers, db_session):
+    _, connection_id = _create_project_and_connection(client, auth_headers, "Pause Project")
+
+    response = client.post(f"/api/v4/connections/{connection_id}/pause", headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "paused"
+
+    audit_event = db_session.execute(
+        text(
+            """
+            select event_type, event_payload_json
+            from audit_events
+            where event_type = 'connection.paused'
+            """
+        )
+    ).first()
+    assert audit_event is not None
+    assert connection_id in audit_event.event_payload_json
+
+
+def test_connection_soft_delete_blocks_active_dependencies(client: TestClient, auth_headers):
+    project_id, connection_id = _create_project_and_connection(client, auth_headers, "Dependency Project")
+    dataset_resp = client.post(
+        "/api/v4/datasets/",
+        json={
+            "project_id": project_id,
+            "connection_id": connection_id,
+            "name": "Dependent dataset",
+            "source_object_name": "Payroll",
+        },
+        headers=auth_headers,
+    )
+    assert dataset_resp.status_code == 201
+
+    dependency_resp = client.get(f"/api/v4/connections/{connection_id}/dependencies", headers=auth_headers)
+    assert dependency_resp.status_code == 200
+    assert dependency_resp.json()["can_delete"] is False
+    assert dependency_resp.json()["active_dataset_count"] == 1
+
+    delete_resp = client.post(f"/api/v4/connections/{connection_id}/soft-delete", headers=auth_headers)
+
+    assert delete_resp.status_code == 400
+    assert "active dependencies" in delete_resp.json()["detail"]
+
+
+def test_connection_soft_delete_hides_restore_and_permanent_delete(client: TestClient, auth_headers):
+    _, connection_id = _create_project_and_connection(client, auth_headers, "Delete Project")
+
+    soft_delete_resp = client.post(f"/api/v4/connections/{connection_id}/soft-delete", headers=auth_headers)
+    assert soft_delete_resp.status_code == 200
+    assert soft_delete_resp.json()["status"] == "soft_deleted"
+
+    list_resp = client.get("/api/v4/connections/", headers=auth_headers)
+    assert list_resp.status_code == 200
+    assert all(item["id"] != connection_id for item in list_resp.json())
+
+    restore_resp = client.post(f"/api/v4/connections/{connection_id}/restore", headers=auth_headers)
+    assert restore_resp.status_code == 200
+    assert restore_resp.json()["status"] == "active"
+
+    second_soft_delete_resp = client.post(f"/api/v4/connections/{connection_id}/soft-delete", headers=auth_headers)
+    assert second_soft_delete_resp.status_code == 200
+
+    permanent_delete_resp = client.request(
+        "DELETE",
+        f"/api/v4/connections/{connection_id}/permanent",
+        headers=auth_headers,
+    )
+    assert permanent_delete_resp.status_code == 200
+    assert permanent_delete_resp.json() == {"deleted": True, "id": connection_id}
+
+    get_resp = client.get(f"/api/v4/connections/{connection_id}", headers=auth_headers)
+    assert get_resp.status_code == 404
+

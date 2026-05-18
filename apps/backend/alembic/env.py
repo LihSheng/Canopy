@@ -14,11 +14,11 @@ import insights.schema  # noqa: F401
 import ontology.schema  # noqa: F401
 import refresh.schema  # noqa: F401
 import sync.schema  # noqa: F401
-import v4.project.schema  # noqa: F401
-import v4.source_type.schema  # noqa: F401
-import v4.connection.schema  # noqa: F401
-import v4.dataset.schema  # noqa: F401
-import v4.run.schema  # noqa: F401
+import project.schema  # noqa: F401
+import source_type.schema  # noqa: F401
+import connection.schema  # noqa: F401
+import dataset.schema  # noqa: F401
+import run.schema  # noqa: F401
 
 config = context.config
 

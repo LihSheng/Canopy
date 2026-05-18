@@ -8,7 +8,7 @@ from api.schemas.auth import SessionUser
 from auth.service import AuthService
 from common.database import get_db
 from common.errors import AuthError
-from v5.context.tenant_context import (
+from context.tenant_context import (
     TenantContext,
     get_current_tenant_context,
     reset_tenant_context,
@@ -65,3 +65,4 @@ async def require_tenant_context(
     if ctx is None:
         raise AuthError("No tenant selected")
     return ctx
+

@@ -12,14 +12,14 @@ from api.routes.departments import router as departments_router
 from api.routes.exports import router as exports_router
 from api.routes.health import router as health_router
 from api.routes.insights import router as insights_router
-from v5.control_plane.admin_router import router as v5_admin_router
-from v5.cache.cache_store import CacheStore
-from v5.cache.config_cache import ConfigCache
-from v5.cache.hooks import (
+from control_plane.admin_router import router as admin_router
+from cache.cache_store import CacheStore
+from cache.config_cache import ConfigCache
+from cache.hooks import (
     register_listener,
 )
-from v5.cache.invalidation import CacheInvalidator
-from v5.cache.routing_cache import RoutingCache
+from cache.invalidation import CacheInvalidator
+from cache.routing_cache import RoutingCache
 from api.routes.project import router as project_router
 from api.routes.source_type import router as source_type_router
 from api.routes.connection import router as connection_router
@@ -94,7 +94,7 @@ def create_app() -> FastAPI:
     app.include_router(refresh_router)
     app.include_router(exports_router)
     app.include_router(insights_router)
-    app.include_router(v5_admin_router)
+    app.include_router(admin_router)
     app.include_router(project_router, prefix="/api")
     app.include_router(source_type_router, prefix="/api")
     app.include_router(connection_router, prefix="/api")
@@ -111,3 +111,4 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
