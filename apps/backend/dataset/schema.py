@@ -1,6 +1,6 @@
 import uuid
 from datetime import UTC, datetime
-from sqlalchemy import String, DateTime, Integer, ForeignKey
+from sqlalchemy import String, DateTime, Integer, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 from common.database import Base
 
@@ -30,4 +30,6 @@ class DatasetVersionModel(Base):
     row_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     column_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     storage_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    raw_storage_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    cleaning_issues: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)

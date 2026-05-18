@@ -53,6 +53,7 @@ class DatasetService:
             "row_count": active_version.row_count if active_version else 0,
             "column_count": active_version.column_count if active_version else 0,
             "warning_count": last_run.warning_count if last_run else 0,
+            "cleaning_issue_count": len(active_version.cleaning_issues) if active_version else 0,
             "missing_required_mappings": False,
             "last_run_status": last_run_status,
             "last_published_version": active_version.version_number if active_version else None,

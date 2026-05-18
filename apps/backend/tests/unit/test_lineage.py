@@ -1,15 +1,43 @@
+import uuid
+from unittest.mock import MagicMock
+
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 pytestmark = pytest.mark.unit
 
-import uuid
-
+from api.routes.dataset import get_lineage
+from api.schemas.auth import SessionUser
+from common.database import Base
+from connection.domain import Connection
+from connection.repository import ConnectionRepository
+from dataset.domain import Dataset, DatasetVersion
+from dataset.repository import DatasetRepository, DatasetVersionRepository
 from ingestion.domain import (
     LineageEdgeType,
     LineageNodeType,
     MappingDecision,
 )
 from ingestion.lineage import build_lineage_graph
+from run.domain import Run
+from run.repository import RunRepository
+
+
+@pytest.fixture(autouse=True)
+def _setup_db():
+    """Override conftest._setup_db to avoid PostgreSQL dependency."""
+    yield
+
+
+def _make_lineage_sqlite_session():
+    engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
+    import dataset.schema  # noqa: F401
+    import connection.schema  # noqa: F401
+    import run.schema  # noqa: F401
+    Base.metadata.create_all(bind=engine)
+    SessionLocal = sessionmaker(bind=engine)
+    return SessionLocal()
 
 
 _UPLOAD_ID = "test-upload-1"
@@ -298,4 +326,219 @@ class TestBuildLineageGraph:
         assert len(raw_nodes) == 3
         assert len(cleaned_nodes) == 3
         assert len(onto_nodes) == 3
+
+
+class TestDatasetLineageHandler:
+    def _make_user(self):
+        return SessionUser(id="user-1", email="a@b.com", display_name="Test User")
+
+    def test_includes_source_object_and_connection_nodes(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
+            ConnectionRepository(session).save(conn)
+
+            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="sheet1")
+            DatasetRepository(session).save(dataset)
+
+            user = self._make_user()
+            result = get_lineage(id="ds-1", db=session, user=user)
+
+            node_types = {n["type"] for n in result["nodes"]}
+            assert "source_object" in node_types
+            assert "connection" in node_types
+            assert "dataset" in node_types
+        finally:
+            session.close()
+
+    def test_source_object_node_has_correct_label(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
+            ConnectionRepository(session).save(conn)
+
+            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="sheet1")
+            DatasetRepository(session).save(dataset)
+
+            user = self._make_user()
+            result = get_lineage(id="ds-1", db=session, user=user)
+
+            source = [n for n in result["nodes"] if n["type"] == "source_object"][0]
+            assert source["label"] == "sheet1"
+        finally:
+            session.close()
+
+    def test_no_source_object_node_when_name_empty(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
+            ConnectionRepository(session).save(conn)
+
+            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="")
+            DatasetRepository(session).save(dataset)
+
+            user = self._make_user()
+            result = get_lineage(id="ds-1", db=session, user=user)
+
+            node_types = {n["type"] for n in result["nodes"]}
+            assert "source_object" not in node_types
+        finally:
+            session.close()
+
+    def test_lineage_has_correct_node_types(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
+            ConnectionRepository(session).save(conn)
+
+            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="tbl")
+            DatasetRepository(session).save(dataset)
+
+            version_repo = DatasetVersionRepository(session)
+            v = DatasetVersion(id="ver-1", dataset_id="ds-1", version_number=1)
+            version_repo.save(v)
+
+            run_repo = RunRepository(session)
+            r = Run(id="run-1", project_id="proj-1", connection_id="conn-1", dataset_id="ds-1", status="completed")
+            run_repo.save(r)
+
+            user = self._make_user()
+            result = get_lineage(id="ds-1", db=session, user=user)
+
+            node_types = {n["type"] for n in result["nodes"]}
+            assert node_types == {"source_object", "connection", "dataset", "version", "run"}
+        finally:
+            session.close()
+
+    def test_source_object_to_connection_edge_exists(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
+            ConnectionRepository(session).save(conn)
+
+            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="tbl")
+            DatasetRepository(session).save(dataset)
+
+            user = self._make_user()
+            result = get_lineage(id="ds-1", db=session, user=user)
+
+            so_to_conn = [e for e in result["edges"] if e["from"].startswith("source_") and e["to"].startswith("connection_")]
+            assert len(so_to_conn) == 1
+            assert so_to_conn[0]["type"] == "feeds"
+        finally:
+            session.close()
+
+    def test_connection_to_dataset_edge_exists(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
+            ConnectionRepository(session).save(conn)
+
+            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs")
+            DatasetRepository(session).save(dataset)
+
+            user = self._make_user()
+            result = get_lineage(id="ds-1", db=session, user=user)
+
+            conn_to_ds = [e for e in result["edges"] if e["from"].startswith("connection_") and e["to"].startswith("dataset_")]
+            assert len(conn_to_ds) == 1
+            assert conn_to_ds[0]["type"] == "provides"
+        finally:
+            session.close()
+
+    def test_version_to_dataset_edge_exists(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
+            ConnectionRepository(session).save(conn)
+
+            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs")
+            DatasetRepository(session).save(dataset)
+
+            version_repo = DatasetVersionRepository(session)
+            version_repo.save(DatasetVersion(id="ver-1", dataset_id="ds-1", version_number=1))
+            version_repo.save(DatasetVersion(id="ver-2", dataset_id="ds-1", version_number=2))
+
+            user = self._make_user()
+            result = get_lineage(id="ds-1", db=session, user=user)
+
+            ver_to_ds = [e for e in result["edges"] if e["from"].startswith("version_") and e["to"].startswith("dataset_")]
+            assert len(ver_to_ds) == 2
+            for edge in ver_to_ds:
+                assert edge["type"] == "belongs_to"
+        finally:
+            session.close()
+
+    def test_run_to_dataset_edge_exists(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
+            ConnectionRepository(session).save(conn)
+
+            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs")
+            DatasetRepository(session).save(dataset)
+
+            run_repo = RunRepository(session)
+            run_repo.save(Run(id="run-1", project_id="proj-1", connection_id="conn-1", dataset_id="ds-1", status="completed"))
+            run_repo.save(Run(id="run-2", project_id="proj-1", connection_id="conn-1", dataset_id="ds-1", status="failed"))
+
+            user = self._make_user()
+            result = get_lineage(id="ds-1", db=session, user=user)
+
+            run_to_ds = [e for e in result["edges"] if e["from"].startswith("run_") and e["to"].startswith("dataset_")]
+            assert len(run_to_ds) == 2
+            for edge in run_to_ds:
+                assert edge["type"] == "produces"
+        finally:
+            session.close()
+
+    def test_version_node_label_includes_version_number(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
+            ConnectionRepository(session).save(conn)
+
+            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs")
+            DatasetRepository(session).save(dataset)
+
+            version_repo = DatasetVersionRepository(session)
+            version_repo.save(DatasetVersion(id="ver-1", dataset_id="ds-1", version_number=3))
+
+            user = self._make_user()
+            result = get_lineage(id="ds-1", db=session, user=user)
+
+            version_nodes = [n for n in result["nodes"] if n["type"] == "version"]
+            assert len(version_nodes) == 1
+            assert version_nodes[0]["label"] == "v3"
+        finally:
+            session.close()
+
+    def test_dataset_not_found_raises_error(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            user = self._make_user()
+            from common.errors import NotFoundError
+            with pytest.raises(NotFoundError, match="Dataset not found"):
+                get_lineage(id="no-such-ds", db=session, user=user)
+        finally:
+            session.close()
+
+    def test_no_connection_edges_when_connection_missing(self):
+        session = _make_lineage_sqlite_session()
+        try:
+            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="bad-conn", name="MyDs", source_object_name="tbl")
+            DatasetRepository(session).save(dataset)
+
+            user = self._make_user()
+            result = get_lineage(id="ds-1", db=session, user=user)
+
+            node_types = {n["type"] for n in result["nodes"]}
+            assert "connection" not in node_types
+
+            feeds_edges = [e for e in result["edges"] if e["type"] == "feeds"]
+            provides_edges = [e for e in result["edges"] if e["type"] == "provides"]
+            assert len(feeds_edges) == 0
+            assert len(provides_edges) == 0
+        finally:
+            session.close()
 

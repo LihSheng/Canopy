@@ -13,13 +13,16 @@ import {
 import type { Dataset, DatasetVersion, DatasetHealth, Run } from "@/lib/api/types";
 import type { DatasetPreviewResponse } from "@/lib/api/data-source";
 import { DatasetPreviewGrid } from "@/components/dataset-preview-grid";
+import { DatasetSummaryCards } from "@/components/dataset-summary-cards";
+import { DatasetCharts } from "@/components/dataset-charts";
+import { VersionHistory } from "@/components/version-history";
 import { HealthPanel } from "@/components/health-panel";
 import { RunHistory } from "@/components/run-history";
 import { LineageView } from "@/components/lineage-view";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
 
-const TABS = ["Preview", "Schema", "Transform", "Lineage", "Runs", "Details"] as const;
+const TABS = ["Overview", "Preview", "Schema", "Transform", "Lineage", "Runs", "Details"] as const;
 
 type Tab = (typeof TABS)[number];
 
@@ -30,7 +33,7 @@ type Props = {
 export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const activeTab = (searchParams.get("tab") as Tab) || "Preview";
+  const activeTab = (searchParams.get("tab") as Tab) || "Overview";
 
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [preview, setPreview] = useState<DatasetPreviewResponse | null>(null);
@@ -44,6 +47,9 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const activeVersion = versions.find((v) => v.id === dataset?.active_version_id);
+  const activeVersionNumber = activeVersion?.version_number;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -132,18 +138,43 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
       </div>
 
       <div>
+        {activeTab === "Overview" && (
+          <div className="space-y-6">
+            <DatasetSummaryCards
+              health={health}
+              versionCount={versions.length}
+              activeVersionNumber={activeVersionNumber}
+            />
+            <DatasetCharts
+              columns={preview?.columns ?? []}
+              rows={preview?.rows ?? []}
+              loading={previewLoading}
+              error={previewError}
+            />
+            <VersionHistory
+              versions={versions}
+              activeVersionId={dataset.active_version_id}
+            />
+          </div>
+        )}
+
         {activeTab === "Preview" && (
-          <DatasetPreviewGrid
-            columns={preview?.columns ?? []}
-            rows={preview?.rows ?? []}
-            totalRowCount={preview?.total_row_count ?? 0}
-            page={previewPage}
-            pageSize={previewPageSize}
-            loading={previewLoading}
-            error={previewError}
-            onPageChange={(page) => setPreviewPage(page)}
-            onRetry={loadPreview}
-          />
+          <div className="space-y-3">
+            <span className="inline-block rounded-full border border-zinc-300 bg-zinc-50 px-2.5 py-0.5 text-xs font-medium text-zinc-500">
+              Read only
+            </span>
+            <DatasetPreviewGrid
+              columns={preview?.columns ?? []}
+              rows={preview?.rows ?? []}
+              totalRowCount={preview?.total_row_count ?? 0}
+              page={previewPage}
+              pageSize={previewPageSize}
+              loading={previewLoading}
+              error={previewError}
+              onPageChange={(page) => setPreviewPage(page)}
+              onRetry={loadPreview}
+            />
+          </div>
         )}
 
         {activeTab === "Schema" && (

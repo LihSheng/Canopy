@@ -39,4 +39,6 @@ class DatasetVersion:
     row_count: int = 0
     column_count: int = 0
     storage_path: str = ""
+    raw_storage_path: str = ""
+    cleaning_issues: list[dict] = field(default_factory=list)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

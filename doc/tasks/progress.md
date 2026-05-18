@@ -8,3 +8,4 @@ for all phases.
 - [V3 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/progress.md): ingestion and cleaning work
 - [V4 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v4/progress.md): workspace and dataset work
 - [V5 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v5/progress.md): future multi-tenant platform and database architecture
+- [V6 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v6/progress.md): data connection workbench

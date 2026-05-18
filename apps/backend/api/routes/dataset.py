@@ -11,8 +11,8 @@ from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError
-from connection.importer import materialize_dataset_version
 from connection.repository import ConnectionRepository
+from dataset.cleaning import clean_source_file
 from dataset.domain import DatasetVersion, DatasetVersionStatus
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from dataset.service import DatasetService, DatasetVersionService
@@ -75,8 +75,8 @@ def _hydrate_dataset_version(
     if connection.source_type != "static_file" or not source_file_path:
         return dataset
 
-    version_path, row_count, column_count = materialize_dataset_version(
-        storage_path=Path(source_file_path),
+    result = clean_source_file(
+        source_file_path=Path(source_file_path),
         sheet_name=dataset.source_object_name or dataset.name,
         dataset_id=dataset.id,
     )
@@ -91,9 +91,11 @@ def _hydrate_dataset_version(
             run_id=None,
             version_number=version_number,
             status=DatasetVersionStatus.READY.value,
-            row_count=row_count,
-            column_count=column_count,
-            storage_path=str(version_path),
+            row_count=result["row_count"],
+            column_count=result["column_count"],
+            storage_path=result["cleaned_path"],
+            raw_storage_path=result["raw_path"],
+            cleaning_issues=result["cleaning_issues"],
         ),
     )
     return dataset_repo.update_active_version(dataset.id, version.id) or dataset
@@ -124,8 +126,8 @@ def create_dataset(body: CreateDatasetRequest, db: Session = Depends(get_db), us
     if connection is not None:
         source_file_path = _resolve_static_source_file_path(connection, db)
         if connection.source_type == "static_file" and source_file_path:
-            version_path, row_count, column_count = materialize_dataset_version(
-                storage_path=Path(source_file_path),
+            result = clean_source_file(
+                source_file_path=Path(source_file_path),
                 sheet_name=body.source_object_name or body.name,
                 dataset_id=dataset.id,
             )
@@ -136,9 +138,11 @@ def create_dataset(body: CreateDatasetRequest, db: Session = Depends(get_db), us
                     run_id=None,
                     version_number=1,
                     status=DatasetVersionStatus.READY.value,
-                    row_count=row_count,
-                    column_count=column_count,
-                    storage_path=str(version_path),
+                    row_count=result["row_count"],
+                    column_count=result["column_count"],
+                    storage_path=result["cleaned_path"],
+                    raw_storage_path=result["raw_path"],
+                    cleaning_issues=result["cleaning_issues"],
                 ),
             )
             dataset = dataset_repo.update_active_version(dataset.id, version.id) or dataset
@@ -217,7 +221,21 @@ def get_lineage(id: str, db: Session = Depends(get_db), user: SessionUser = Depe
     nodes: list[dict] = []
     edges: list[dict] = []
 
+    connection = ConnectionRepository(db).get(dataset.connection_id)
+
+    if dataset.source_object_name:
+        nodes.append({"id": f"source_{id}", "type": "source_object", "label": dataset.source_object_name})
+
+    if connection is not None:
+        nodes.append({"id": f"connection_{dataset.connection_id}", "type": "connection", "label": connection.name})
+
     nodes.append({"id": f"dataset_{id}", "type": "dataset", "label": dataset.name})
+
+    if dataset.source_object_name and connection is not None:
+        edges.append({"from": f"source_{id}", "to": f"connection_{dataset.connection_id}", "type": "feeds"})
+
+    if connection is not None:
+        edges.append({"from": f"connection_{dataset.connection_id}", "to": f"dataset_{id}", "type": "provides"})
 
     for v in versions:
         nodes.append({"id": f"version_{v.id}", "type": "version", "label": f"v{v.version_number}"})
