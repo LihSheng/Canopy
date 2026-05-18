@@ -9,9 +9,9 @@ from v5.tenant_data.base import TenantDataBase
 RLS_POLICY_NAME = "tenant_isolation"
 
 
-# PostgreSQL: metadata.lineage_nodes  |  SQLite: v5td_lineage_nodes
+# PostgreSQL: metadata.lineage_nodes  |  SQLite: lineage_nodes
 class LineageNodeModel(TenantDataBase):
-    __tablename__ = "v5td_lineage_nodes"
+    __tablename__ = "lineage_nodes"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -25,7 +25,7 @@ class LineageNodeModel(TenantDataBase):
 
     @staticmethod
     def get_rls_policy_sql() -> str:
-        table = "v5td_lineage_nodes"
+        table = "lineage_nodes"
         return (
             f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;\n"
             f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;\n"
@@ -34,9 +34,9 @@ class LineageNodeModel(TenantDataBase):
         )
 
 
-# PostgreSQL: metadata.lineage_edges  |  SQLite: v5td_lineage_edges
+# PostgreSQL: metadata.lineage_edges  |  SQLite: lineage_edges
 class LineageEdgeModel(TenantDataBase):
-    __tablename__ = "v5td_lineage_edges"
+    __tablename__ = "lineage_edges"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -51,7 +51,7 @@ class LineageEdgeModel(TenantDataBase):
 
     @staticmethod
     def get_rls_policy_sql() -> str:
-        table = "v5td_lineage_edges"
+        table = "lineage_edges"
         return (
             f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;\n"
             f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;\n"
@@ -60,9 +60,9 @@ class LineageEdgeModel(TenantDataBase):
         )
 
 
-# PostgreSQL: metadata.publish_states  |  SQLite: v5td_publish_states
+# PostgreSQL: metadata.publish_states  |  SQLite: publish_states
 class PublishStateModel(TenantDataBase):
-    __tablename__ = "v5td_publish_states"
+    __tablename__ = "publish_states"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -79,7 +79,7 @@ class PublishStateModel(TenantDataBase):
 
     @staticmethod
     def get_rls_policy_sql() -> str:
-        table = "v5td_publish_states"
+        table = "publish_states"
         return (
             f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;\n"
             f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;\n"
@@ -88,9 +88,9 @@ class PublishStateModel(TenantDataBase):
         )
 
 
-# PostgreSQL: metadata.storage_objects  |  SQLite: v5td_storage_objects
+# PostgreSQL: metadata.storage_objects  |  SQLite: storage_objects
 class StorageObjectModel(TenantDataBase):
-    __tablename__ = "v5td_storage_objects"
+    __tablename__ = "storage_objects"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -112,7 +112,7 @@ class StorageObjectModel(TenantDataBase):
 
     @staticmethod
     def get_rls_policy_sql() -> str:
-        table = "v5td_storage_objects"
+        table = "storage_objects"
         return (
             f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;\n"
             f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;\n"
@@ -121,9 +121,9 @@ class StorageObjectModel(TenantDataBase):
         )
 
 
-# PostgreSQL: metadata.job_runs  |  SQLite: v5td_job_runs
+# PostgreSQL: metadata.job_runs  |  SQLite: job_runs
 class JobRunModel(TenantDataBase):
-    __tablename__ = "v5td_job_runs"
+    __tablename__ = "job_runs"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -144,7 +144,7 @@ class JobRunModel(TenantDataBase):
 
     @staticmethod
     def get_rls_policy_sql() -> str:
-        table = "v5td_job_runs"
+        table = "job_runs"
         return (
             f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;\n"
             f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;\n"

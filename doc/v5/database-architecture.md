@@ -5,6 +5,13 @@
 This document defines the platform database foundation for the future multi-
 tenant phase.
 
+Note:
+
+- `v5` is a planning label for this document set only
+- implementation names must use domain terms, not phase prefixes
+- tables, schemas, files, routes, and jobs should not be named `v5_*` or
+  `v3_*`
+
 It stays aligned with [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md)
 and the v5 planning docs. If it conflicts with `ARCHITECTURE.md`, the system
 source of truth wins.
@@ -310,4 +317,3 @@ Rules:
 
 Ontology-specific database modeling is intentionally out of scope for v5
 database architecture and will be documented separately.
-

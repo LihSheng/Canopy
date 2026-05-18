@@ -196,7 +196,7 @@ def test_preview_backfills_upload_id_connection_without_active_version(client: T
     db_session.execute(
         text(
             """
-            create table if not exists v3_uploads (
+            create table if not exists uploads (
                 id varchar primary key,
                 storage_path varchar not null
             )
@@ -204,7 +204,7 @@ def test_preview_backfills_upload_id_connection_without_active_version(client: T
         ),
     )
     db_session.execute(
-        text("insert into v3_uploads (id, storage_path) values (:id, :storage_path)"),
+        text("insert into uploads (id, storage_path) values (:id, :storage_path)"),
         {"id": upload_id, "storage_path": preview["source_file_path"]},
     )
     db_session.commit()

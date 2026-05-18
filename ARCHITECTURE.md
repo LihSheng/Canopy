@@ -106,6 +106,24 @@ Preferred unit size:
 
 Avoid large “utility” or “service” files that mix unrelated rules.
 
+### Naming and phase labels rule
+
+Version labels such as `v3`, `v4`, and `v5` are planning-phase markers only.
+
+Rules:
+
+- use phase labels in docs, task trackers, and milestones only
+- do not prefix runtime code, database tables, schemas, jobs, routes, or
+  config keys with phase labels
+- use domain names for implementation artifacts
+- if an implementation artifact needs a lifecycle or rollout marker, name that
+  marker after the business concept, not the project phase
+
+Examples:
+
+- good: `tenant_context`, `provisioning_jobs`, `backup_runs`
+- bad: `v5_tenant_context`, `v3_uploads`, `v5_backup_runs`
+
 ### Ports and adapters rule
 
 Framework and vendor details should stay at the edges.

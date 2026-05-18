@@ -6,12 +6,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from v5.tenant_data.base import TenantDataBase
 
-# PostgreSQL: staging.normalized_rows  |  SQLite: v5td_normalized_rows
+# PostgreSQL: staging.normalized_rows  |  SQLite: normalized_rows
 RLS_POLICY_NAME = "tenant_isolation"
 
 
 class NormalizedRowModel(TenantDataBase):
-    __tablename__ = "v5td_normalized_rows"
+    __tablename__ = "normalized_rows"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -32,7 +32,7 @@ class NormalizedRowModel(TenantDataBase):
 
     @staticmethod
     def get_rls_policy_sql() -> str:
-        table = "v5td_normalized_rows"
+        table = "normalized_rows"
         return (
             f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;\n"
             f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;\n"

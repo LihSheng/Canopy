@@ -8,7 +8,7 @@ from common.database import Base
 
 
 class AuditEventModel(Base):
-    __tablename__ = "v5_audit_events"
+    __tablename__ = "audit_events"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -23,7 +23,7 @@ class AuditEventModel(Base):
 
 
 class ImpersonationSessionModel(Base):
-    __tablename__ = "v5_impersonation_sessions"
+    __tablename__ = "impersonation_sessions"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())

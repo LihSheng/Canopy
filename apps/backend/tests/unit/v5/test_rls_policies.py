@@ -23,7 +23,7 @@ from v5.tenant_data.schemas.metadata import (
 
 class TestRlsPolicyGeneration:
     def test_generate_rls_policies_produces_valid_sql(self):
-        sql = generate_rls_policies(None, ["v5td_upload_batches"])
+        sql = generate_rls_policies(None, ["upload_batches"])
         assert "ENABLE ROW LEVEL SECURITY" in sql
         assert "FORCE ROW LEVEL SECURITY" in sql
         assert "CREATE POLICY tenant_isolation" in sql
@@ -35,16 +35,16 @@ class TestRlsPolicyGeneration:
             assert table in sql, f"Missing RLS policy for {table}"
 
     def test_generate_rls_rollback_produces_valid_drop_statements(self):
-        sql = generate_rls_rollback(None, ["v5td_upload_batches"])
+        sql = generate_rls_rollback(None, ["upload_batches"])
         assert "DROP POLICY IF EXISTS tenant_isolation" in sql
         assert "NO FORCE ROW LEVEL SECURITY" in sql
         assert "DISABLE ROW LEVEL SECURITY" in sql
 
     def test_generate_rls_rollback_reverses_order(self):
-        tables = ["v5td_upload_batches", "v5td_raw_artifacts"]
+        tables = ["upload_batches", "raw_artifacts"]
         sql = generate_rls_rollback(None, tables)
-        idx_batches = sql.find("v5td_upload_batches")
-        idx_artifacts = sql.find("v5td_raw_artifacts")
+        idx_batches = sql.find("upload_batches")
+        idx_artifacts = sql.find("raw_artifacts")
         assert idx_artifacts < idx_batches
 
     def test_is_rls_supported_returns_true_for_postgres(self, db_session):
@@ -55,7 +55,7 @@ class TestRlsPolicyGeneration:
         factory = sessionmaker(autocommit=False, autoflush=False, bind=tenant_data_engine)
         db_session = factory()
         try:
-            apply_rls(db_session, ["v5td_upload_batches"])
+            apply_rls(db_session, ["upload_batches"])
             db_session.commit()
         finally:
             db_session.close()
@@ -64,49 +64,49 @@ class TestRlsPolicyGeneration:
 class TestPerModelRlsPolicies:
     def test_upload_batch_rls_policy(self):
         sql = UploadBatchModel.get_rls_policy_sql()
-        assert "v5td_upload_batches" in sql
+        assert "upload_batches" in sql
         assert "tenant_isolation" in sql
         assert "app.current_tenant_id" in sql
 
     def test_raw_artifact_rls_policy_includes_immutable_check(self):
         sql = RawArtifactModel.get_rls_policy_sql()
-        assert "v5td_raw_artifacts" in sql
+        assert "raw_artifacts" in sql
         assert "is_immutable = true" in sql.lower()
 
     def test_normalized_row_rls_policy(self):
         sql = NormalizedRowModel.get_rls_policy_sql()
-        assert "v5td_normalized_rows" in sql
+        assert "normalized_rows" in sql
         assert "tenant_isolation" in sql
 
     def test_cleaned_record_rls_policy(self):
         sql = CleanedRecordModel.get_rls_policy_sql()
-        assert "v5td_cleaned_records" in sql
+        assert "cleaned_records" in sql
         assert "tenant_isolation" in sql
 
     def test_derived_read_model_rls_policy(self):
         sql = DerivedReadModel.get_rls_policy_sql()
-        assert "v5td_derived_read_models" in sql
+        assert "derived_read_models" in sql
         assert "tenant_isolation" in sql
 
     def test_lineage_node_rls_policy(self):
         sql = LineageNodeModel.get_rls_policy_sql()
-        assert "v5td_lineage_nodes" in sql
+        assert "lineage_nodes" in sql
 
     def test_lineage_edge_rls_policy(self):
         sql = LineageEdgeModel.get_rls_policy_sql()
-        assert "v5td_lineage_edges" in sql
+        assert "lineage_edges" in sql
 
     def test_publish_state_rls_policy(self):
         sql = PublishStateModel.get_rls_policy_sql()
-        assert "v5td_publish_states" in sql
+        assert "publish_states" in sql
 
     def test_storage_object_rls_policy(self):
         sql = StorageObjectModel.get_rls_policy_sql()
-        assert "v5td_storage_objects" in sql
+        assert "storage_objects" in sql
 
     def test_job_run_rls_policy(self):
         sql = JobRunModel.get_rls_policy_sql()
-        assert "v5td_job_runs" in sql
+        assert "job_runs" in sql
 
 
 class TestRlsEdgeCases:

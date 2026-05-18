@@ -4,6 +4,13 @@
 
 This document defines the implementation-ready shape for v5.
 
+Naming note:
+
+- `v5` names this document set, not runtime artifacts
+- implementation files, modules, schemas, tables, routes, and jobs should use
+  domain names only
+- phase prefixes are allowed only in docs, task trackers, and milestone labels
+
 V5 introduces the control-plane and tenant-data split, tenant-aware routing,
 database-enforced isolation, and the operational flows needed to run the
 platform safely across tenants.
@@ -545,4 +552,3 @@ Mitigation:
 - separate cluster per tenant
 - read replicas as default
 - per-tenant schema drift
-

@@ -6,13 +6,13 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from v5.tenant_data.base import TenantDataBase
 
-# PostgreSQL: clean.cleaned_records  |  SQLite: v5td_cleaned_records
-# PostgreSQL: clean.derived_read_models  |  SQLite: v5td_derived_read_models
+# PostgreSQL: clean.cleaned_records  |  SQLite: cleaned_records
+# PostgreSQL: clean.derived_read_models  |  SQLite: derived_read_models
 RLS_POLICY_NAME = "tenant_isolation"
 
 
 class CleanedRecordModel(TenantDataBase):
-    __tablename__ = "v5td_cleaned_records"
+    __tablename__ = "cleaned_records"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -33,7 +33,7 @@ class CleanedRecordModel(TenantDataBase):
 
     @staticmethod
     def get_rls_policy_sql() -> str:
-        table = "v5td_cleaned_records"
+        table = "cleaned_records"
         return (
             f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;\n"
             f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;\n"
@@ -43,7 +43,7 @@ class CleanedRecordModel(TenantDataBase):
 
 
 class DerivedReadModel(TenantDataBase):
-    __tablename__ = "v5td_derived_read_models"
+    __tablename__ = "derived_read_models"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -61,7 +61,7 @@ class DerivedReadModel(TenantDataBase):
 
     @staticmethod
     def get_rls_policy_sql() -> str:
-        table = "v5td_derived_read_models"
+        table = "derived_read_models"
         return (
             f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;\n"
             f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;\n"

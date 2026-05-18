@@ -44,7 +44,7 @@ def _resolve_static_source_file_path(connection, db: Session) -> str:
     try:
         return (
             db.execute(
-                text("select storage_path from v3_uploads where id = :upload_id"),
+                text("select storage_path from uploads where id = :upload_id"),
                 {"upload_id": upload_id},
             ).scalar_one_or_none()
             or ""

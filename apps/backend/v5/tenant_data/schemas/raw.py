@@ -6,12 +6,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from v5.tenant_data.base import TenantDataBase
 
-# PostgreSQL: raw.upload_batches  |  SQLite: v5td_upload_batches
+# PostgreSQL: raw.upload_batches  |  SQLite: upload_batches
 RLS_POLICY_NAME = "tenant_isolation"
 
 
 class UploadBatchModel(TenantDataBase):
-    __tablename__ = "v5td_upload_batches"
+    __tablename__ = "upload_batches"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -33,7 +33,7 @@ class UploadBatchModel(TenantDataBase):
 
     @staticmethod
     def get_rls_policy_sql() -> str:
-        table = "v5td_upload_batches"
+        table = "upload_batches"
         return (
             f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;\n"
             f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;\n"
@@ -43,7 +43,7 @@ class UploadBatchModel(TenantDataBase):
 
 
 class RawArtifactModel(TenantDataBase):
-    __tablename__ = "v5td_raw_artifacts"
+    __tablename__ = "raw_artifacts"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -61,7 +61,7 @@ class RawArtifactModel(TenantDataBase):
 
     @staticmethod
     def get_rls_policy_sql() -> str:
-        table = "v5td_raw_artifacts"
+        table = "raw_artifacts"
         return (
             f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;\n"
             f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;\n"

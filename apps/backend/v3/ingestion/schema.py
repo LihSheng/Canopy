@@ -9,7 +9,7 @@ from common.database import Base
 
 
 class UploadModel(Base):
-    __tablename__ = "v3_uploads"
+    __tablename__ = "uploads"
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -76,7 +76,7 @@ class UploadModel(Base):
 
 
 class MappingDecisionModel(Base):
-    __tablename__ = "v3_mapping_decisions"
+    __tablename__ = "mapping_decisions"
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -89,7 +89,7 @@ class MappingDecisionModel(Base):
 
 
 class TemplateFamilyModel(Base):
-    __tablename__ = "v3_template_families"
+    __tablename__ = "template_families"
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -103,7 +103,7 @@ class TemplateFamilyModel(Base):
 
 
 class TemplateVersionModel(Base):
-    __tablename__ = "v3_template_versions"
+    __tablename__ = "template_versions"
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -117,7 +117,7 @@ class TemplateVersionModel(Base):
 
 
 class CleaningPipelineModel(Base):
-    __tablename__ = "v3_cleaning_pipelines"
+    __tablename__ = "cleaning_pipelines"
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -129,7 +129,7 @@ class CleaningPipelineModel(Base):
 
 
 class CleaningStepModel(Base):
-    __tablename__ = "v3_cleaning_steps"
+    __tablename__ = "cleaning_steps"
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -142,7 +142,7 @@ class CleaningStepModel(Base):
 
 
 class CleanedSnapshotModel(Base):
-    __tablename__ = "v3_cleaned_snapshots"
+    __tablename__ = "cleaned_snapshots"
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -157,7 +157,7 @@ class CleanedSnapshotModel(Base):
 
 
 class LineageNodeModel(Base):
-    __tablename__ = "v3_lineage_nodes"
+    __tablename__ = "lineage_nodes"
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[str] = mapped_column(String(50), primary_key=True)
@@ -170,7 +170,7 @@ class LineageNodeModel(Base):
 
 
 class LineageEdgeModel(Base):
-    __tablename__ = "v3_lineage_edges"
+    __tablename__ = "lineage_edges"
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[str] = mapped_column(String(50), primary_key=True)
@@ -184,7 +184,7 @@ class LineageEdgeModel(Base):
 
 
 class WorkflowStateModel(Base):
-    __tablename__ = "v3_workflow_state"
+    __tablename__ = "workflow_state"
     __table_args__ = {"extend_existing": True}
 
     upload_id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -199,7 +199,7 @@ class WorkflowStateModel(Base):
 
 
 class PublishRecordModel(Base):
-    __tablename__ = "v3_publish_records"
+    __tablename__ = "publish_records"
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)

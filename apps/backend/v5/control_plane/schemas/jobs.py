@@ -8,7 +8,7 @@ from common.database import Base
 
 
 class ProvisioningJobModel(Base):
-    __tablename__ = "v5_provisioning_jobs"
+    __tablename__ = "provisioning_jobs"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())

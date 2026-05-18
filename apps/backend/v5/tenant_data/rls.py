@@ -61,14 +61,14 @@ def apply_rls_with_policy_sql(db_session: Session, policy_sql_provider: Callable
 
 
 ALL_TENANT_DATA_TABLES = [
-    "v5td_upload_batches",
-    "v5td_raw_artifacts",
-    "v5td_normalized_rows",
-    "v5td_cleaned_records",
-    "v5td_derived_read_models",
-    "v5td_lineage_nodes",
-    "v5td_lineage_edges",
-    "v5td_publish_states",
-    "v5td_storage_objects",
-    "v5td_job_runs",
+    "upload_batches",
+    "raw_artifacts",
+    "normalized_rows",
+    "cleaned_records",
+    "derived_read_models",
+    "lineage_nodes",
+    "lineage_edges",
+    "publish_states",
+    "storage_objects",
+    "job_runs",
 ]

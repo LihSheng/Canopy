@@ -8,7 +8,7 @@ from common.database import Base
 
 
 class TenantModel(Base):
-    __tablename__ = "v5_tenants"
+    __tablename__ = "tenants"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
