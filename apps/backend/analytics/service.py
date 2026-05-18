@@ -7,37 +7,43 @@ from analytics.aggregators.deltas import (
     calculate_mom_deltas,
     rank_departments,
 )
-from analytics.repositories.analytics import AnalyticsRepository
-from api.schemas.dashboard import (
-    ClaimTypeBreakdownItem,
-    DashboardSummaryResponse,
-    MonthlyTrendItem,
-    PeriodInfo,
-    TopDepartmentItem,
+from analytics.domain import (
+    ClaimTypeBreakdown,
+    DashboardSummary,
+    DashboardSummaryCache,
+    MonthlyDepartmentSpend,
+    MonthlyTrend,
+    TopDepartment,
 )
+from analytics.repositories.analytics import AnalyticsRepository
 
 
-def get_dashboard_summary(db: Session) -> DashboardSummaryResponse:
+def get_dashboard_summary(db: Session) -> DashboardSummary:
     repo = AnalyticsRepository(db)
     cache = repo.get_latest_summary_cache()
 
     if cache is None:
-        return DashboardSummaryResponse(
+        now = datetime.now()
+        return DashboardSummary(
             total_payroll=0.0,
             total_claims=0.0,
-            period=PeriodInfo(year=datetime.now().year, month=datetime.now().month),
+            year=now.year,
+            month=now.month,
             department_count=0,
             anomaly_count=0,
             last_updated="",
+            snapshot_id="",
         )
 
-    return DashboardSummaryResponse(
+    return DashboardSummary(
         total_payroll=cache.total_payroll,
         total_claims=cache.total_claims,
-        period=PeriodInfo(year=cache.year, month=cache.month),
+        year=cache.year,
+        month=cache.month,
         department_count=cache.department_count,
         anomaly_count=cache.anomaly_count,
         last_updated=cache.created_at,
+        snapshot_id=cache.snapshot_id,
     )
 
 
@@ -45,7 +51,7 @@ def get_monthly_trends(
     db: Session,
     year: int | None = None,
     month: int | None = None,
-) -> list[MonthlyTrendItem]:
+) -> list[MonthlyTrend]:
     repo = AnalyticsRepository(db)
     spends = repo.get_all_monthly_spends()
 
@@ -56,11 +62,11 @@ def get_monthly_trends(
         month_totals[s.month]["payroll"] += s.payroll_total
         month_totals[s.month]["claims"] += s.claims_total
 
-    trends: list[MonthlyTrendItem] = []
+    trends: list[MonthlyTrend] = []
     for m_key in sorted(month_totals.keys()):
         values = month_totals[m_key]
         trends.append(
-            MonthlyTrendItem(
+            MonthlyTrend(
                 month=m_key,
                 payroll=round(values["payroll"], 2),
                 claims=round(values["claims"], 2),
@@ -75,7 +81,7 @@ def get_monthly_trends(
     return trends
 
 
-def get_top_departments(db: Session) -> list[TopDepartmentItem]:
+def get_top_departments(db: Session) -> list[TopDepartment]:
     repo = AnalyticsRepository(db)
     months = repo.get_distinct_months()
 
@@ -102,7 +108,7 @@ def get_top_departments(db: Session) -> list[TopDepartmentItem]:
 
     top5 = rankings[:5]
     return [
-        TopDepartmentItem(
+        TopDepartment(
             id=r.department_id,
             name=r.department_name,
             total_spend=r.total_spend,
@@ -114,7 +120,7 @@ def get_top_departments(db: Session) -> list[TopDepartmentItem]:
     ]
 
 
-def get_claim_type_breakdown(db: Session) -> list[ClaimTypeBreakdownItem]:
+def get_claim_type_breakdown(db: Session) -> list[ClaimTypeBreakdown]:
     repo = AnalyticsRepository(db)
     months = repo.get_distinct_months()
 
@@ -134,10 +140,58 @@ def get_claim_type_breakdown(db: Session) -> list[ClaimTypeBreakdownItem]:
     sorted_types = sorted(type_totals.items(), key=lambda x: float(x[1]["amount"]), reverse=True)
 
     return [
-        ClaimTypeBreakdownItem(
+        ClaimTypeBreakdown(
             type=claim_type,
             amount=float(values["amount"]),
             count=int(values["count"]),
         )
         for claim_type, values in sorted_types
     ]
+
+
+def get_distinct_months(db: Session, snapshot_id: str | None = None) -> list[str]:
+    repo = AnalyticsRepository(db)
+    return repo.get_distinct_months(snapshot_id=snapshot_id)
+
+
+def get_department_map(db: Session, snapshot_id: str | None = None) -> dict[str, str]:
+    repo = AnalyticsRepository(db)
+    return repo.get_department_map(snapshot_id=snapshot_id)
+
+
+def get_monthly_spends_for_month(
+    db: Session, month: str, snapshot_id: str | None = None
+) -> list[MonthlyDepartmentSpend]:
+    repo = AnalyticsRepository(db)
+    return repo.get_monthly_spends_for_month(month, snapshot_id=snapshot_id)
+
+
+def get_all_monthly_spends(db: Session, snapshot_id: str | None = None) -> list[MonthlyDepartmentSpend]:
+    repo = AnalyticsRepository(db)
+    return repo.get_all_monthly_spends(snapshot_id=snapshot_id)
+
+
+def get_snapshot_id_from_aggregates(db: Session) -> str | None:
+    repo = AnalyticsRepository(db)
+    return repo.get_snapshot_id_from_aggregates()
+
+
+def _cache_to_summary(cache: DashboardSummaryCache) -> DashboardSummary:
+    return DashboardSummary(
+        total_payroll=cache.total_payroll,
+        total_claims=cache.total_claims,
+        year=cache.year,
+        month=cache.month,
+        department_count=cache.department_count,
+        anomaly_count=cache.anomaly_count,
+        last_updated=cache.created_at,
+        snapshot_id=cache.snapshot_id,
+    )
+
+
+def get_summary_cache_for_snapshot(db: Session, snapshot_id: str) -> DashboardSummary | None:
+    repo = AnalyticsRepository(db)
+    cache = repo.get_summary_cache_for_snapshot(snapshot_id)
+    if cache is None:
+        return None
+    return _cache_to_summary(cache)

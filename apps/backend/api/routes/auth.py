@@ -63,7 +63,7 @@ def session(
     current_user: SessionUser = Depends(get_current_user),
 ) -> SessionResponse:
     ctx = get_current_tenant_context()
-    session_data = getattr(request.state, "v5_session", None)
+    session_data = getattr(request.state, "tenant_session", None)
     tenants: list[TenantInfo] = []
     if session_data is not None:
         tenants = [

@@ -1,78 +1,123 @@
-
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from common.config import settings
 
-_control_plane_engine: Engine | None = None
-_tenant_data_engine: Engine | None = None
-_control_plane_session_factory: sessionmaker[Session] | None = None
-_tenant_data_session_factory: sessionmaker[Session] | None = None
 
+class _DatabaseManager:
+    """Encapsulates engine and session factory lifecycle for control-plane and tenant-data databases.
 
-def _build_engine(database_url: str) -> Engine:
-    return create_engine(database_url)
+    A single module-level instance is used by default. Future multi-tenant routing
+    can introduce per-request instances without changing business service signatures.
+    """
 
+    def __init__(self):
+        self._control_plane_engine: Engine | None = None
+        self._tenant_data_engine: Engine | None = None
+        self._control_plane_session_factory: sessionmaker[Session] | None = None
+        self._tenant_data_session_factory: sessionmaker[Session] | None = None
 
-def _resolve_control_plane_engine() -> Engine:
-    global _control_plane_engine
-    if _control_plane_engine is None:
-        _control_plane_engine = _build_engine(settings.resolved_control_plane_database_url)
-    return _control_plane_engine
+    def _build_engine(self, database_url: str) -> Engine:
+        return create_engine(database_url)
 
+    def _resolve_control_plane_engine(self) -> Engine:
+        if self._control_plane_engine is None:
+            self._control_plane_engine = self._build_engine(
+                settings.resolved_control_plane_database_url
+            )
+        return self._control_plane_engine
 
-def _resolve_tenant_data_engine() -> Engine:
-    global _tenant_data_engine
-    if _tenant_data_engine is None:
-        _tenant_data_engine = _build_engine(settings.resolved_tenant_data_database_url)
-    return _tenant_data_engine
+    def _resolve_tenant_data_engine(self) -> Engine:
+        if self._tenant_data_engine is None:
+            self._tenant_data_engine = self._build_engine(
+                settings.resolved_tenant_data_database_url
+            )
+        return self._tenant_data_engine
 
+    def _resolve_session_factory(
+        self, *, tenant_data: bool = False
+    ) -> sessionmaker[Session]:
+        if tenant_data:
+            if self._tenant_data_session_factory is None:
+                self._tenant_data_session_factory = sessionmaker(
+                    autocommit=False,
+                    autoflush=False,
+                    bind=self._resolve_tenant_data_engine(),
+                )
+            return self._tenant_data_session_factory
 
-def _resolve_session_factory(
-    *, tenant_data: bool = False
-) -> sessionmaker[Session]:
-    global _control_plane_session_factory, _tenant_data_session_factory
-    if tenant_data:
-        if _tenant_data_session_factory is None:
-            _tenant_data_session_factory = sessionmaker(
+        if self._control_plane_session_factory is None:
+            self._control_plane_session_factory = sessionmaker(
                 autocommit=False,
                 autoflush=False,
-                bind=_resolve_tenant_data_engine(),
+                bind=self._resolve_control_plane_engine(),
             )
-        return _tenant_data_session_factory
+        return self._control_plane_session_factory
 
-    if _control_plane_session_factory is None:
-        _control_plane_session_factory = sessionmaker(
-            autocommit=False,
-            autoflush=False,
-            bind=_resolve_control_plane_engine(),
+    def engine(self) -> Engine:
+        return self._resolve_control_plane_engine()
+
+    def control_plane_engine(self) -> Engine:
+        return self._resolve_control_plane_engine()
+
+    def tenant_data_engine(self) -> Engine:
+        return self._resolve_tenant_data_engine()
+
+    def session_factory(self) -> sessionmaker[Session]:
+        return self._resolve_session_factory()
+
+    def control_plane_session_factory(self) -> sessionmaker[Session]:
+        return self._resolve_session_factory()
+
+    def tenant_data_session_factory(self) -> sessionmaker[Session]:
+        return self._resolve_session_factory(tenant_data=True)
+
+    def set_engine(self, eng: Engine, tenant_data_eng: Engine | None = None) -> None:
+        self._control_plane_engine = eng
+        self._tenant_data_engine = tenant_data_eng or eng
+        self._control_plane_session_factory = sessionmaker(
+            autocommit=False, autoflush=False, bind=self._control_plane_engine
         )
-    return _control_plane_session_factory
+        self._tenant_data_session_factory = sessionmaker(
+            autocommit=False, autoflush=False, bind=self._tenant_data_engine
+        )
 
+    def reset_engine(self) -> None:
+        self._control_plane_engine = None
+        self._tenant_data_engine = None
+        self._control_plane_session_factory = None
+        self._tenant_data_session_factory = None
+
+
+# Module-level default instance. Replaceable for testing or per-tenant routing.
+_db_manager = _DatabaseManager()
+
+
+# Public API delegates to the default instance so callers do not touch globals directly.
 
 def engine() -> Engine:
-    return _resolve_control_plane_engine()
+    return _db_manager.engine()
 
 
 def control_plane_engine() -> Engine:
-    return _resolve_control_plane_engine()
+    return _db_manager.control_plane_engine()
 
 
 def tenant_data_engine() -> Engine:
-    return _resolve_tenant_data_engine()
+    return _db_manager.tenant_data_engine()
 
 
 def session_factory() -> sessionmaker[Session]:
-    return _resolve_session_factory()
+    return _db_manager.session_factory()
 
 
 def control_plane_session_factory() -> sessionmaker[Session]:
-    return _resolve_session_factory()
+    return _db_manager.control_plane_session_factory()
 
 
 def tenant_data_session_factory() -> sessionmaker[Session]:
-    return _resolve_session_factory(tenant_data=True)
+    return _db_manager.tenant_data_session_factory()
 
 
 def make_session(session_source):
@@ -91,25 +136,11 @@ def make_session(session_source):
 
 
 def set_engine(eng: Engine, tenant_data_eng: Engine | None = None) -> None:
-    global _control_plane_engine, _tenant_data_engine
-    global _control_plane_session_factory, _tenant_data_session_factory
-    _control_plane_engine = eng
-    _tenant_data_engine = tenant_data_eng or eng
-    _control_plane_session_factory = sessionmaker(
-        autocommit=False, autoflush=False, bind=_control_plane_engine
-    )
-    _tenant_data_session_factory = sessionmaker(
-        autocommit=False, autoflush=False, bind=_tenant_data_engine
-    )
+    _db_manager.set_engine(eng, tenant_data_eng)
 
 
 def reset_engine() -> None:
-    global _control_plane_engine, _tenant_data_engine
-    global _control_plane_session_factory, _tenant_data_session_factory
-    _control_plane_engine = None
-    _tenant_data_engine = None
-    _control_plane_session_factory = None
-    _tenant_data_session_factory = None
+    _db_manager.reset_engine()
 
 
 class Base(DeclarativeBase):
@@ -155,4 +186,3 @@ def init_db(engine_override: Engine | None = None):
     tenant_data_eng = engine_override or tenant_data_engine()
     Base.metadata.create_all(bind=control_plane_eng)
     TenantDataBase.metadata.create_all(bind=tenant_data_eng)
-

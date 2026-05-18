@@ -50,7 +50,7 @@ async def get_current_user(
     else:
         reset_tenant_context()
 
-    request.state.v5_session = result
+    request.state.tenant_session = result
 
     return SessionUser(**asdict(result.user))
 

@@ -5,22 +5,22 @@ from analytics.aggregators.deltas import (
     calculate_mom_deltas,
     rank_departments,
 )
-from analytics.repositories.analytics import AnalyticsRepository
-from api.schemas.dashboard import MonthlyTrendItem
-from api.schemas.departments import (
-    ClaimDetailItem,
-    DepartmentClaimTypeItem,
-    DepartmentDetailResponse,
-    DepartmentItem,
-    EmployeeContributionItem,
+from analytics.domain import (
+    ClaimDetail,
+    DepartmentClaimType,
+    DepartmentDetail,
+    DepartmentSummary,
+    EmployeeContribution,
+    MonthlyTrend,
 )
+from analytics.repositories.analytics import AnalyticsRepository
 
 
 def get_departments(
     db: Session,
     sort_by: str | None = None,
     snapshot_id: str | None = None,
-) -> list[DepartmentItem]:
+) -> list[DepartmentSummary]:
     repo = AnalyticsRepository(db)
     months = repo.get_distinct_months(snapshot_id=snapshot_id)
 
@@ -49,7 +49,7 @@ def get_departments(
         attach_mom_deltas_to_rankings(rankings, deltas)
 
     items = [
-        DepartmentItem(
+        DepartmentSummary(
             id=r.department_id,
             name=r.department_name,
             total_spend=r.total_spend,
@@ -70,7 +70,7 @@ def get_departments(
     return items
 
 
-def get_department(db: Session, department_id: str) -> DepartmentDetailResponse | None:
+def get_department(db: Session, department_id: str) -> DepartmentDetail | None:
     repo = AnalyticsRepository(db)
     months = repo.get_distinct_months()
     snapshot_id = repo.get_snapshot_id_from_aggregates() or ""
@@ -82,7 +82,7 @@ def get_department(db: Session, department_id: str) -> DepartmentDetailResponse 
     department_name = names[department_id]
 
     if not months:
-        return DepartmentDetailResponse(
+        return DepartmentDetail(
             id=department_id,
             name=department_name,
             total_spend=0.0,
@@ -90,8 +90,6 @@ def get_department(db: Session, department_id: str) -> DepartmentDetailResponse 
             claims_spend=0.0,
             change_pct=0.0,
             employee_count=0,
-            attention_state=None,
-            ai_summary=None,
         )
 
     current_month = months[0]
@@ -113,7 +111,7 @@ def get_department(db: Session, department_id: str) -> DepartmentDetailResponse 
 
     employees = repo.get_employee_spends_for_department(department_id, month=current_month)
 
-    return DepartmentDetailResponse(
+    return DepartmentDetail(
         id=department_id,
         name=department_name,
         total_spend=total_spend,
@@ -121,14 +119,12 @@ def get_department(db: Session, department_id: str) -> DepartmentDetailResponse 
         claims_spend=claims_spend,
         change_pct=change_pct,
         employee_count=len(employees),
-        attention_state=None,
-        ai_summary=None,
     )
 
 
 def get_department_employees(
     db: Session, department_id: str
-) -> list[EmployeeContributionItem]:
+) -> list[EmployeeContribution]:
     repo = AnalyticsRepository(db)
     months = repo.get_distinct_months()
 
@@ -139,7 +135,7 @@ def get_department_employees(
     contributions = repo.get_employee_contributions(department_id, month=current_month)
 
     return [
-        EmployeeContributionItem(
+        EmployeeContribution(
             id=c.employee_id,
             name=c.employee_name,
             department=c.department_name,
@@ -153,12 +149,12 @@ def get_department_employees(
 
 def get_department_trends(
     db: Session, department_id: str
-) -> list[MonthlyTrendItem]:
+) -> list[MonthlyTrend]:
     repo = AnalyticsRepository(db)
     spends = repo.get_monthly_spends_for_department(department_id)
 
     return [
-        MonthlyTrendItem(
+        MonthlyTrend(
             month=s.month,
             payroll=round(s.payroll_total, 2),
             claims=round(s.claims_total, 2),
@@ -170,7 +166,7 @@ def get_department_trends(
 
 def get_department_claim_types(
     db: Session, department_id: str
-) -> list[DepartmentClaimTypeItem]:
+) -> list[DepartmentClaimType]:
     repo = AnalyticsRepository(db)
     months = repo.get_distinct_months()
 
@@ -181,7 +177,7 @@ def get_department_claim_types(
     type_spends = repo.get_claim_type_spends(department_id=department_id, month=current_month)
 
     return [
-        DepartmentClaimTypeItem(
+        DepartmentClaimType(
             type=s.claim_type,
             amount=s.amount,
             count=s.claim_count,
@@ -192,12 +188,12 @@ def get_department_claim_types(
 
 def get_claims(
     db: Session, department_id: str | None = None
-) -> list[ClaimDetailItem]:
+) -> list[ClaimDetail]:
     repo = AnalyticsRepository(db)
     details = repo.get_claim_details(department_id=department_id)
 
     return [
-        ClaimDetailItem(
+        ClaimDetail(
             id=c.claim_id,
             employee_name=c.employee_name,
             department=c.department_name,

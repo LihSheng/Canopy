@@ -95,3 +95,91 @@ class ClaimDetailSummary:
     claim_type: str
     amount: float
     claim_date: str
+
+
+# Read models for analytics service layer (returned to API routes)
+@dataclass
+class DashboardSummary:
+    total_payroll: float
+    total_claims: float
+    year: int
+    month: int
+    department_count: int
+    anomaly_count: int
+    last_updated: str
+    snapshot_id: str = ""
+
+
+@dataclass
+class MonthlyTrend:
+    month: str
+    payroll: float
+    claims: float
+    total: float
+
+
+@dataclass
+class TopDepartment:
+    id: str
+    name: str
+    total_spend: float
+    payroll_spend: float
+    claims_spend: float
+    change_pct: float
+
+
+@dataclass
+class ClaimTypeBreakdown:
+    type: str
+    amount: float
+    count: int
+
+
+@dataclass
+class DepartmentSummary:
+    id: str
+    name: str
+    total_spend: float
+    payroll_spend: float
+    claims_spend: float
+    change_pct: float
+
+
+@dataclass
+class DepartmentDetail:
+    id: str
+    name: str
+    total_spend: float
+    payroll_spend: float
+    claims_spend: float
+    change_pct: float
+    employee_count: int
+    attention_state: str | None = None
+    ai_summary: str | None = None
+
+
+@dataclass
+class EmployeeContribution:
+    id: str
+    name: str
+    department: str
+    payroll: float
+    claims: float
+    total: float
+
+
+@dataclass
+class DepartmentClaimType:
+    type: str
+    amount: float
+    count: int
+
+
+@dataclass
+class ClaimDetail:
+    id: str
+    employee_name: str
+    department: str
+    type: str
+    amount: float
+    date: str

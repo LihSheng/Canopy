@@ -1,6 +1,9 @@
 from sqlalchemy.orm import Session
 
-from analytics.repositories.analytics import AnalyticsRepository
+from analytics.service import (
+    get_department_map,
+    get_monthly_spends_for_month,
+)
 from anomalies.domain import AnomalyOutput
 from anomalies.repository import AnomalyRepository
 from anomalies.rules import department_claim_spike_rule, department_total_spike_rule
@@ -12,16 +15,14 @@ def detect_anomalies(
     current_month: str,
     previous_month: str,
 ) -> list[AnomalyOutput]:
-    analytics_repo = AnalyticsRepository(db)
     anomaly_repo = AnomalyRepository(db)
-
     anomaly_repo.clear_snapshot(snapshot_id)
 
-    current_spends = analytics_repo.get_monthly_spends_for_month(
-        current_month, snapshot_id=snapshot_id
+    current_spends = get_monthly_spends_for_month(
+        db, current_month, snapshot_id=snapshot_id
     )
-    previous_spends = analytics_repo.get_monthly_spends_for_month(
-        previous_month, snapshot_id=snapshot_id
+    previous_spends = get_monthly_spends_for_month(
+        db, previous_month, snapshot_id=snapshot_id
     )
 
     outputs: list[AnomalyOutput] = []
@@ -45,7 +46,7 @@ def get_anomalies_list(
     outputs = repo.find_all(snapshot_id=snapshot_id)
     if department_id:
         outputs = [o for o in outputs if o.target_entity_id == department_id]
-    dept_map = AnalyticsRepository(db).get_department_map(snapshot_id=snapshot_id)
+    dept_map = get_department_map(db, snapshot_id=snapshot_id)
     return [
         _to_item(o, dept_map) for o in outputs
     ]
@@ -56,7 +57,7 @@ def get_anomaly_detail(db: Session, anomaly_id: str) -> dict | None:
     output = repo.find_by_id(anomaly_id)
     if output is None:
         return None
-    dept_map = AnalyticsRepository(db).get_department_map()
+    dept_map = get_department_map(db)
     return _to_detail(output, dept_map)
 
 

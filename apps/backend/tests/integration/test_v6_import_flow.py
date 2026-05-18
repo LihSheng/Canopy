@@ -28,7 +28,7 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
     monkeypatch.setattr(settings, "export_storage_dir", str(tmp_path), raising=False)
 
     project_resp = client.post(
-        "/api/v4/projects/",
+        "/api/projects/",
         json={"name": "V6 Import Project", "description": "Test project"},
         headers=auth_headers,
     )
@@ -37,7 +37,7 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
 
     xlsx_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     preview_resp = client.post(
-        "/api/v4/connections/preview",
+        "/api/connections/preview",
         files={"file": ("payroll.xlsx", _make_xlsx_bytes(), xlsx_mime)},
         headers=auth_headers,
     )
@@ -51,7 +51,7 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
     assert preview["sheet_profiles"][0]["preview_rows"][0] == ["Alice", 100]
 
     connection_resp = client.post(
-        "/api/v4/connections/",
+        "/api/connections/",
         json={
             "project_id": project_id,
             "source_type": "static_file",
@@ -67,7 +67,7 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
     connection_id = connection_resp.json()["id"]
 
     dataset_resp = client.post(
-        "/api/v4/datasets/",
+        "/api/datasets/",
         json={
             "project_id": project_id,
             "connection_id": connection_id,
@@ -80,13 +80,13 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
     dataset = dataset_resp.json()
     assert dataset["active_version_id"] is not None
 
-    get_resp = client.get(f"/api/v4/datasets/{dataset['id']}", headers=auth_headers)
+    get_resp = client.get(f"/api/datasets/{dataset['id']}", headers=auth_headers)
     assert get_resp.status_code == 200
     fetched = get_resp.json()
     assert fetched["active_version_id"] is not None
     assert fetched["id"] == dataset["id"]
 
-    versions_resp = client.get(f"/api/v4/datasets/{dataset['id']}/versions", headers=auth_headers)
+    versions_resp = client.get(f"/api/datasets/{dataset['id']}/versions", headers=auth_headers)
     assert versions_resp.status_code == 200
     versions = versions_resp.json()
     assert len(versions) == 1
@@ -95,7 +95,7 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
     assert isinstance(versions[0].get("cleaning_issues"), list)
 
     preview_dataset_resp = client.get(
-        f"/api/v4/datasets/{dataset['id']}/preview", headers=auth_headers
+        f"/api/datasets/{dataset['id']}/preview", headers=auth_headers
     )
     assert preview_dataset_resp.status_code == 200
     preview_dataset = preview_dataset_resp.json()
@@ -103,7 +103,7 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
     assert preview_dataset["rows"][0] == ["Alice", 100]
     assert preview_dataset["total_row_count"] == 2
 
-    lineage_resp = client.get(f"/api/v4/datasets/{dataset['id']}/lineage", headers=auth_headers)
+    lineage_resp = client.get(f"/api/datasets/{dataset['id']}/lineage", headers=auth_headers)
     assert lineage_resp.status_code == 200
     lineage = lineage_resp.json()
     assert "nodes" in lineage
@@ -117,7 +117,7 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
     edge_types = {e["type"] for e in lineage["edges"]}
     assert "feeds" in edge_types or "provides" in edge_types or "belongs_to" in edge_types
 
-    health_resp = client.get(f"/api/v4/datasets/{dataset['id']}/health", headers=auth_headers)
+    health_resp = client.get(f"/api/datasets/{dataset['id']}/health", headers=auth_headers)
     assert health_resp.status_code == 200
     health = health_resp.json()
     assert health["dataset_id"] == dataset["id"]
@@ -125,7 +125,7 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
     assert health["column_count"] == 2
 
     dataset2_resp = client.post(
-        "/api/v4/datasets/",
+        "/api/datasets/",
         json={
             "project_id": project_id,
             "connection_id": connection_id,
@@ -138,19 +138,19 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
     dataset2 = dataset2_resp.json()
     assert dataset2["active_version_id"] is not None
 
-    versions2_resp = client.get(f"/api/v4/datasets/{dataset2['id']}/versions", headers=auth_headers)
+    versions2_resp = client.get(f"/api/datasets/{dataset2['id']}/versions", headers=auth_headers)
     assert versions2_resp.status_code == 200
     versions2 = versions2_resp.json()
     assert len(versions2) == 1
 
-    preview2_resp = client.get(f"/api/v4/datasets/{dataset2['id']}/preview", headers=auth_headers)
+    preview2_resp = client.get(f"/api/datasets/{dataset2['id']}/preview", headers=auth_headers)
     assert preview2_resp.status_code == 200
     preview2 = preview2_resp.json()
     assert preview2["total_row_count"] == 2
 
 
 def test_source_types_static_file_enabled_mysql_disabled(client: TestClient, auth_headers):
-    resp = client.get("/api/v4/source-types/", headers=auth_headers)
+    resp = client.get("/api/source-types/", headers=auth_headers)
     assert resp.status_code == 200
     source_types = resp.json()
 

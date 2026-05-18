@@ -1,11 +1,14 @@
 from sqlalchemy.orm import Session
 
-from analytics.repositories.analytics import AnalyticsRepository
 from analytics.service import (
     get_claim_type_breakdown,
+    get_dashboard_summary,
+    get_department_map,
+    get_distinct_months,
+    get_monthly_spends_for_month,
     get_top_departments,
 )
-from anomalies.repository import AnomalyRepository
+from anomalies.service import get_anomalies_list
 from insights.domain import (
     AnomalyFact,
     ClaimTypeFact,
@@ -16,15 +19,15 @@ from insights.domain import (
 
 
 def extract_facts(db: Session) -> FactBundle | None:
-    analytics_repo = AnalyticsRepository(db)
-    cache = analytics_repo.get_latest_summary_cache()
-    if cache is None:
+    summary = get_dashboard_summary(db)
+    if not summary or not summary.last_updated:
         return None
 
-    months = analytics_repo.get_distinct_months()
-    current_month = months[0] if months else cache.month
-
+    months = get_distinct_months(db)
+    current_month = months[0] if months else f"{summary.year:04d}-{summary.month:02d}"
     previous_month = months[1] if len(months) > 1 else None
+
+    snapshot_id = summary.snapshot_id
 
     top_deps = get_top_departments(db)
     top_department_facts = [
@@ -39,16 +42,15 @@ def extract_facts(db: Session) -> FactBundle | None:
         for d in top_deps
     ]
 
-    anomaly_repo = AnomalyRepository(db)
-    anomaly_outputs = anomaly_repo.find_all(snapshot_id=cache.snapshot_id)
-    dept_map = analytics_repo.get_department_map(cache.snapshot_id)
+    anomaly_outputs = get_anomalies_list(db, snapshot_id=snapshot_id)
+    dept_map = get_department_map(db, snapshot_id=snapshot_id)
 
     anomaly_facts = [
         AnomalyFact(
-            department_name=dept_map.get(a.target_entity_id, a.target_entity_id),
-            severity=a.severity,
-            description=a.description,
-            change_pct=a.delta_percent,
+            department_name=dept_map.get(a.get("department_id", ""), a.get("department_id", "")),
+            severity=a.get("severity", "low"),
+            description=a.get("description", ""),
+            change_pct=a.get("change_pct", 0.0),
         )
         for a in anomaly_outputs
     ]
@@ -59,7 +61,7 @@ def extract_facts(db: Session) -> FactBundle | None:
         for c in breakdown
     ]
 
-    department_spends = analytics_repo.get_monthly_spends_for_month(current_month)
+    department_spends = get_monthly_spends_for_month(db, current_month, snapshot_id=snapshot_id)
     rankings = sorted(department_spends, key=lambda s: s.total, reverse=True)
     ranking_facts = [
         DepartmentRankingFact(
@@ -70,13 +72,13 @@ def extract_facts(db: Session) -> FactBundle | None:
     ]
 
     return FactBundle(
-        snapshot_id=cache.snapshot_id,
+        snapshot_id=snapshot_id,
         current_month=current_month,
         previous_month=previous_month,
-        total_payroll=cache.total_payroll,
-        total_claims=cache.total_claims,
-        department_count=cache.department_count,
-        anomaly_count=cache.anomaly_count,
+        total_payroll=summary.total_payroll,
+        total_claims=summary.total_claims,
+        department_count=summary.department_count,
+        anomaly_count=summary.anomaly_count,
         top_departments=top_department_facts,
         anomalies=anomaly_facts,
         claim_type_breakdown=claim_type_facts,

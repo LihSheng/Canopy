@@ -8,7 +8,14 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from analytics.departments import get_departments as get_departments_list
-from analytics.repositories.analytics import AnalyticsRepository
+from analytics.service import (
+    get_all_monthly_spends,
+    get_dashboard_summary,
+    get_department_map,
+    get_distinct_months,
+    get_snapshot_id_from_aggregates,
+    get_summary_cache_for_snapshot,
+)
 from anomalies.service import get_anomalies_list
 from common.clock import iso_now, utcnow
 from common.config import settings
@@ -201,8 +208,7 @@ def _run_export(job_id: str) -> None:
 
 def _get_snapshot_id(db: Session) -> str | None:
     try:
-        repo = AnalyticsRepository(db)
-        return repo.get_snapshot_id_from_aggregates()
+        return get_snapshot_id_from_aggregates(db)
     except Exception:
         return None
 
@@ -214,11 +220,10 @@ def _get_snapshot_context(
     owns_db = db is None
     db = db or session_factory()()
     try:
-        repo = AnalyticsRepository(db)
         summary = (
-            repo.get_summary_cache_for_snapshot(snapshot_id)
+            get_summary_cache_for_snapshot(db, snapshot_id)
             if snapshot_id
-            else repo.get_latest_summary_cache()
+            else get_dashboard_summary(db)
         )
         if summary is None:
             return None
@@ -229,7 +234,7 @@ def _get_snapshot_context(
             total_claims=summary.total_claims,
             department_count=summary.department_count,
             anomaly_count=summary.anomaly_count,
-            created_at=summary.created_at,
+            created_at=summary.last_updated,
         )
     finally:
         if owns_db:
@@ -262,12 +267,11 @@ def _build_payload(
     include_departments: bool = True,
     include_anomalies: bool = True,
 ) -> ExportPayload:
-    analytics_repo = AnalyticsRepository(db)
     snapshot_context = _get_snapshot_context(db, snapshot_id)
     snapshot_id = (
         snapshot_context.snapshot_id
         if snapshot_context is not None
-        else analytics_repo.get_snapshot_id_from_aggregates() or ""
+        else get_snapshot_id_from_aggregates(db) or ""
     )
     if snapshot_context is None:
         snapshot_context = SnapshotContext(
@@ -318,9 +322,9 @@ def _collect_departments(
     db: Session,
     snapshot_id: str | None = None,
 ) -> list[DepartmentExportRow]:
-    snapshot_id = snapshot_id or AnalyticsRepository(db).get_snapshot_id_from_aggregates() or ""
+    snapshot_id = snapshot_id or get_snapshot_id_from_aggregates(db) or ""
     dept_list = get_departments_list(db, snapshot_id=snapshot_id)
-    department_ids = AnalyticsRepository(db).get_department_map(snapshot_id)
+    department_ids = get_department_map(db, snapshot_id=snapshot_id)
     return [
         DepartmentExportRow(
             rank=i + 1,
@@ -362,10 +366,9 @@ def _collect_trends(
     period_label: str = "",
     time_range: str = "all",
 ) -> list[MonthlyTrendExportRow]:
-    repo = AnalyticsRepository(db)
-    snapshot_id = snapshot_id or repo.get_snapshot_id_from_aggregates() or ""
+    snapshot_id = snapshot_id or get_snapshot_id_from_aggregates(db) or ""
     allowed_months = set(_allowed_months(db, snapshot_id, period_label, time_range))
-    spends = repo.get_all_monthly_spends(snapshot_id=snapshot_id)
+    spends = get_all_monthly_spends(db, snapshot_id=snapshot_id)
     month_totals: dict[str, dict[str, float]] = {}
     for spend in spends:
         if allowed_months and spend.month not in allowed_months:
@@ -392,8 +395,7 @@ def _allowed_months(
     period_label: str,
     time_range: str,
 ) -> list[str]:
-    repo = AnalyticsRepository(db)
-    months = repo.get_distinct_months(snapshot_id=snapshot_id)
+    months = get_distinct_months(db, snapshot_id=snapshot_id)
     if not months:
         return []
     if time_range == "all":

@@ -12,7 +12,7 @@ import {
   triggerExport,
   rerunExportJob,
   fetchExportJob,
-} from "@/lib/api/reports-v2";
+} from "@/lib/api/reports";
 import { mapReportsWorkspace } from "./report-mappers";
 import { readDashboardState } from "@/lib/navigation/route-state";
 import { TIME_RANGE_LABELS } from "@/lib/navigation/time-range";
