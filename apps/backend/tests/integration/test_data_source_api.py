@@ -429,7 +429,11 @@ def test_dataset_preview_invalid_page(client: TestClient, auth_headers, monkeypa
     assert resp.status_code == 422
 
 
-def _create_project_and_connection(client: TestClient, auth_headers, project_name: str = "Lifecycle Project"):
+def _create_project_and_connection(
+    client: TestClient,
+    auth_headers,
+    project_name: str = "Lifecycle Project",
+):
     project_resp = client.post(
         "/api/v4/projects/",
         json={"name": project_name, "description": "Test project"},
@@ -474,7 +478,11 @@ def test_connection_lifecycle_pause_and_audit(client: TestClient, auth_headers, 
 
 
 def test_connection_soft_delete_blocks_active_dependencies(client: TestClient, auth_headers):
-    project_id, connection_id = _create_project_and_connection(client, auth_headers, "Dependency Project")
+    project_id, connection_id = _create_project_and_connection(
+        client,
+        auth_headers,
+        "Dependency Project",
+    )
     dataset_resp = client.post(
         "/api/v4/datasets/",
         json={
@@ -487,21 +495,33 @@ def test_connection_soft_delete_blocks_active_dependencies(client: TestClient, a
     )
     assert dataset_resp.status_code == 201
 
-    dependency_resp = client.get(f"/api/v4/connections/{connection_id}/dependencies", headers=auth_headers)
+    dependency_resp = client.get(
+        f"/api/v4/connections/{connection_id}/dependencies",
+        headers=auth_headers,
+    )
     assert dependency_resp.status_code == 200
     assert dependency_resp.json()["can_delete"] is False
     assert dependency_resp.json()["active_dataset_count"] == 1
 
-    delete_resp = client.post(f"/api/v4/connections/{connection_id}/soft-delete", headers=auth_headers)
+    delete_resp = client.post(
+        f"/api/v4/connections/{connection_id}/soft-delete",
+        headers=auth_headers,
+    )
 
     assert delete_resp.status_code == 400
     assert "active dependencies" in delete_resp.json()["detail"]
 
 
-def test_connection_soft_delete_hides_restore_and_permanent_delete(client: TestClient, auth_headers):
+def test_connection_soft_delete_hides_restore_and_permanent_delete(
+    client: TestClient,
+    auth_headers,
+):
     _, connection_id = _create_project_and_connection(client, auth_headers, "Delete Project")
 
-    soft_delete_resp = client.post(f"/api/v4/connections/{connection_id}/soft-delete", headers=auth_headers)
+    soft_delete_resp = client.post(
+        f"/api/v4/connections/{connection_id}/soft-delete",
+        headers=auth_headers,
+    )
     assert soft_delete_resp.status_code == 200
     assert soft_delete_resp.json()["status"] == "soft_deleted"
 
@@ -513,7 +533,10 @@ def test_connection_soft_delete_hides_restore_and_permanent_delete(client: TestC
     assert restore_resp.status_code == 200
     assert restore_resp.json()["status"] == "active"
 
-    second_soft_delete_resp = client.post(f"/api/v4/connections/{connection_id}/soft-delete", headers=auth_headers)
+    second_soft_delete_resp = client.post(
+        f"/api/v4/connections/{connection_id}/soft-delete",
+        headers=auth_headers,
+    )
     assert second_soft_delete_resp.status_code == 200
 
     permanent_delete_resp = client.request(
