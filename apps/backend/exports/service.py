@@ -257,10 +257,10 @@ def _model_to_domain(model) -> ExportJob:
 
 def _build_payload(
     db: Session,
-    snapshot_id: str | None,
-    time_range: str,
-    include_departments: bool,
-    include_anomalies: bool,
+    snapshot_id: str | None = None,
+    time_range: str = "this_month",
+    include_departments: bool = True,
+    include_anomalies: bool = True,
 ) -> ExportPayload:
     analytics_repo = AnalyticsRepository(db)
     snapshot_context = _get_snapshot_context(db, snapshot_id)
@@ -297,7 +297,7 @@ def _build_payload(
         db,
         snapshot_id=snapshot_id,
         period_label=snapshot_context.period_label,
-        time_range=time_range,
+        time_range="all",
     )
 
     return ExportPayload(
@@ -316,8 +316,9 @@ def _build_payload(
 
 def _collect_departments(
     db: Session,
-    snapshot_id: str,
+    snapshot_id: str | None = None,
 ) -> list[DepartmentExportRow]:
+    snapshot_id = snapshot_id or AnalyticsRepository(db).get_snapshot_id_from_aggregates() or ""
     dept_list = get_departments_list(db, snapshot_id=snapshot_id)
     department_ids = AnalyticsRepository(db).get_department_map(snapshot_id)
     return [
@@ -357,11 +358,12 @@ def _collect_anomalies(
 
 def _collect_trends(
     db: Session,
-    snapshot_id: str,
-    period_label: str,
-    time_range: str,
+    snapshot_id: str | None = None,
+    period_label: str = "",
+    time_range: str = "all",
 ) -> list[MonthlyTrendExportRow]:
     repo = AnalyticsRepository(db)
+    snapshot_id = snapshot_id or repo.get_snapshot_id_from_aggregates() or ""
     allowed_months = set(_allowed_months(db, snapshot_id, period_label, time_range))
     spends = repo.get_all_monthly_spends(snapshot_id=snapshot_id)
     month_totals: dict[str, dict[str, float]] = {}
@@ -394,6 +396,8 @@ def _allowed_months(
     months = repo.get_distinct_months(snapshot_id=snapshot_id)
     if not months:
         return []
+    if time_range == "all":
+        return months
 
     latest_period = period_label or months[0]
     if latest_period in months:

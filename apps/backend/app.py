@@ -12,6 +12,14 @@ from api.routes.departments import router as departments_router
 from api.routes.exports import router as exports_router
 from api.routes.health import router as health_router
 from api.routes.insights import router as insights_router
+from v5.control_plane.admin_router import router as v5_admin_router
+from v5.cache.cache_store import CacheStore
+from v5.cache.config_cache import ConfigCache
+from v5.cache.hooks import (
+    register_listener,
+)
+from v5.cache.invalidation import CacheInvalidator
+from v5.cache.routing_cache import RoutingCache
 from api.routes.project import router as project_router
 from api.routes.source_type import router as source_type_router
 from api.routes.connection import router as connection_router
@@ -19,14 +27,45 @@ from api.routes.dataset import router as dataset_router
 from api.routes.run import router as run_router
 from api.routes.refresh import router as refresh_router
 from common.database import init_db
+from common.database import session_factory
 from common.errors import AppError
+
+_cache_listeners_registered = False
 
 
 def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        global _cache_listeners_registered
         init_db()
+        if not _cache_listeners_registered:
+            cache_store = CacheStore()
+            routing_cache = RoutingCache(cache_store, session_factory)
+            config_cache = ConfigCache(cache_store)
+            invalidator = CacheInvalidator(routing_cache, config_cache)
+
+            def handle_cache_event(event_type: str, tenant_id: str, **kwargs):
+                handlers = {
+                    "provisioned": lambda: invalidator.on_tenant_provisioned(
+                        tenant_id
+                    ),
+                    "suspended": lambda: invalidator.on_tenant_suspended(tenant_id),
+                    "restored": lambda: invalidator.on_tenant_restored(tenant_id),
+                    "config_changed": lambda: invalidator.on_tenant_config_changed(
+                        tenant_id, kwargs.get("key")
+                    ),
+                    "database_rotation": lambda: invalidator.on_database_rotation(
+                        tenant_id, kwargs.get("old_ref", ""), kwargs.get("new_ref", "")
+                    ),
+                    "schema_rollout": invalidator.on_schema_rollout,
+                }
+                handler = handlers.get(event_type)
+                if handler is not None:
+                    handler()
+
+            register_listener(handle_cache_event)
+            _cache_listeners_registered = True
         yield
 
     app = FastAPI(title="HERD Aggregator API", version="0.1.0", lifespan=lifespan)
@@ -55,6 +94,7 @@ def create_app() -> FastAPI:
     app.include_router(refresh_router)
     app.include_router(exports_router)
     app.include_router(insights_router)
+    app.include_router(v5_admin_router)
     app.include_router(project_router, prefix="/api")
     app.include_router(source_type_router, prefix="/api")
     app.include_router(connection_router, prefix="/api")

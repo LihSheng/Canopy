@@ -4,8 +4,6 @@ pytestmark = pytest.mark.business_rule
 
 from datetime import datetime
 
-from sqlalchemy import create_engine
-
 from sync.readers._source_models import (
     SourceBase,
     SourceBudgetCodeRow,
@@ -23,8 +21,8 @@ from sync.readers.employees import EmployeeReader
 from sync.readers.payroll import PayrollReader
 
 
-def _source_db_with_rows(*row_lists):
-    engine = create_engine("sqlite:///:memory:")
+def _source_db_with_rows(engine, *row_lists):
+    SourceBase.metadata.drop_all(bind=engine)
     SourceBase.metadata.create_all(bind=engine)
     from sqlalchemy.orm import Session
 
@@ -36,8 +34,9 @@ def _source_db_with_rows(*row_lists):
 
 
 class TestDepartmentReader:
-    def test_reads_all_rows(self):
+    def test_reads_all_rows(self, source_engine):
         engine = _source_db_with_rows(
+            source_engine,
             [
                 SourceDepartmentRow(source_key="D001", name="Engineering"),
                 SourceDepartmentRow(source_key="D002", name="Marketing"),
@@ -55,8 +54,8 @@ class TestDepartmentReader:
         assert result[0].parent_key is None
         assert result[0].status == "active"
 
-    def test_empty_table_returns_empty_list(self):
-        engine = _source_db_with_rows()
+    def test_empty_table_returns_empty_list(self, source_engine):
+        engine = _source_db_with_rows(source_engine)
         from sqlalchemy.orm import Session
 
         with Session(engine) as source_db:
@@ -70,8 +69,9 @@ class TestDepartmentReader:
 
 
 class TestEmployeeReader:
-    def test_reads_all_rows(self):
+    def test_reads_all_rows(self, source_engine):
         engine = _source_db_with_rows(
+            source_engine,
             [
                 SourceEmployeeRow(
                     source_key="E001",
@@ -99,8 +99,9 @@ class TestEmployeeReader:
 
 
 class TestClaimReader:
-    def test_reads_all_rows(self):
+    def test_reads_all_rows(self, source_engine):
         engine = _source_db_with_rows(
+            source_engine,
             [
                 SourceClaimRow(
                     source_key="C001",
@@ -125,8 +126,8 @@ class TestClaimReader:
         assert result[0].claim_type == "travel"
         assert isinstance(result[0].submitted_at, datetime)
 
-    def test_empty_table(self):
-        engine = _source_db_with_rows()
+    def test_empty_table(self, source_engine):
+        engine = _source_db_with_rows(source_engine)
         from sqlalchemy.orm import Session
 
         with Session(engine) as source_db:
@@ -137,8 +138,9 @@ class TestClaimReader:
 
 
 class TestPayrollReader:
-    def test_reads_all_rows(self):
+    def test_reads_all_rows(self, source_engine):
         engine = _source_db_with_rows(
+            source_engine,
             [
                 SourcePayrollRow(
                     source_key="P001",
@@ -163,8 +165,9 @@ class TestPayrollReader:
 
 
 class TestCostCenterReader:
-    def test_reads_all_rows(self):
+    def test_reads_all_rows(self, source_engine):
         engine = _source_db_with_rows(
+            source_engine,
             [
                 SourceCostCenterRow(
                     source_key="CC001", name="R&D", department_key="D001"
@@ -186,8 +189,9 @@ class TestCostCenterReader:
 
 
 class TestBudgetCodeReader:
-    def test_reads_all_rows(self):
+    def test_reads_all_rows(self, source_engine):
         engine = _source_db_with_rows(
+            source_engine,
             [
                 SourceBudgetCodeRow(
                     source_key="B001", name="Opex-IT", department_key="D001"

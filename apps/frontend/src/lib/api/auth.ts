@@ -1,3 +1,5 @@
+import type { TenantContextResponse, TenantInfo } from "./types";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 export interface LoginPayload {
@@ -15,11 +17,14 @@ export interface LoginResponse {
   user: SessionUser;
   token: string;
   expires_at: string;
+  tenants: TenantInfo[];
 }
 
 export interface SessionResponse {
   authenticated: boolean;
   user: SessionUser | null;
+  tenant: TenantContextResponse | null;
+  tenants: TenantInfo[];
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -53,4 +58,13 @@ export async function logout(): Promise<void> {
 
 export async function getSession(): Promise<SessionResponse> {
   return request<SessionResponse>("/api/auth/session");
+}
+
+export async function switchTenant(
+  tenantId: string
+): Promise<SessionResponse> {
+  return request<SessionResponse>("/api/auth/switch-tenant", {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: tenantId }),
+  });
 }

@@ -34,3 +34,12 @@ Use the versioned folders for planning and design docs.
 - [UI/UX Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v4/uiux-design.md)
 - [High-Level Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v4/high-level-design.md)
 - [Detailed Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v4/detailed-design.md)
+
+## V5 Planning
+
+- [PRD](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/prd.md)
+- [Plan](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/plan.md)
+- [High-Level Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/high-level-design.md)
+- [Detailed Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/detailed-design.md)
+- [Database Architecture](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/database-architecture.md)
+- [Ontology Todo](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/ontology-todo.md)

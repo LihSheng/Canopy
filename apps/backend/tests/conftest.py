@@ -1,5 +1,43 @@
+import os
+
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine.url import make_url
+from sqlalchemy.orm import sessionmaker
+from starlette.testclient import TestClient
+
+from auth.hashing import hash_password
+from auth.schema import UserModel
+from common.database import Base, init_db, reset_engine, set_engine
+from ontology.schema import (
+    DepartmentModel,
+    EmployeeModel,
+    ExpenseClaimModel,
+    PayrollExpenseModel,
+)
+from analytics.services.builder import run_aggregation_pipeline
+from v5.tenant_data.base import TenantDataBase
+
+_TEST_SERVER_URL = os.environ.get(
+    "HERD_AGGREGATOR_TEST_SERVER_URL",
+    "postgresql+psycopg://postgres:postgres@127.0.0.1:5432",
+)
+_TEST_CONTROL_PLANE_DATABASE_NAME = os.environ.get(
+    "HERD_AGGREGATOR_TEST_CONTROL_PLANE_DATABASE_NAME",
+    "herd_aggregator_test_control_plane",
+)
+_TEST_TENANT_DATA_DATABASE_NAME = os.environ.get(
+    "HERD_AGGREGATOR_TEST_TENANT_DATA_DATABASE_NAME",
+    "herd_aggregator_test_tenant_data",
+)
+_TEST_SOURCE_DATABASE_NAME = os.environ.get(
+    "HERD_AGGREGATOR_TEST_SOURCE_DATABASE_NAME",
+    "source_staging_test",
+)
+_TEST_DATABASE_URL = f"{_TEST_SERVER_URL.rstrip('/')}/{_TEST_CONTROL_PLANE_DATABASE_NAME}"
+_TEST_TENANT_DATA_URL = f"{_TEST_SERVER_URL.rstrip('/')}/{_TEST_TENANT_DATA_DATABASE_NAME}"
+_TEST_SOURCE_URL = f"{_TEST_SERVER_URL.rstrip('/')}/{_TEST_SOURCE_DATABASE_NAME}"
+_SNAPSHOT_ID = "test-snapshot-001"
 
 
 def pytest_configure(config):
@@ -18,47 +56,65 @@ def pytest_collection_modifyitems(config, items):
         elif "/tests/integration/" in fspath or "\\tests\\integration\\" in fspath:
             item.add_marker(pytest.mark.integration)
 
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-from starlette.testclient import TestClient
 
-from auth.hashing import hash_password
-from auth.schema import UserModel
-from common.database import Base, init_db, reset_engine, set_engine
-from ontology.schema import (
-    DepartmentModel,
-    EmployeeModel,
-    ExpenseClaimModel,
-    PayrollExpenseModel,
-)
-from analytics.services.builder import run_aggregation_pipeline
+def _ensure_database_exists(database_url: str) -> None:
+    url = make_url(database_url)
+    admin_url = url.set(database="postgres")
+    admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    try:
+        with admin_engine.connect() as conn:
+            exists = conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :database_name"),
+                {"database_name": url.database},
+            ).scalar()
+            if not exists:
+                conn.execute(text(f'CREATE DATABASE "{url.database}"'))
+    finally:
+        admin_engine.dispose()
 
-_TEST_DATABASE_URL = "sqlite:///:memory:"
-_SNAPSHOT_ID = "test-snapshot-001"
+
+@pytest.fixture(scope="session")
+def control_plane_engine():
+    _ensure_database_exists(_TEST_DATABASE_URL)
+    engine = create_engine(_TEST_DATABASE_URL)
+    yield engine
+    engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def tenant_data_engine():
+    _ensure_database_exists(_TEST_TENANT_DATA_URL)
+    engine = create_engine(_TEST_TENANT_DATA_URL)
+    yield engine
+    engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def source_engine():
+    _ensure_database_exists(_TEST_SOURCE_URL)
+    engine = create_engine(_TEST_SOURCE_URL)
+    yield engine
+    engine.dispose()
 
 
 @pytest.fixture
-def engine():
-    engine = create_engine(
-        _TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    yield engine
+def engine(control_plane_engine):
+    return control_plane_engine
 
 
 @pytest.fixture(autouse=True)
-def _setup_db(engine):
-    set_engine(engine)
-    init_db(engine_override=engine)
+def _setup_db(control_plane_engine, tenant_data_engine):
+    set_engine(control_plane_engine, tenant_data_engine)
+    init_db()
     yield
-    Base.metadata.drop_all(bind=engine)
+    Base.metadata.drop_all(bind=control_plane_engine)
+    TenantDataBase.metadata.drop_all(bind=tenant_data_engine)
     reset_engine()
 
 
 @pytest.fixture
-def db_session(engine):
-    test_session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def db_session(control_plane_engine):
+    test_session = sessionmaker(autocommit=False, autoflush=False, bind=control_plane_engine)
     session = test_session()
     try:
         yield session
@@ -148,8 +204,13 @@ def _seed_employees(db_session):
 
 def _seed_payroll(db_session):
     months = [
-        "2025-11", "2025-12", "2026-01", "2026-02",
-        "2026-03", "2026-04", "2026-05",
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+        "2026-03",
+        "2026-04",
+        "2026-05",
     ]
     dept_monthly = {
         "dept-1": [420000, 425000, 422000, 428000, 430000, 435000, 440000],
@@ -173,7 +234,7 @@ def _seed_payroll(db_session):
     for did, amounts in dept_monthly.items():
         emp_ids = dept_employee_map[did]
         for i, month in enumerate(months):
-            for j, eid in enumerate(emp_ids):
+            for eid in emp_ids:
                 split = round(amounts[i] / len(emp_ids), 2)
                 models.append(
                     PayrollExpenseModel(

@@ -222,6 +222,7 @@ Separate versioned trackers:
 - [`doc/tasks/v2/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/progress.md): v2 dashboard shell and navigation work
 - [`doc/tasks/v3/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/progress.md): v3 ingestion and cleaning work
 - [`doc/tasks/v4/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v4/progress.md): v4 workspace and dataset work
+- [`doc/tasks/v5/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v5/progress.md): v5 multi-tenant platform and database architecture
 
 ## Known Drift Hotspots
 

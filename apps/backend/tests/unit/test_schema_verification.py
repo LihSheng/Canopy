@@ -7,7 +7,7 @@ from sqlalchemy import inspect
 from common.database import Base
 
 
-EXPECTED_TABLES = {
+EXPECTED_CONTROL_PLANE_TABLES = {
     "users",
     "source_snapshots",
     "source_snapshot_rows",
@@ -27,6 +27,12 @@ EXPECTED_TABLES = {
     "refresh_jobs",
     "data_snapshots",
     "export_jobs",
+    "projects",
+    "connections",
+    "datasets",
+    "dataset_versions",
+    "runs",
+    "source_types",
     "v3_uploads",
     "v3_mapping_decisions",
     "v3_cleaning_pipelines",
@@ -38,6 +44,27 @@ EXPECTED_TABLES = {
     "v3_lineage_edges",
     "v3_publish_records",
     "v3_workflow_state",
+    "v5_audit_events",
+    "v5_impersonation_sessions",
+    "v5_provisioning_jobs",
+    "v5_tenant_configs",
+    "v5_tenant_database_targets",
+    "v5_tenant_memberships",
+    "v5_tenants",
+}
+
+
+EXPECTED_TENANT_DATA_TABLES = {
+    "v5td_cleaned_records",
+    "v5td_derived_read_models",
+    "v5td_job_runs",
+    "v5td_lineage_edges",
+    "v5td_lineage_nodes",
+    "v5td_normalized_rows",
+    "v5td_publish_states",
+    "v5td_raw_artifacts",
+    "v5td_storage_objects",
+    "v5td_upload_batches",
 }
 
 
@@ -51,14 +78,20 @@ class TestSchemaVerification:
     def test_all_expected_tables_exist(self, engine):
         inspector = inspect(engine)
         tables = set(inspector.get_table_names())
-        missing = EXPECTED_TABLES - tables
+        missing = EXPECTED_CONTROL_PLANE_TABLES - tables
         assert not missing, f"Missing tables: {missing}"
 
     def test_no_unexpected_tables(self, engine):
         inspector = inspect(engine)
         tables = set(inspector.get_table_names())
-        extra = tables - EXPECTED_TABLES
+        extra = tables - EXPECTED_CONTROL_PLANE_TABLES
         assert not extra, f"Unexpected tables: {extra}"
+
+    def test_tenant_data_tables_exist(self, tenant_data_engine):
+        inspector = inspect(tenant_data_engine)
+        tables = set(inspector.get_table_names())
+        missing = EXPECTED_TENANT_DATA_TABLES - tables
+        assert not missing, f"Missing tenant data tables: {missing}"
 
     def test_users_columns(self, engine):
         inspector = inspect(engine)
@@ -87,11 +120,11 @@ class TestSchemaVerification:
 
     def test_generated_insights_has_datetime_generated_at(self, engine):
         t = _column_type(engine, "generated_insights", "generated_at")
-        assert t.__class__.__name__ == "DATETIME", f"Expected DATETIME, got {t.__class__.__name__}"
+        assert t.__class__.__name__ == "TIMESTAMP", f"Expected TIMESTAMP, got {t.__class__.__name__}"
 
     def test_data_snapshots_has_datetime_created_at(self, engine):
         t = _column_type(engine, "data_snapshots", "created_at")
-        assert t.__class__.__name__ == "DATETIME", f"Expected DATETIME, got {t.__class__.__name__}"
+        assert t.__class__.__name__ == "TIMESTAMP", f"Expected TIMESTAMP, got {t.__class__.__name__}"
 
     def test_detected_anomalies_has_numeric_values(self, engine):
         for col_name in ("baseline_value", "observed_value", "delta_value"):
@@ -101,7 +134,7 @@ class TestSchemaVerification:
     def test_indexes_exist_for_snapshot_lookups(self, engine):
         inspector = inspect(engine)
         indexes_by_table = {}
-        for table_name in EXPECTED_TABLES:
+        for table_name in EXPECTED_CONTROL_PLANE_TABLES:
             indexes = inspector.get_indexes(table_name)
             indexes_by_table[table_name] = {ix["name"] for ix in indexes}
 

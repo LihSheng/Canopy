@@ -14,15 +14,33 @@ class SessionUser(BaseModel):
     display_name: str
 
 
+class TenantInfo(BaseModel):
+    tenant_id: str
+    name: str
+    role: str
+
+
+class TenantContextResponse(BaseModel):
+    tenant_id: str
+    role: str
+
+
+class SwitchTenantRequest(BaseModel):
+    tenant_id: str
+
+
 class LoginResponse(BaseModel):
     user: SessionUser
     token: str
     expires_at: datetime
+    tenants: list[TenantInfo] = []
 
 
 class SessionResponse(BaseModel):
     authenticated: bool
     user: SessionUser | None = None
+    tenant: TenantContextResponse | None = None
+    tenants: list[TenantInfo] = []
 
 
 class LogoutResponse(BaseModel):

@@ -187,6 +187,17 @@ export interface Run {
   created_at: string;
 }
 
+export interface TenantInfo {
+  tenant_id: string;
+  name: string;
+  role: string;
+}
+
+export interface TenantContextResponse {
+  tenant_id: string;
+  role: string;
+}
+
 export interface DatasetHealth {
   dataset_id: string;
   row_count: number;

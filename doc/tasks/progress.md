@@ -7,4 +7,4 @@ for all phases.
 - [V2 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/progress.md): dashboard shell and navigation work
 - [V3 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/progress.md): ingestion and cleaning work
 - [V4 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v4/progress.md): workspace and dataset work
-
+- [V5 Task Progress](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v5/progress.md): future multi-tenant platform and database architecture

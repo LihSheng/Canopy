@@ -5,6 +5,8 @@
 - Node.js >= 22
 - Python >= 3.11
 - npm >= 10
+- PostgreSQL 16+ running locally
+- Docker Desktop or another way to run the local PostgreSQL container
 
 ## Setup
 
@@ -28,6 +30,25 @@ cp .env.example .env
 cp apps/frontend/.env.example apps/frontend/.env.local
 cp apps/backend/.env.example apps/backend/.env
 ```
+
+### Start PostgreSQL
+
+```bash
+docker run -d --name herd-aggregator-postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=postgres \
+  -p 5432:5432 \
+  postgres:16
+
+docker exec herd-aggregator-postgres psql -U postgres -d postgres -c "CREATE DATABASE herd_aggregator_control_plane;"
+docker exec herd-aggregator-postgres psql -U postgres -d postgres -c "CREATE DATABASE herd_aggregator_tenant_data;"
+docker exec herd-aggregator-postgres psql -U postgres -d postgres -c "CREATE DATABASE source_staging;"
+```
+
+The backend test harness will create the `herd_aggregator_test_control_plane`,
+`herd_aggregator_test_tenant_data`, and `source_staging_test` databases
+automatically if they do not exist.
 
 ## Run
 

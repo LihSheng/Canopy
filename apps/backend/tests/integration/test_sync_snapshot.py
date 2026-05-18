@@ -2,34 +2,17 @@ import json
 import uuid
 
 import pytest
-from sqlalchemy import create_engine, select
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import select
+from sqlalchemy.orm import sessionmaker
 
 from common.clock import utcnow
-from common.database import Base, reset_engine, set_engine
 from sync.repositories.snapshot import SnapshotRepository
 from sync.schema import SourceSnapshotModel, SourceSnapshotRowModel
 
 
 @pytest.fixture
-def app_engine():
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    set_engine(engine)
-    Base.metadata.create_all(bind=engine)
-    yield engine
-    Base.metadata.drop_all(bind=engine)
-    reset_engine()
-
-
-@pytest.fixture
-def app_session(app_engine):
-    from sqlalchemy.orm import sessionmaker
-
-    factory = sessionmaker(autocommit=False, autoflush=False, bind=app_engine)
+def app_session(engine):
+    factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     session = factory()
     try:
         yield session
@@ -103,11 +86,14 @@ class TestSnapshotPersistence:
                 self.source_key = source_key
                 self.name = name
 
-        repo.save_rows(snap_id, [
-            FakeRow("D001", "Engineering"),
-            FakeRow("D002", "Marketing"),
-            FakeRow("D003", "Sales"),
-        ])
+        repo.save_rows(
+            snap_id,
+            [
+                FakeRow("D001", "Engineering"),
+                FakeRow("D002", "Marketing"),
+                FakeRow("D003", "Sales"),
+            ],
+        )
         app_session.commit()
 
         rows = (

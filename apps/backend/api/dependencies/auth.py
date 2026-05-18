@@ -8,6 +8,12 @@ from api.schemas.auth import SessionUser
 from auth.service import AuthService
 from common.database import get_db
 from common.errors import AuthError
+from v5.context.tenant_context import (
+    TenantContext,
+    get_current_tenant_context,
+    reset_tenant_context,
+    set_current_tenant_context,
+)
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -33,4 +39,29 @@ async def get_current_user(
     if not result.authenticated or result.user is None:
         raise AuthError("Invalid or expired session")
 
+    if result.tenant_id:
+        ctx = TenantContext(
+            tenant_id=result.tenant_id,
+            tenant_role=result.tenant_role or "",
+            membership_status="active",
+            is_impersonated=False,
+        )
+        set_current_tenant_context(ctx)
+    else:
+        reset_tenant_context()
+
+    request.state.v5_session = result
+
     return SessionUser(**asdict(result.user))
+
+
+async def get_tenant_context() -> TenantContext | None:
+    return get_current_tenant_context()
+
+
+async def require_tenant_context(
+    ctx: TenantContext | None = Depends(get_tenant_context),
+) -> TenantContext:
+    if ctx is None:
+        raise AuthError("No tenant selected")
+    return ctx
