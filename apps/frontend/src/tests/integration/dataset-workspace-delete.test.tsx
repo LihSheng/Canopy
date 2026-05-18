@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mock_push = vi.fn();
@@ -22,6 +22,18 @@ vi.mock("@/lib/api/data-source", () => ({
   deleteDatasetVersion: vi.fn(),
 }));
 
+const mock_toast = {
+  success: vi.fn(),
+  info: vi.fn(),
+  warning: vi.fn(),
+  danger: vi.fn(),
+  showToast: vi.fn(),
+};
+
+vi.mock("@/components/shared/toast", () => ({
+  useToast: () => mock_toast,
+}));
+
 import DatasetWorkspaceContent from "@/app/dashboard/connections/datasets/[id]/dataset-workspace-content";
 import * as api from "@/lib/api/data-source";
 
@@ -29,7 +41,6 @@ describe("Dataset workspace delete actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mock_search_params = new URLSearchParams();
-    vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
   function mockWorkspaceData() {
@@ -116,7 +127,18 @@ describe("Dataset workspace delete actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete Dataset" }));
 
     await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText("Delete dataset?")).toBeInTheDocument();
+    });
+
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete Dataset" }));
+
+    await waitFor(() => {
       expect(api.deleteDataset).toHaveBeenCalledWith("dataset-1");
+      expect(mock_toast.success).toHaveBeenCalledWith(
+        "Dataset deleted",
+        "Leave Application Report was removed.",
+      );
       expect(mock_push).toHaveBeenCalledWith("/dashboard/connections/datasets");
     });
   });
@@ -162,7 +184,18 @@ describe("Dataset workspace delete actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete Version" }));
 
     await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText("Delete version?")).toBeInTheDocument();
+    });
+
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete Version" }));
+
+    await waitFor(() => {
       expect(api.deleteDatasetVersion).toHaveBeenCalledWith("dataset-1", "version-2");
+      expect(mock_toast.success).toHaveBeenCalledWith(
+        "Version deleted",
+        "v2 was removed from Leave Application Report.",
+      );
     });
   });
 });

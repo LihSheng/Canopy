@@ -1,3 +1,5 @@
+import { NoticeBanner } from "./notice-banner";
+
 export function EmptyState({
   title = "No data available",
   description,
@@ -6,9 +8,13 @@ export function EmptyState({
   description?: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-      <p className="text-sm font-semibold text-zinc-900">{title}</p>
-      {description && <p className="text-sm text-zinc-500">{description}</p>}
+    <div className="py-12">
+      <NoticeBanner
+        tone="info"
+        title={title}
+        description={description}
+        className="mx-auto max-w-md text-left"
+      />
     </div>
   );
 }

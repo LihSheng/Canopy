@@ -1,3 +1,6 @@
+import { NoticeBanner } from "./notice-banner";
+import { buttonToneStyles, sharedButtonBase } from "./ui-styles";
+
 export function ErrorState({
   message = "Something went wrong",
   onRetry,
@@ -6,12 +9,17 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-12 text-center" role="alert">
-      <p className="text-sm font-semibold text-red-600">{message}</p>
+    <div className="flex flex-col items-center justify-center gap-4 py-12 text-center" role="alert">
+      <NoticeBanner
+        tone="danger"
+        title={message}
+        description="Please retry or go back and try again."
+        className="w-full max-w-md text-left"
+      />
       {onRetry && (
         <button
           onClick={onRetry}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+          className={`${sharedButtonBase} ${buttonToneStyles.primary}`}
         >
           Try again
         </button>

@@ -28,8 +28,13 @@ import { VersionHistory } from "@/components/version-history";
 import { HealthPanel } from "@/components/health-panel";
 import { RunHistory } from "@/components/run-history";
 import { LineageView } from "@/components/lineage-view";
-import { LoadingSpinner } from "@/components/shared/loading-spinner";
-import { ErrorState } from "@/components/shared/error-state";
+import {
+  ConfirmDialog,
+  ErrorState,
+  LoadingSpinner,
+  NoticeBanner,
+  useToast,
+} from "@/components/shared";
 
 const TABS = [
   "Overview",
@@ -69,6 +74,9 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [deletingDataset, setDeletingDataset] = useState(false);
   const [deletingVersionId, setDeletingVersionId] = useState<string | null>(null);
+  const [deleteDialogKind, setDeleteDialogKind] = useState<"dataset" | "version" | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<DatasetVersion | null>(null);
+  const toast = useToast();
 
   const activeVersion = versions.find((v) => v.id === dataset?.active_version_id);
   const activeVersionNumber = activeVersion?.version_number;
@@ -133,51 +141,67 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   };
 
   const handleDeleteDataset = async () => {
-    if (!deleteSummary?.can_delete) {
-      setActionError(
-        deleteSummary?.blocking_reason ?? "Dataset cannot be deleted yet.",
-      );
-      return;
-    }
-
-    const confirmed = window.confirm(`Delete dataset "${dataset!.name}"?`);
-    if (!confirmed) {
-      return;
-    }
-
-    setDeletingDataset(true);
-    setActionError(null);
-    try {
-      await deleteDataset(dataset!.id);
-      router.push("/dashboard/connections/datasets");
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to delete dataset");
-    } finally {
-      setDeletingDataset(false);
-    }
+    setDeleteDialogKind("dataset");
   };
 
   const handleDeleteVersion = async (version: DatasetVersion) => {
-    if (version.id === dataset!.active_version_id) {
-      setActionError("Cannot delete active version");
+    setSelectedVersion(version);
+    setDeleteDialogKind("version");
+  };
+
+  const confirmDelete = async () => {
+    if (deleteDialogKind === "dataset") {
+      if (!deleteSummary?.can_delete) {
+        setActionError(
+          deleteSummary?.blocking_reason ?? "Dataset cannot be deleted yet.",
+        );
+        setDeleteDialogKind(null);
+        return;
+      }
+
+      setDeletingDataset(true);
+      setActionError(null);
+      try {
+        await deleteDataset(dataset!.id);
+        toast.success("Dataset deleted", `${dataset!.name} was removed.`);
+        router.push("/dashboard/connections/datasets");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to delete dataset";
+        setActionError(message);
+        toast.danger("Delete failed", message);
+      } finally {
+        setDeletingDataset(false);
+        setDeleteDialogKind(null);
+      }
       return;
     }
 
-    const confirmed = window.confirm(`Delete version v${version.version_number}?`);
-    if (!confirmed) {
-      return;
-    }
+    if (deleteDialogKind === "version" && selectedVersion) {
+      if (selectedVersion.id === dataset!.active_version_id) {
+        setActionError("Cannot delete active version");
+        setDeleteDialogKind(null);
+        return;
+      }
 
-    setDeletingVersionId(version.id);
-    setActionError(null);
-    try {
-      await deleteDatasetVersion(dataset!.id, version.id);
-      await load();
-      await loadPreview();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to delete version");
-    } finally {
-      setDeletingVersionId(null);
+      setDeletingVersionId(selectedVersion.id);
+      setActionError(null);
+      try {
+        await deleteDatasetVersion(dataset!.id, selectedVersion.id);
+        toast.success(
+          "Version deleted",
+          `v${selectedVersion.version_number} was removed from ${dataset!.name}.`,
+        );
+        await load();
+        await loadPreview();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to delete version";
+        setActionError(message);
+        toast.danger("Delete failed", message);
+      } finally {
+        setDeletingVersionId(null);
+        setDeleteDialogKind(null);
+        setSelectedVersion(null);
+      }
     }
   };
 
@@ -186,6 +210,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   if (!dataset) return <ErrorState message="Dataset not found" />;
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -194,17 +219,14 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
             {dataset!.source_object_name} &middot; {dataset!.status}
           </p>
           {deleteSummary && !deleteSummary.can_delete && (
-            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              <p className="font-medium">Dataset delete is locked.</p>
-              <p className="mt-1">
-                Remove active runs before deleting this dataset.
-              </p>
-              {deleteSummary.blocking_reason && (
-                <p className="mt-1 text-xs text-amber-800">
-                  {deleteSummary.blocking_reason}
-                </p>
-              )}
-            </div>
+            <NoticeBanner
+              tone="warning"
+              className="mt-3"
+              title="Dataset delete is locked."
+              description={`Remove active runs before deleting this dataset.${
+                deleteSummary.blocking_reason ? ` ${deleteSummary.blocking_reason}` : ""
+              }`}
+            />
           )}
           {actionError && (
             <p className="mt-2 text-sm text-rose-600">{actionError}</p>
@@ -379,5 +401,25 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
         )}
       </div>
     </div>
+    <ConfirmDialog
+      open={deleteDialogKind !== null}
+      title={deleteDialogKind === "dataset" ? "Delete dataset?" : "Delete version?"}
+      description={
+        deleteDialogKind === "dataset"
+          ? `Delete "${dataset!.name}" and all stored versions?`
+          : selectedVersion
+            ? `Delete version v${selectedVersion.version_number} from "${dataset!.name}"?`
+            : undefined
+      }
+      confirmLabel={deleteDialogKind === "dataset" ? "Delete Dataset" : "Delete Version"}
+      confirmTone="danger"
+      busy={deletingDataset || deletingVersionId !== null}
+      onConfirm={confirmDelete}
+      onClose={() => {
+        setDeleteDialogKind(null);
+        setSelectedVersion(null);
+      }}
+    />
+    </>
   );
 }

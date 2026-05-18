@@ -3,6 +3,7 @@
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
+import { buttonToneStyles, sharedButtonBase } from "@/components/shared/ui-styles";
 import type { ColumnDef, RowIdentity, TablePage } from "./types";
 
 type CompactTableProps = {
@@ -107,7 +108,7 @@ export function CompactTable({
           <button
             onClick={() => onPageChange(page.current - 1)}
             disabled={page.current <= 1}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`${sharedButtonBase} ${buttonToneStyles.secondary} px-3 py-1.5`}
           >
             Previous
           </button>
@@ -117,7 +118,7 @@ export function CompactTable({
           <button
             onClick={() => onPageChange(page.current + 1)}
             disabled={page.current >= page.total}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`${sharedButtonBase} ${buttonToneStyles.secondary} px-3 py-1.5`}
           >
             Next
           </button>
