@@ -1,6 +1,6 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { screen } from "@testing-library/dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { VersionHistory } from "@/components/version-history";
 import type { DatasetVersion } from "@/lib/api/types";
@@ -142,5 +142,36 @@ describe("VersionHistory", () => {
     );
 
     expect(screen.getByText(/2026/)).toBeInTheDocument();
+  });
+
+  it("renders delete version actions for non-active versions", () => {
+    const onDeleteVersion = vi.fn();
+
+    render(
+      <VersionHistory
+        versions={mockVersions}
+        activeVersionId="v2"
+        onDeleteVersion={onDeleteVersion}
+      />,
+    );
+
+    expect(screen.getAllByRole("button", { name: "Delete Version" }).length).toBe(2);
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete Version" })[0]);
+    expect(onDeleteVersion).toHaveBeenCalledWith(mockVersions[0]);
+  });
+
+  it("shows locked message when delete actions are enabled", () => {
+    render(
+      <VersionHistory
+        versions={mockVersions}
+        activeVersionId="v2"
+        onDeleteVersion={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Active version is locked/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Locked")).toBeInTheDocument();
   });
 });

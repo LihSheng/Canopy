@@ -5,6 +5,8 @@ import type {
   Connection,
   ConnectionDependencySummary,
   Dataset,
+  DatasetDeleteSummary,
+  DatasetVersionDeleteSummary,
   DatasetVersion,
   Run,
   DatasetHealth,
@@ -139,6 +141,34 @@ export function fetchDatasetLineage(datasetId: string): Promise<{ nodes: { id: s
 
 export function fetchDatasetHealth(datasetId: string): Promise<DatasetHealth> {
   return request<DatasetHealth>(`/api/v4/datasets/${datasetId}/health`);
+}
+
+export function fetchDatasetDeleteSummary(datasetId: string): Promise<DatasetDeleteSummary> {
+  return request<DatasetDeleteSummary>(`/api/v4/datasets/${datasetId}/dependencies`);
+}
+
+export function fetchDatasetVersionDeleteSummary(
+  datasetId: string,
+  versionId: string,
+): Promise<DatasetVersionDeleteSummary> {
+  return request<DatasetVersionDeleteSummary>(
+    `/api/v4/datasets/${datasetId}/versions/${versionId}/dependencies`,
+  );
+}
+
+export function deleteDataset(datasetId: string): Promise<{ deleted: boolean; id: string }> {
+  return request<{ deleted: boolean; id: string }>(`/api/v4/datasets/${datasetId}`, {
+    method: "DELETE",
+  });
+}
+
+export function deleteDatasetVersion(
+  datasetId: string,
+  versionId: string,
+): Promise<{ deleted: boolean; id: string }> {
+  return request<{ deleted: boolean; id: string }>(`/api/v4/datasets/${datasetId}/versions/${versionId}`, {
+    method: "DELETE",
+  });
 }
 
 export function fetchRuns(datasetId?: string): Promise<Run[]> {

@@ -216,3 +216,20 @@ export interface DatasetHealth {
   last_published_version: number | null;
   freshness_at: string | null;
 }
+
+export interface DatasetDeleteSummary {
+  dataset_id: string;
+  version_count: number;
+  active_run_count: number;
+  can_delete: boolean;
+  blocking_reason: string | null;
+}
+
+export interface DatasetVersionDeleteSummary {
+  dataset_id: string;
+  version_id: string;
+  version_number: number;
+  is_active_version: boolean;
+  can_delete: boolean;
+  blocking_reason: string | null;
+}

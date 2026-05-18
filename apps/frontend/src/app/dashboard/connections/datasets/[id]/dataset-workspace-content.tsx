@@ -4,13 +4,22 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   fetchDataset,
+  fetchDatasetDeleteSummary,
   fetchDatasetPreview,
   fetchDatasetVersions,
   fetchDatasetHealth,
   fetchDatasetLineage,
+  deleteDataset,
+  deleteDatasetVersion,
   fetchRuns,
 } from "@/lib/api/data-source";
-import type { Dataset, DatasetVersion, DatasetHealth, Run } from "@/lib/api/types";
+import type {
+  Dataset,
+  DatasetVersion,
+  DatasetHealth,
+  Run,
+  DatasetDeleteSummary,
+} from "@/lib/api/types";
 import type { DatasetPreviewResponse } from "@/lib/api/data-source";
 import { DatasetPreviewGrid } from "@/components/dataset-preview-grid";
 import { DatasetSummaryCards } from "@/components/dataset-summary-cards";
@@ -22,7 +31,16 @@ import { LineageView } from "@/components/lineage-view";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
 
-const TABS = ["Overview", "Preview", "Schema", "Transform", "Lineage", "Runs", "Details"] as const;
+const TABS = [
+  "Overview",
+  "Preview",
+  "Schema",
+  "Transform",
+  "Lineage",
+  "Runs",
+  "Versions",
+  "Details",
+] as const;
 
 type Tab = (typeof TABS)[number];
 
@@ -43,10 +61,14 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [versions, setVersions] = useState<DatasetVersion[]>([]);
   const [health, setHealth] = useState<DatasetHealth | null>(null);
+  const [deleteSummary, setDeleteSummary] = useState<DatasetDeleteSummary | null>(null);
   const [lineage, setLineage] = useState<{ nodes: { id: string; type: string; label: string }[]; edges: { from: string; to: string; type: string }[] } | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [deletingDataset, setDeletingDataset] = useState(false);
+  const [deletingVersionId, setDeletingVersionId] = useState<string | null>(null);
 
   const activeVersion = versions.find((v) => v.id === dataset?.active_version_id);
   const activeVersionNumber = activeVersion?.version_number;
@@ -55,19 +77,21 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const [ds, versionsData, healthData, lineageData, runsData] =
+      const [ds, versionsData, healthData, lineageData, runsData, deleteSummaryData] =
         await Promise.all([
           fetchDataset(datasetId),
           fetchDatasetVersions(datasetId),
           fetchDatasetHealth(datasetId),
           fetchDatasetLineage(datasetId),
           fetchRuns(datasetId),
+          fetchDatasetDeleteSummary(datasetId),
         ]);
       setDataset(ds);
       setVersions(versionsData);
       setHealth(healthData);
       setLineage(lineageData);
       setRuns(runsData);
+      setDeleteSummary(deleteSummaryData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load dataset");
     } finally {
@@ -93,10 +117,12 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   }, [datasetId, previewPage, previewPageSize]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPreview();
   }, [loadPreview]);
 
@@ -106,17 +132,97 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
     router.replace(`?${params.toString()}`, { scroll: false });
   };
 
+  const handleDeleteDataset = async () => {
+    if (!deleteSummary?.can_delete) {
+      setActionError(
+        deleteSummary?.blocking_reason ?? "Dataset cannot be deleted yet.",
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete dataset "${dataset!.name}"?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingDataset(true);
+    setActionError(null);
+    try {
+      await deleteDataset(dataset!.id);
+      router.push("/dashboard/connections/datasets");
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete dataset");
+    } finally {
+      setDeletingDataset(false);
+    }
+  };
+
+  const handleDeleteVersion = async (version: DatasetVersion) => {
+    if (version.id === dataset!.active_version_id) {
+      setActionError("Cannot delete active version");
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete version v${version.version_number}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingVersionId(version.id);
+    setActionError(null);
+    try {
+      await deleteDatasetVersion(dataset!.id, version.id);
+      await load();
+      await loadPreview();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete version");
+    } finally {
+      setDeletingVersionId(null);
+    }
+  };
+
   if (loading) return <LoadingSpinner text="Loading dataset workspace..." />;
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!dataset) return <ErrorState message="Dataset not found" />;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-zinc-900">{dataset.name}</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          {dataset.source_object_name} &middot; {dataset.status}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900">{dataset!.name}</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            {dataset!.source_object_name} &middot; {dataset!.status}
+          </p>
+          {deleteSummary && !deleteSummary.can_delete && (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p className="font-medium">Dataset delete is locked.</p>
+              <p className="mt-1">
+                Remove active runs before deleting this dataset.
+              </p>
+              {deleteSummary.blocking_reason && (
+                <p className="mt-1 text-xs text-amber-800">
+                  {deleteSummary.blocking_reason}
+                </p>
+              )}
+            </div>
+          )}
+          {actionError && (
+            <p className="mt-2 text-sm text-rose-600">{actionError}</p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleDeleteDataset}
+          disabled={deletingDataset || !deleteSummary?.can_delete}
+          title={
+            deleteSummary?.can_delete
+              ? "Delete dataset"
+              : deleteSummary?.blocking_reason ?? "Dataset cannot be deleted yet."
+          }
+          className="rounded-md border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {deletingDataset ? "Deleting..." : "Delete Dataset"}
+        </button>
       </div>
 
       <div className="border-b border-zinc-200">
@@ -150,10 +256,6 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
               rows={preview?.rows ?? []}
               loading={previewLoading}
               error={previewError}
-            />
-            <VersionHistory
-              versions={versions}
-              activeVersionId={dataset.active_version_id}
             />
           </div>
         )}
@@ -223,6 +325,15 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
           <RunHistory runs={runs} datasetId={datasetId} />
         )}
 
+        {activeTab === "Versions" && (
+          <VersionHistory
+            versions={versions}
+            activeVersionId={dataset!.active_version_id}
+            onDeleteVersion={handleDeleteVersion}
+            deletingVersionId={deletingVersionId}
+          />
+        )}
+
         {activeTab === "Details" && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-4">
@@ -231,7 +342,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
                 <dl className="mt-3 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <dt className="text-zinc-500">ID</dt>
-                    <dd className="text-zinc-900">{dataset.id}</dd>
+                    <dd className="text-zinc-900">{dataset!.id}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-zinc-500">Created</dt>
@@ -248,9 +359,9 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
                   <div className="flex justify-between">
                     <dt className="text-zinc-500">Active Version</dt>
                     <dd className="text-zinc-900">
-                      {dataset.active_version_id
-                        ? versions.find((v) => v.id === dataset.active_version_id)
-                            ?.version_number ?? dataset.active_version_id.slice(0, 8)
+                      {dataset!.active_version_id
+                        ? versions.find((v) => v.id === dataset!.active_version_id)
+                            ?.version_number ?? dataset!.active_version_id.slice(0, 8)
                         : "None"}
                     </dd>
                   </div>

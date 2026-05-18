@@ -528,6 +528,176 @@ def test_connection_soft_delete_blocks_active_dependencies(client: TestClient, a
     assert "active dependencies" in delete_resp.json()["detail"]
 
 
+def test_dataset_delete_allowed_when_unused(client: TestClient, auth_headers, monkeypatch, tmp_path):
+    dataset_id = _create_dataset_via_api(
+        client,
+        auth_headers,
+        monkeypatch,
+        tmp_path,
+        _make_two_row_xlsx_bytes(),
+        "Delete Dataset Project",
+        "Delete Dataset Conn",
+        "Delete Dataset",
+    )
+
+    delete_summary_resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/dependencies",
+        headers=auth_headers,
+    )
+    assert delete_summary_resp.status_code == 200
+    delete_summary = delete_summary_resp.json()
+    assert delete_summary["can_delete"] is True
+    assert delete_summary["active_run_count"] == 0
+
+    delete_resp = client.delete(f"/api/v4/datasets/{dataset_id}", headers=auth_headers)
+    assert delete_resp.status_code == 200
+    assert delete_resp.json() == {"deleted": True, "id": dataset_id}
+
+    dataset_storage_dir = tmp_path / "data-sources" / dataset_id
+    assert not dataset_storage_dir.exists()
+
+    get_resp = client.get(f"/api/v4/datasets/{dataset_id}", headers=auth_headers)
+    assert get_resp.status_code == 404
+
+    versions_resp = client.get(f"/api/v4/datasets/{dataset_id}/versions", headers=auth_headers)
+    assert versions_resp.status_code == 200
+    assert versions_resp.json() == []
+
+
+def test_dataset_delete_blocks_active_runs(client: TestClient, auth_headers, monkeypatch, tmp_path):
+    dataset_id = _create_dataset_via_api(
+        client,
+        auth_headers,
+        monkeypatch,
+        tmp_path,
+        _make_two_row_xlsx_bytes(),
+        "Blocked Dataset Project",
+        "Blocked Dataset Conn",
+        "Blocked Dataset",
+    )
+
+    dataset = client.get(f"/api/v4/datasets/{dataset_id}", headers=auth_headers).json()
+    run_resp = client.post(
+        "/api/v4/runs/",
+        json={
+            "project_id": dataset["project_id"],
+            "connection_id": dataset["connection_id"],
+            "dataset_id": dataset_id,
+            "started_by": "tester",
+        },
+        headers=auth_headers,
+    )
+    assert run_resp.status_code == 201
+
+    delete_summary_resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/dependencies",
+        headers=auth_headers,
+    )
+    assert delete_summary_resp.status_code == 200
+    delete_summary = delete_summary_resp.json()
+    assert delete_summary["can_delete"] is False
+    assert delete_summary["active_run_count"] == 1
+
+    delete_resp = client.delete(f"/api/v4/datasets/{dataset_id}", headers=auth_headers)
+    assert delete_resp.status_code == 400
+    assert "active run" in delete_resp.json()["detail"].lower()
+
+
+def test_dataset_version_delete_allowed_for_non_active_version(
+    client: TestClient,
+    auth_headers,
+    monkeypatch,
+    tmp_path,
+):
+    dataset_id = _create_dataset_via_api(
+        client,
+        auth_headers,
+        monkeypatch,
+        tmp_path,
+        _make_two_row_xlsx_bytes(),
+        "Version Delete Project",
+        "Version Delete Conn",
+        "Version Delete Dataset",
+    )
+
+    versions_resp = client.get(f"/api/v4/datasets/{dataset_id}/versions", headers=auth_headers)
+    versions = versions_resp.json()
+    assert len(versions) == 1
+    active_version_id = versions[0]["id"]
+
+    second_version_resp = client.post(
+        f"/api/v4/datasets/{dataset_id}/versions",
+        json={},
+        headers=auth_headers,
+    )
+    assert second_version_resp.status_code == 201
+    second_version_id = second_version_resp.json()["id"]
+    assert second_version_id != active_version_id
+
+    version_summary_resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/versions/{second_version_id}/dependencies",
+        headers=auth_headers,
+    )
+    assert version_summary_resp.status_code == 200
+    version_summary = version_summary_resp.json()
+    assert version_summary["can_delete"] is True
+    assert version_summary["is_active_version"] is False
+
+    delete_resp = client.delete(
+        f"/api/v4/datasets/{dataset_id}/versions/{second_version_id}",
+        headers=auth_headers,
+    )
+    assert delete_resp.status_code == 200
+    assert delete_resp.json() == {"deleted": True, "id": second_version_id}
+
+    versions_after_resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/versions",
+        headers=auth_headers,
+    )
+    assert versions_after_resp.status_code == 200
+    versions_after = versions_after_resp.json()
+    assert len(versions_after) == 1
+    assert versions_after[0]["id"] == active_version_id
+
+
+def test_dataset_version_delete_blocks_active_version(
+    client: TestClient,
+    auth_headers,
+    monkeypatch,
+    tmp_path,
+):
+    dataset_id = _create_dataset_via_api(
+        client,
+        auth_headers,
+        monkeypatch,
+        tmp_path,
+        _make_two_row_xlsx_bytes(),
+        "Active Version Delete Project",
+        "Active Version Delete Conn",
+        "Active Version Delete Dataset",
+    )
+
+    versions_resp = client.get(f"/api/v4/datasets/{dataset_id}/versions", headers=auth_headers)
+    assert versions_resp.status_code == 200
+    active_version_id = versions_resp.json()[0]["id"]
+
+    version_summary_resp = client.get(
+        f"/api/v4/datasets/{dataset_id}/versions/{active_version_id}/dependencies",
+        headers=auth_headers,
+    )
+    assert version_summary_resp.status_code == 200
+    version_summary = version_summary_resp.json()
+    assert version_summary["can_delete"] is False
+    assert version_summary["is_active_version"] is True
+
+    delete_resp = client.delete(
+        f"/api/v4/datasets/{dataset_id}/versions/{active_version_id}",
+        headers=auth_headers,
+    )
+    assert delete_resp.status_code == 400
+    assert "active version" in delete_resp.json()["detail"].lower()
+
+
 def test_connection_soft_delete_hides_restore_and_permanent_delete(
     client: TestClient,
     auth_headers,

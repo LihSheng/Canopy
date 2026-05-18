@@ -36,6 +36,14 @@ class DatasetRepository:
         self._db.refresh(model)
         return self._to_domain(model)
 
+    def delete(self, id: str) -> bool:
+        model = self._db.query(DatasetModel).filter(DatasetModel.id == id).first()
+        if model is None:
+            return False
+        self._db.delete(model)
+        self._db.commit()
+        return True
+
     def _to_model(self, d: Dataset) -> DatasetModel:
         return DatasetModel(**{k: getattr(d, k) for k in d.__dataclass_fields__})
 
@@ -69,6 +77,26 @@ class DatasetVersionRepository:
     def get_latest_by_dataset(self, dataset_id: str) -> DatasetVersion | None:
         model = self._db.query(DatasetVersionModel).filter(DatasetVersionModel.dataset_id == dataset_id).order_by(DatasetVersionModel.version_number.desc()).first()
         return self._to_domain(model) if model else None
+
+    def count_by_dataset(self, dataset_id: str) -> int:
+        return self._db.query(DatasetVersionModel).filter(DatasetVersionModel.dataset_id == dataset_id).count()
+
+    def delete(self, id: str) -> bool:
+        model = self._db.query(DatasetVersionModel).filter(DatasetVersionModel.id == id).first()
+        if model is None:
+            return False
+        self._db.delete(model)
+        self._db.commit()
+        return True
+
+    def delete_by_dataset(self, dataset_id: str) -> int:
+        deleted = (
+            self._db.query(DatasetVersionModel)
+            .filter(DatasetVersionModel.dataset_id == dataset_id)
+            .delete(synchronize_session=False)
+        )
+        self._db.commit()
+        return deleted
 
     def _to_model(self, d: DatasetVersion) -> DatasetVersionModel:
         return DatasetVersionModel(**{k: getattr(d, k) for k in d.__dataclass_fields__})

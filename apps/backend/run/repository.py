@@ -35,6 +35,14 @@ class RunRepository:
         model = self._db.query(RunModel).filter(RunModel.dataset_id == dataset_id).order_by(RunModel.created_at.desc()).first()
         return self._to_domain(model) if model else None
 
+    def count_active_by_dataset(self, dataset_id: str) -> int:
+        return (
+            self._db.query(RunModel)
+            .filter(RunModel.dataset_id == dataset_id)
+            .filter(RunModel.status.in_(["queued", "running"]))
+            .count()
+        )
+
     def _to_model(self, d: Run) -> RunModel:
         return RunModel(**{k: getattr(d, k) for k in d.__dataclass_fields__})
 

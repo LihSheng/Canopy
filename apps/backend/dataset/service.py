@@ -1,8 +1,12 @@
 import uuid
+import shutil
 from datetime import UTC, datetime
 
+from common.errors import NotFoundError, ValidationError
 from dataset.domain import Dataset, DatasetVersion, DatasetStatus, DatasetVersionStatus
 from dataset.repository import DatasetRepository, DatasetVersionRepository
+from connection._shared import storage_root
+from run.repository import RunRepository
 
 
 class DatasetService:
@@ -31,6 +35,49 @@ class DatasetService:
 
     def list_all_datasets(self) -> list[Dataset]:
         return self._repo.list_all()
+
+    def get_delete_summary(self, dataset_id: str) -> dict:
+        dataset = self._repo.get(dataset_id)
+        if dataset is None:
+            raise NotFoundError("Dataset not found")
+
+        run_repo = RunRepository(self._repo._db)
+        active_run_count = run_repo.count_active_by_dataset(dataset_id)
+        version_count = self._version_repo.count_by_dataset(dataset_id)
+        return {
+            "dataset_id": dataset_id,
+            "version_count": version_count,
+            "active_run_count": active_run_count,
+            "can_delete": active_run_count == 0,
+            "blocking_reason": (
+                None
+                if active_run_count == 0
+                else f"Dataset has {active_run_count} active run(s)"
+            ),
+        }
+
+    def delete_dataset(self, dataset_id: str) -> dict:
+        dataset = self._repo.get(dataset_id)
+        if dataset is None:
+            raise NotFoundError("Dataset not found")
+
+        run_repo = RunRepository(self._repo._db)
+        active_run_count = run_repo.count_active_by_dataset(dataset_id)
+        if active_run_count > 0:
+            raise ValidationError(
+                f"Dataset has {active_run_count} active run(s)"
+            )
+
+        self._version_repo.delete_by_dataset(dataset_id)
+        deleted = self._repo.delete(dataset_id)
+        if not deleted:
+            raise NotFoundError("Dataset not found")
+
+        dataset_storage_dir = storage_root() / dataset_id
+        if dataset_storage_dir.exists():
+            shutil.rmtree(dataset_storage_dir)
+
+        return {"deleted": True, "id": dataset_id}
 
     def get_dataset_health(self, dataset_id: str) -> dict:
         dataset = self._repo.get(dataset_id)
@@ -86,4 +133,41 @@ class DatasetVersionService:
 
     def get_version(self, id: str) -> DatasetVersion | None:
         return self._repo.get(id)
+
+    def get_delete_summary(self, dataset_id: str, version_id: str) -> dict:
+        dataset = self._dataset_repo.get(dataset_id)
+        if dataset is None:
+            raise NotFoundError("Dataset not found")
+
+        version = self._repo.get(version_id)
+        if version is None or version.dataset_id != dataset_id:
+            raise NotFoundError("Dataset version not found")
+
+        is_active_version = dataset.active_version_id == version_id
+        return {
+            "dataset_id": dataset_id,
+            "version_id": version_id,
+            "version_number": version.version_number,
+            "is_active_version": is_active_version,
+            "can_delete": not is_active_version,
+            "blocking_reason": "Version is active" if is_active_version else None,
+        }
+
+    def delete_version(self, dataset_id: str, version_id: str) -> dict:
+        dataset = self._dataset_repo.get(dataset_id)
+        if dataset is None:
+            raise NotFoundError("Dataset not found")
+
+        version = self._repo.get(version_id)
+        if version is None or version.dataset_id != dataset_id:
+            raise NotFoundError("Dataset version not found")
+
+        if dataset.active_version_id == version_id:
+            raise ValidationError("Cannot delete active version")
+
+        deleted = self._repo.delete(version_id)
+        if not deleted:
+            raise NotFoundError("Dataset version not found")
+
+        return {"deleted": True, "id": version_id}
 

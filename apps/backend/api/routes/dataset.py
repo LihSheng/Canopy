@@ -32,6 +32,23 @@ class CreateVersionRequest(BaseModel):
     run_id: str | None = None
 
 
+class DatasetDeleteSummaryResponse(BaseModel):
+    dataset_id: str
+    version_count: int
+    active_run_count: int
+    can_delete: bool
+    blocking_reason: str | None = None
+
+
+class DatasetVersionDeleteSummaryResponse(BaseModel):
+    dataset_id: str
+    version_id: str
+    version_number: int
+    is_active_version: bool
+    can_delete: bool
+    blocking_reason: str | None = None
+
+
 def _resolve_static_source_file_path(connection, db: Session) -> str:
     source_file_path = connection.config_json.get("source_file_path")
     if isinstance(source_file_path, str) and source_file_path:
@@ -166,12 +183,50 @@ def list_versions(id: str, db: Session = Depends(get_db), user: SessionUser = De
     return repo.list_by_dataset(id)
 
 
+@router.get("/{id}/dependencies")
+def get_delete_summary(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+    version_repo = DatasetVersionRepository(db)
+    service = DatasetService(DatasetRepository(db), version_repo)
+    return DatasetDeleteSummaryResponse(**service.get_delete_summary(id))
+
+
+@router.get("/{dataset_id}/versions/{version_id}/dependencies")
+def get_version_delete_summary(
+    dataset_id: str,
+    version_id: str,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    version_repo = DatasetVersionRepository(db)
+    service = DatasetVersionService(version_repo, DatasetRepository(db))
+    return DatasetVersionDeleteSummaryResponse(**service.get_delete_summary(dataset_id, version_id))
+
+
 @router.post("/{id}/versions", status_code=201)
 def create_version(id: str, body: CreateVersionRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
     repo = DatasetVersionRepository(db)
     dataset_repo = DatasetRepository(db)
     service = DatasetVersionService(repo, dataset_repo)
     return service.create_version(dataset_id=id, run_id=body.run_id)
+
+
+@router.delete("/{id}")
+def delete_dataset(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+    version_repo = DatasetVersionRepository(db)
+    service = DatasetService(DatasetRepository(db), version_repo)
+    return service.delete_dataset(id)
+
+
+@router.delete("/{dataset_id}/versions/{version_id}")
+def delete_version(
+    dataset_id: str,
+    version_id: str,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    version_repo = DatasetVersionRepository(db)
+    service = DatasetVersionService(version_repo, DatasetRepository(db))
+    return service.delete_version(dataset_id, version_id)
 
 
 @router.get("/{id}/preview")

@@ -3,6 +3,8 @@ import type { DatasetVersion } from "@/lib/api/types";
 type Props = {
   versions: DatasetVersion[];
   activeVersionId: string | null | undefined;
+  onDeleteVersion?: (version: DatasetVersion) => void | Promise<void>;
+  deletingVersionId?: string | null;
 };
 
 const statusStyles: Record<string, string> = {
@@ -12,7 +14,12 @@ const statusStyles: Record<string, string> = {
   processing: "bg-blue-100 text-blue-800",
 };
 
-export function VersionHistory({ versions = [], activeVersionId }: Props) {
+export function VersionHistory({
+  versions = [],
+  activeVersionId,
+  onDeleteVersion,
+  deletingVersionId = null,
+}: Props) {
   if (!versions || versions.length === 0) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-zinc-500">
@@ -22,7 +29,13 @@ export function VersionHistory({ versions = [], activeVersionId }: Props) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-200">
+    <div className="space-y-3">
+      {onDeleteVersion && activeVersionId && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Active version is locked. Use Delete Version only for non-active snapshots.
+        </div>
+      )}
+      <div className="overflow-hidden rounded-lg border border-zinc-200">
       <table className="min-w-full divide-y divide-zinc-200 text-sm">
         <thead>
           <tr className="bg-zinc-50">
@@ -44,6 +57,11 @@ export function VersionHistory({ versions = [], activeVersionId }: Props) {
             <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Created
             </th>
+            {onDeleteVersion && (
+              <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Actions
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100">
@@ -92,11 +110,28 @@ export function VersionHistory({ versions = [], activeVersionId }: Props) {
                 <td className="px-4 py-2 text-zinc-700">
                   {new Date(version.created_at).toLocaleString()}
                 </td>
+                {onDeleteVersion && (
+                  <td className="px-4 py-2 text-right">
+                    {!isActive ? (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteVersion(version)}
+                        disabled={deletingVersionId === version.id}
+                        className="rounded-md border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingVersionId === version.id ? "Deleting..." : "Delete Version"}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-zinc-400">Locked</span>
+                    )}
+                  </td>
+                )}
               </tr>
             );
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
