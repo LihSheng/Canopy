@@ -93,12 +93,20 @@ export default function ConnectionsHomeContent() {
             Manage sources, connections, datasets, and runs
           </p>
         </div>
-        <Link
-          href="/dashboard/connections/sources"
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
-        >
-          New Source
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/dashboard/connections/sources"
+            className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+          >
+            Source Catalog
+          </Link>
+          <Link
+            href="/dashboard/data-studio/connections/new"
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+          >
+            + New Connection
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

@@ -4,13 +4,17 @@ import type {
   SourceType,
   Connection,
   ConnectionDependencySummary,
+  ConnectionTestResult,
   Dataset,
   DatasetDeleteSummary,
   DatasetVersionDeleteSummary,
   DatasetVersion,
+  DiscoveredTable,
   Run,
   DatasetHealth,
   StaticFilePreview,
+  SyncPolicyUpdate,
+  TablePreview,
 } from "./types";
 
 export interface DatasetPreviewResponse {
@@ -105,6 +109,9 @@ export function createDataset(data: {
   connection_id: string;
   name: string;
   source_object_name?: string;
+  sync_mode?: string | null;
+  batch_strategy?: string | null;
+  cursor_column?: string | null;
 }): Promise<Dataset> {
   return request<Dataset>("/api/datasets/", {
     method: "POST",
@@ -195,5 +202,28 @@ export function createRun(data: { dataset_id: string }): Promise<Run> {
   return request<Run>("/api/runs/", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+// --- Connection Wizard API ---
+
+export function fetchConnectionTest(id: string): Promise<ConnectionTestResult> {
+  return request<ConnectionTestResult>(`/api/connections/${id}/test`, {
+    method: "POST",
+  });
+}
+
+export function fetchTableDiscovery(id: string): Promise<DiscoveredTable[]> {
+  return request<DiscoveredTable[]>(`/api/connections/${id}/discover`);
+}
+
+export function fetchTablePreview(id: string, table: string): Promise<TablePreview> {
+  return request<TablePreview>(`/api/connections/${id}/discover/${encodeURIComponent(table)}`);
+}
+
+export function updateSyncPolicy(id: string, policy: SyncPolicyUpdate): Promise<Dataset> {
+  return request<Dataset>(`/api/datasets/${id}/sync-policy`, {
+    method: "PATCH",
+    body: JSON.stringify(policy),
   });
 }

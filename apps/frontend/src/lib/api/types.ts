@@ -144,6 +144,8 @@ export interface Connection {
   name: string;
   status: string;
   config_json: Record<string, unknown>;
+  test_status: string | null;
+  last_tested_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -163,6 +165,10 @@ export interface Dataset {
   source_object_name: string;
   status: string;
   active_version_id: string | null;
+  sync_mode: string | null;
+  batch_strategy: string | null;
+  cursor_column: string | null;
+  last_cursor_value: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -233,4 +239,35 @@ export interface DatasetVersionDeleteSummary {
   is_active_version: boolean;
   can_delete: boolean;
   blocking_reason: string | null;
+}
+
+export interface ConnectionTestResult {
+  success: boolean;
+  message?: string;
+}
+
+export interface ColumnSchema {
+  name: string;
+  data_type: string;
+}
+
+export interface DiscoveredTable {
+  table_name: string;
+  row_count_estimate: number;
+  columns: ColumnSchema[];
+  detected_cursor_column: string | null;
+}
+
+export interface TablePreview {
+  columns: ColumnSchema[];
+  rows: (string | number | boolean | null)[][];
+  detected_cursor_column: string | null;
+  cursor_candidates: string[];
+}
+
+export interface SyncPolicyUpdate {
+  sync_mode?: string | null;
+  batch_strategy?: string | null;
+  cursor_column?: string | null;
+  frequency_minutes?: number | null;
 }
