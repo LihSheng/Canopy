@@ -8,8 +8,11 @@ from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError, ValidationError
+from connection.cursor_detection import detect_cursor_column
+from connection.database_adapter import get_adapter
 from connection.importer import build_sheet_profiles, delete_uploaded_file, save_uploaded_file
 from connection.repository import ConnectionRepository
+from connection.secret_store import AesGcmSecretStore, SecretStore
 from connection.service import ConnectionService
 from control_plane.audit_service import AuditService
 
@@ -112,6 +115,77 @@ def get_connection(
     if connection is None:
         raise NotFoundError("Connection not found")
     return connection
+
+
+@router.post("/{id}/test")
+async def test_connection(
+    id: str,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = ConnectionService(ConnectionRepository(db))
+    connection = service.get_connection(id)
+    if connection is None:
+        raise NotFoundError("Connection not found")
+
+    store: SecretStore = AesGcmSecretStore()
+    config = dict(connection.config_json or {})
+    if "password" in config:
+        config["password"] = store.decrypt(config["password"])
+
+    adapter = get_adapter(connection.source_type)
+    result = await adapter.test_connection(config)
+    return result
+
+
+@router.get("/{id}/discover")
+async def discover_tables(
+    id: str,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = ConnectionService(ConnectionRepository(db))
+    connection = service.get_connection(id)
+    if connection is None:
+        raise NotFoundError("Connection not found")
+
+    store: SecretStore = AesGcmSecretStore()
+    config = dict(connection.config_json or {})
+    if "password" in config:
+        config["password"] = store.decrypt(config["password"])
+
+    adapter = get_adapter(connection.source_type)
+    tables = await adapter.discover_tables(config)
+
+    for table in tables:
+        table["detected_cursor_column"] = detect_cursor_column(table.get("columns", []))
+
+    return tables
+
+
+@router.get("/{id}/discover/{table:path}")
+async def preview_table(
+    id: str,
+    table: str,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = ConnectionService(ConnectionRepository(db))
+    connection = service.get_connection(id)
+    if connection is None:
+        raise NotFoundError("Connection not found")
+
+    store: SecretStore = AesGcmSecretStore()
+    config = dict(connection.config_json or {})
+    if "password" in config:
+        config["password"] = store.decrypt(config["password"])
+
+    adapter = get_adapter(connection.source_type)
+    preview = await adapter.preview_table(config, table)
+
+    cursor = detect_cursor_column(preview.get("columns", []))
+    preview["detected_cursor_column"] = cursor
+    return preview
 
 
 def _lifecycle_service(db: Session) -> ConnectionService:
