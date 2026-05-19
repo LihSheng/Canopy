@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { AnalyticsHeader } from "@/components/analytics-shell/analytics-header";
+import { AnalyticsPageShell } from "@/components/analytics-shell/analytics-page-shell";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ReportPresetGrid } from "./report-preset-grid";
@@ -94,42 +94,35 @@ export function ReportsPage() {
 
   if (data.status === "error") {
     return (
-      <>
-        <AnalyticsHeader title="Reports" contextText={contextLabel} />
-        <div className="p-6">
-          <ErrorState message={data.message} onRetry={load} />
-        </div>
-      </>
+      <AnalyticsPageShell title="Reports" contextText={contextLabel}>
+        <ErrorState message={data.message} onRetry={load} />
+      </AnalyticsPageShell>
     );
   }
 
   const loading = data.status === "loading";
 
   return (
-    <div className="flex flex-col h-full overflow-auto">
-      <AnalyticsHeader
-        title="Reports"
-        contextText={loading ? undefined : contextLabel}
-      />
-
-      <div className="flex-1 overflow-auto p-6">
-        {loading ? (
-          <LoadingSpinner text="Loading reports..." />
-        ) : data.status === "success" ? (
-          <>
-            <ReportPresetGrid
-              presets={data.view.presets}
-              onTrigger={handleTrigger}
-              exporting={exporting}
-            />
-            <ReportHistoryList
-              items={data.view.recentExports}
-              onRerun={handleRerun}
-              exporting={rerunning}
-            />
-          </>
-        ) : null}
-      </div>
-    </div>
+    <AnalyticsPageShell
+      title="Reports"
+      contextText={loading ? undefined : contextLabel}
+    >
+      {loading ? (
+        <LoadingSpinner text="Loading reports..." />
+      ) : data.status === "success" ? (
+        <>
+          <ReportPresetGrid
+            presets={data.view.presets}
+            onTrigger={handleTrigger}
+            exporting={exporting}
+          />
+          <ReportHistoryList
+            items={data.view.recentExports}
+            onRerun={handleRerun}
+            exporting={rerunning}
+          />
+        </>
+      ) : null}
+    </AnalyticsPageShell>
   );
 }

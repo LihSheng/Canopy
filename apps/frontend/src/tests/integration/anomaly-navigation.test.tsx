@@ -24,7 +24,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { AnomaliesShell } from "@/components/dashboard/anomalies-shell";
+import { AnomaliesPage } from "@/components/anomalies/anomalies-page";
 import * as api from "@/lib/api/dashboard";
 
 describe("Anomaly navigation", () => {
@@ -38,18 +38,20 @@ describe("Anomaly navigation", () => {
       { id: "a2", department_id: "d2", department_name: "Sales", period: "2024-05", description: "Claims drop", severity: "low" as const, change_pct: -8 },
     ]);
 
-    render(<AnomaliesShell />);
+    render(<AnomaliesPage />);
 
     await waitFor(() => {
+      // High-severity group is expanded by default, so its items are visible
       expect(screen.getByText("Payroll spike of 15%")).toBeInTheDocument();
-      expect(screen.getByText("Claims drop")).toBeInTheDocument();
+      // Low-severity group is collapsed by default
+      expect(screen.queryByText("Claims drop")).not.toBeInTheDocument();
     });
   });
 
   it("shows empty state when no anomalies", async () => {
     vi.mocked(api.fetchAnomalies).mockResolvedValue([]);
 
-    render(<AnomaliesShell />);
+    render(<AnomaliesPage />);
 
     await waitFor(() => {
       expect(screen.getByText("No anomalies detected")).toBeInTheDocument();
@@ -59,7 +61,7 @@ describe("Anomaly navigation", () => {
   it("shows error state on API failure", async () => {
     vi.mocked(api.fetchAnomalies).mockRejectedValue(new Error("Server error"));
 
-    render(<AnomaliesShell />);
+    render(<AnomaliesPage />);
 
     await waitFor(() => {
       expect(screen.getByText("Server error")).toBeInTheDocument();

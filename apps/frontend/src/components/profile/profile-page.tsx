@@ -1,7 +1,6 @@
 "use client";
 
-import { AnalyticsHeader } from "@/components/analytics-shell/analytics-header";
-import { AnalyticsBreadcrumb } from "@/components/analytics-shell/analytics-breadcrumb";
+import { AnalyticsPageShell } from "@/components/analytics-shell/analytics-page-shell";
 import { ErrorState } from "@/components/shared/error-state";
 import { useSession } from "@/hooks/use-session";
 import { ProfileIdentityCard, ProfileIdentityCardSkeleton } from "./profile-identity-card";
@@ -9,42 +8,30 @@ import { ProfileIdentityCard, ProfileIdentityCardSkeleton } from "./profile-iden
 export function ProfilePage() {
   const { user, loading, error, refetch } = useSession();
 
+  const breadcrumbItems = [
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Profile" },
+  ];
+
   if (error) {
     return (
-      <>
-        <AnalyticsHeader title="Profile" />
-        <AnalyticsBreadcrumb
-          items={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Profile" },
-          ]}
-        />
-        <div className="p-6">
-          <ErrorState message={error} onRetry={refetch} />
-        </div>
-      </>
+      <AnalyticsPageShell title="Profile" breadcrumbItems={breadcrumbItems}>
+        <ErrorState message={error} onRetry={refetch} />
+      </AnalyticsPageShell>
     );
   }
 
   return (
-    <div className="flex flex-col h-full overflow-auto">
-      <AnalyticsHeader
-        title="Profile"
-        contextText={user ? user.email : undefined}
-      />
-      <AnalyticsBreadcrumb
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Profile" },
-        ]}
-      />
-      <div className="flex-1 overflow-auto p-6">
-        {loading ? (
-          <ProfileIdentityCardSkeleton />
-        ) : user ? (
-          <ProfileIdentityCard user={user} />
-        ) : null}
-      </div>
-    </div>
+    <AnalyticsPageShell
+      title="Profile"
+      contextText={user ? user.email : undefined}
+      breadcrumbItems={breadcrumbItems}
+    >
+      {loading ? (
+        <ProfileIdentityCardSkeleton />
+      ) : user ? (
+        <ProfileIdentityCard user={user} />
+      ) : null}
+    </AnalyticsPageShell>
   );
 }

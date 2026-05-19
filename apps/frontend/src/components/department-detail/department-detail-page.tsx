@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { AnalyticsHeader } from "@/components/analytics-shell/analytics-header";
-import { AnalyticsBreadcrumb } from "@/components/analytics-shell/analytics-breadcrumb";
+import { AnalyticsPageShell } from "@/components/analytics-shell/analytics-page-shell";
 import { ErrorState } from "@/components/shared/error-state";
 import { EmptyState } from "@/components/shared/empty-state";
 import { DepartmentDetailHeader } from "./department-detail-header";
@@ -68,96 +67,86 @@ export function DepartmentDetailPage({ id }: Props) {
 
   const contextLabel = TIME_RANGE_LABELS[timeRange];
 
-  if (data.status === "error") {
-    return (
-      <>
-        <AnalyticsHeader title="Department Detail" contextText={contextLabel} />
-        <AnalyticsBreadcrumb
-          items={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Departments", href: "/dashboard/departments" },
-            { label: "Detail" },
-          ]}
-        />
-        <div className="p-6">
-          <ErrorState message={data.message} onRetry={load} />
-        </div>
-      </>
-    );
-  }
-
   const loading = data.status === "loading";
   const view = data.status === "success" ? data.view : null;
 
+  const breadcrumbItems = [
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Departments", href: "/dashboard/departments" },
+    { label: view ? view.department.name : "Loading..." },
+  ];
+
+  if (data.status === "error") {
+    return (
+      <AnalyticsPageShell title="Department Detail" contextText={contextLabel} breadcrumbItems={breadcrumbItems}>
+        <ErrorState message={data.message} onRetry={load} />
+      </AnalyticsPageShell>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full overflow-auto">
-      <DepartmentDetailHeader
-        summary={{
-          departmentName: view ? view.department.name : "Loading...",
-          attentionState: view?.department.attentionState ?? null,
-          totalSpend: view ? view.summary.totalSpend : 0,
-          changePercent: view ? view.summary.changePercent : 0,
-        }}
-        timeRange={timeRange}
-        onTimeRangeChange={setTimeRange}
-      />
-      <AnalyticsBreadcrumb
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Departments", href: "/dashboard/departments" },
-          { label: view ? view.department.name : "Loading..." },
-        ]}
-      />
+    <AnalyticsPageShell
+      header={
+        <DepartmentDetailHeader
+          summary={{
+            departmentName: view ? view.department.name : "Loading...",
+            attentionState: view?.department.attentionState ?? null,
+            totalSpend: view ? view.summary.totalSpend : 0,
+            changePercent: view ? view.summary.changePercent : 0,
+          }}
+          timeRange={timeRange}
+          onTimeRangeChange={setTimeRange}
+        />
+      }
+      breadcrumbItems={breadcrumbItems}
+    >
+      {loading && (
+        <div className="space-y-6">
+          <DepartmentTrendPanelSkeleton />
+          <DepartmentAiSummarySkeleton />
+          <DepartmentContributorsSplitSkeleton />
+        </div>
+      )}
 
-      <div className="flex-1 overflow-auto p-6">
-        {loading && (
-          <div className="space-y-6">
-            <DepartmentTrendPanelSkeleton />
-            <DepartmentAiSummarySkeleton />
-            <DepartmentContributorsSplitSkeleton />
-          </div>
-        )}
+      {view && view.topEmployees.length === 0 && view.topClaimTypes.length === 0 && (
+        <EmptyState
+          title="No department data"
+          description="Data will appear after the first sync completes."
+        />
+      )}
 
-        {view && view.topEmployees.length === 0 && view.topClaimTypes.length === 0 && (
-          <EmptyState
-            title="No department data"
-            description="Data will appear after the first sync completes."
+      {view && (view.topEmployees.length > 0 || view.topClaimTypes.length > 0) && (
+        <div className="space-y-6">
+          <DepartmentTrendPanel series={view.trend} />
+
+          <DepartmentAiSummary summary={view.aiSummary} />
+
+          <DepartmentContributorsSplit
+            topEmployees={view.topEmployees}
+            topClaimTypes={view.topClaimTypes}
           />
-        )}
 
-        {view && (view.topEmployees.length > 0 || view.topClaimTypes.length > 0) && (
-          <div className="space-y-6">
-            <DepartmentTrendPanel series={view.trend} />
-
-            <DepartmentAiSummary summary={view.aiSummary} />
-
-            <DepartmentContributorsSplit
-              topEmployees={view.topEmployees}
-              topClaimTypes={view.topClaimTypes}
-            />
-
-            <div className="flex justify-end">
-              <Link
-                href={buildDepartmentToAnomaliesLink(view.department.id, timeRange)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-300 hover:text-zinc-900"
+          <div className="flex justify-end">
+            <Link
+              href={buildDepartmentToAnomaliesLink(view.department.id, timeRange)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-300 hover:text-zinc-900"
+            >
+              View related anomalies
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
               >
-                View related anomalies
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-4 w-4"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8.22 5.22a.75.75 0 01 1.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 010-1.06z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </Link>
-            </div>
+                <path
+                  fillRule="evenodd"
+                  d="M8.22 5.22a.75.75 0 01 1.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 010-1.06z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </Link>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </AnalyticsPageShell>
   );
 }

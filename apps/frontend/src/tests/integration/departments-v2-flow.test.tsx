@@ -1,1 +1,0 @@
-// DEPRECATED: This file has been renamed to src/tests/integration/departments-flow.test.tsx. Use the new file instead.

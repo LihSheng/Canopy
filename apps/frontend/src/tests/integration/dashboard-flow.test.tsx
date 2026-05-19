@@ -21,7 +21,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { DashboardPage } from "@/components/dashboard/dashboard-page";
 import * as api from "@/lib/api/dashboard";
 
 const mockSummary = {
@@ -64,14 +64,17 @@ describe("Dashboard flow", () => {
     vi.mocked(api.fetchClaimTypeBreakdown).mockResolvedValue(mockClaimTypes);
     vi.mocked(api.fetchAnomalies).mockResolvedValue(mockAnomalies);
 
-    render(<DashboardShell />);
+    render(<DashboardPage />);
 
+    // DashboardPage renders "Dashboard" as the page title
     await waitFor(() => {
-      expect(screen.getByText("Executive Dashboard")).toBeInTheDocument();
+      expect(screen.getByText("Dashboard")).toBeInTheDocument();
     });
 
     await waitFor(() => {
+      // Payroll spend card shows $1,000,000
       expect(screen.getByText("$1,000,000")).toBeInTheDocument();
+      // Claims spend card shows $200,000
       expect(screen.getByText("$200,000")).toBeInTheDocument();
     });
   });
@@ -79,7 +82,7 @@ describe("Dashboard flow", () => {
   it("shows error state when API fails", async () => {
     vi.mocked(api.fetchSummary).mockRejectedValue(new Error("Network error"));
 
-    render(<DashboardShell />);
+    render(<DashboardPage />);
 
     await waitFor(() => {
       expect(screen.getByText("Network error")).toBeInTheDocument();
@@ -96,7 +99,7 @@ describe("Dashboard flow", () => {
     vi.mocked(api.fetchClaimTypeBreakdown).mockResolvedValue(mockClaimTypes);
     vi.mocked(api.fetchAnomalies).mockResolvedValue(mockAnomalies);
 
-    render(<DashboardShell />);
+    render(<DashboardPage />);
 
     await waitFor(() => {
       const engineeringElements = screen.getAllByText("Engineering");

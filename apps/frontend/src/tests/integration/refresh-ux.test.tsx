@@ -21,35 +21,21 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { DashboardNav } from "@/components/dashboard/nav-bar";
 import { RefreshStatusBadge, RefreshTimelinePanel } from "@/components/dashboard/refresh-widgets";
-import * as api from "@/lib/api/dashboard";
 
 describe("Refresh UX", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders refresh badge in nav bar", async () => {
-    const mockStatus = { status: "idle" as const, last_refresh: "2024-06-01T00:00:00Z", last_attempt: null, error_message: null };
-    vi.mocked(api.fetchRefreshStatus).mockResolvedValue(mockStatus);
-
-    render(<DashboardNav />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Up to date")).toBeInTheDocument();
-    });
+  it("renders refresh badge", () => {
+    render(<RefreshStatusBadge status="idle" />);
+    expect(screen.getByText("Up to date")).toBeInTheDocument();
   });
 
-  it("shows running badge when refresh is active", async () => {
-    const mockStatus = { status: "running" as const, last_refresh: null, last_attempt: null, error_message: null };
-    vi.mocked(api.fetchRefreshStatus).mockResolvedValue(mockStatus);
-
-    render(<DashboardNav />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Refreshing...")).toBeInTheDocument();
-    });
+  it("shows running badge when refresh is active", () => {
+    render(<RefreshStatusBadge status="running" />);
+    expect(screen.getByText("Refreshing...")).toBeInTheDocument();
   });
 
   it("renders refresh timeline panel with refresh dates", () => {

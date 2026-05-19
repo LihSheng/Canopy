@@ -1,1 +1,0 @@
-// DEPRECATED: This file has been renamed to src/tests/unit/department-detail-mappers.test.ts. Use the new file instead.

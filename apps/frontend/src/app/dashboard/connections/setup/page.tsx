@@ -3,9 +3,8 @@
 import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnalyticsBreadcrumb } from "@/components/analytics-shell/analytics-breadcrumb";
+import { AnalyticsPageShell } from "@/components/analytics-shell/analytics-page-shell";
 import { buildConnectionsBreadcrumbs } from "@/components/analytics-shell/breadcrumb-helpers";
-import { AnalyticsHeader } from "@/components/analytics-shell/analytics-header";
 import { PreviewGrid } from "@/components/preview-grid";
 import {
   deleteStaticFilePreview,
@@ -122,27 +121,23 @@ export default function SetupPage() {
   }, [preview, selectedSheets, file, router]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto">
-      <AnalyticsHeader
-        title="Connection Setup"
-        contextText={`Source: ${sourceKey}`}
-        actions={
-          <Link
-            href="/dashboard/connections/sources"
-            className="rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-          >
-            Back to sources
-          </Link>
-        }
-      />
-      <AnalyticsBreadcrumb
-        items={buildConnectionsBreadcrumbs(
-          { label: "Source Catalog", href: "/dashboard/connections/sources" },
-          { label: "Connection Setup" },
-        )}
-      />
-      <div className="p-6">
-        <div className="mx-auto max-w-2xl space-y-6">
+    <AnalyticsPageShell
+      title="Connection Setup"
+      contextText={`Source: ${sourceKey}`}
+      actions={
+        <Link
+          href="/dashboard/connections/sources"
+          className="rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+        >
+          Back to sources
+        </Link>
+      }
+      breadcrumbItems={buildConnectionsBreadcrumbs(
+        { label: "Source Catalog", href: "/dashboard/connections/sources" },
+        { label: "Connection Setup" },
+      )}
+    >
+      <div className="mx-auto max-w-2xl space-y-6">
           <input
             ref={file_input_ref}
             type="file"
@@ -316,7 +311,6 @@ export default function SetupPage() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </AnalyticsPageShell>
   );
 }
