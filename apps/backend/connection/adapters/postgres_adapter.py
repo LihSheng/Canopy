@@ -3,6 +3,8 @@
 Requires ``asyncpg``.
 """
 
+from collections.abc import AsyncIterator
+
 from connection.database_adapter import DatabaseAdapter
 
 
@@ -17,3 +19,12 @@ class PostgresAdapter(DatabaseAdapter):
 
     async def preview_table(self, config: dict, table: str, limit: int = 10) -> dict:
         raise NotImplementedError("PostgresAdapter.preview_table not yet implemented")
+
+    async def fetch_table(
+        self,
+        config: dict,
+        table: str,
+        cursor_column: str | None = None,
+        cursor_value: str | None = None,
+    ) -> AsyncIterator[list[dict]]:
+        raise NotImplementedError("PostgresAdapter.fetch_table not yet implemented")

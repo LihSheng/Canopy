@@ -5,6 +5,7 @@ encapsulates all source-specific SQL and driver logic.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 
 
 class DatabaseAdapter(ABC):
@@ -35,6 +36,26 @@ class DatabaseAdapter(ABC):
         """Return sample rows and column schema for a table.
 
         Returns ``{"columns": [{"name": str, "data_type": str}], "rows": [list]}]``.
+        """
+
+    @abstractmethod
+    async def fetch_table(
+        self,
+        config: dict,
+        table: str,
+        cursor_column: str | None = None,
+        cursor_value: str | None = None,
+    ) -> AsyncIterator[list[dict]]:
+        """Stream all rows from a table in batches for batch sync.
+
+        Each yielded batch is a list of dicts keyed by column name.
+        When ``cursor_column`` and ``cursor_value`` are provided, only
+        rows where ``cursor_column > cursor_value`` are returned
+        (incremental cursor mode).
+
+        This is the primary method for the sync engine. Unlike
+        ``preview_table`` it is NOT limited to a small sample and
+        MUST support streaming batches to avoid memory exhaustion.
         """
 
 
