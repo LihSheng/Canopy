@@ -14,6 +14,7 @@ import {
   fetchRuns,
   reimportDatasetVersion,
   previewStaticFile,
+  updateSyncPolicy,
 } from "@/lib/api/data-source";
 import type {
   Dataset,
@@ -37,6 +38,7 @@ import {
   NoticeBanner,
   useToast,
 } from "@/components/shared";
+import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
 
 const TABS = [
   "Overview",
@@ -80,6 +82,8 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const [deleteDialogKind, setDeleteDialogKind] = useState<"dataset" | "version" | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<DatasetVersion | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [editingSyncPolicy, setEditingSyncPolicy] = useState(false);
+  const [savingSyncPolicy, setSavingSyncPolicy] = useState(false);
   const toast = useToast();
 
   const handleUploadVersion = () => {
@@ -116,6 +120,30 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
       toast.danger("Upload failed", message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleSaveSyncPolicy = async (policy: SyncPolicy) => {
+    setSavingSyncPolicy(true);
+    try {
+      await updateSyncPolicy(datasetId, {
+        sync_mode: policy.syncMode,
+        batch_strategy: policy.syncMode === "batch" ? policy.batchStrategy : null,
+        cursor_column:
+          policy.syncMode === "batch" && policy.batchStrategy === "incremental_cursor"
+            ? policy.cursorColumn
+            : null,
+        frequency_minutes: policy.frequencyMinutes,
+      });
+      await load();
+      setEditingSyncPolicy(false);
+      toast.success("Sync policy updated", "Dataset sync configuration saved.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save sync policy";
+      setActionError(message);
+      toast.danger("Save failed", message);
+    } finally {
+      setSavingSyncPolicy(false);
     }
   };
 
@@ -434,6 +462,96 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
                     <dd className="text-zinc-900">{versions.length}</dd>
                   </div>
                 </dl>
+              </div>
+
+              {/* Sync Policy section */}
+              <div className="rounded-lg border border-zinc-200 bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-zinc-900">Sync Policy</h3>
+                  {!editingSyncPolicy && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingSyncPolicy(true)}
+                      className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {editingSyncPolicy ? (
+                  <div className="mt-3">
+                    <SyncPolicyEditor
+                      tableName={dataset!.name}
+                      schemaColumns={[]}
+                      detectedCursorColumn={dataset!.cursor_column}
+                      value={{
+                        syncMode: (dataset!.sync_mode ?? "batch") as SyncPolicy["syncMode"],
+                        batchStrategy: (dataset!.batch_strategy ?? "full_snapshot") as SyncPolicy["batchStrategy"],
+                        cursorColumn: dataset!.cursor_column ?? "",
+                        frequencyMinutes: 1440,
+                      }}
+                      onChange={handleSaveSyncPolicy}
+                    />
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingSyncPolicy(false)}
+                        disabled={savingSyncPolicy}
+                        className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <span className="text-xs text-zinc-400">
+                        Changes save automatically
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <dl className="mt-3 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <dt className="text-zinc-500">Sync Mode</dt>
+                      <dd className="font-medium text-zinc-900">
+                        {dataset!.sync_mode ?? "batch"}
+                      </dd>
+                    </div>
+                    {dataset!.sync_mode === "batch" && (
+                      <>
+                        <div className="flex justify-between">
+                          <dt className="text-zinc-500">Strategy</dt>
+                          <dd className="text-zinc-900">
+                            {dataset!.batch_strategy ?? "full_snapshot"}
+                          </dd>
+                        </div>
+                        {dataset!.batch_strategy === "incremental_cursor" && (
+                          <>
+                            <div className="flex justify-between">
+                              <dt className="text-zinc-500">Cursor Column</dt>
+                              <dd className="text-zinc-900">
+                                {dataset!.cursor_column ?? "—"}
+                              </dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-zinc-500">Last Cursor Value</dt>
+                              <dd className="text-xs text-zinc-400">
+                                {dataset!.last_cursor_value ?? "—"}
+                              </dd>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
+                    {dataset!.sync_mode === "direct_query" && (
+                      <p className="text-xs text-zinc-400">
+                        Live queries — no data copied
+                      </p>
+                    )}
+                    {dataset!.sync_mode === "real_time" && (
+                      <p className="text-xs text-zinc-400">
+                        Accelerated polling
+                      </p>
+                    )}
+                  </dl>
+                )}
               </div>
             </div>
             <div className="lg:col-span-1">
