@@ -220,6 +220,7 @@ describe("AnalyticsShell - sidebar collapse and expand", () => {
     expect(screen.getByText("Anomalies")).toBeInTheDocument();
     expect(screen.getByText("Departments")).toBeInTheDocument();
     expect(screen.getByText("Reports")).toBeInTheDocument();
+    expect(screen.getByText("Data Studio")).toBeInTheDocument();
   });
 
   it("collapses sidebar when toggle is clicked", () => {
