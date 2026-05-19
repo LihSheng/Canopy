@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   fetchDataset,
@@ -12,6 +12,8 @@ import {
   deleteDataset,
   deleteDatasetVersion,
   fetchRuns,
+  reimportDatasetVersion,
+  previewStaticFile,
 } from "@/lib/api/data-source";
 import type {
   Dataset,
@@ -57,6 +59,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeTab = (searchParams.get("tab") as Tab) || "Overview";
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [preview, setPreview] = useState<DatasetPreviewResponse | null>(null);
@@ -76,7 +79,45 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const [deletingVersionId, setDeletingVersionId] = useState<string | null>(null);
   const [deleteDialogKind, setDeleteDialogKind] = useState<"dataset" | "version" | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<DatasetVersion | null>(null);
+  const [uploading, setUploading] = useState(false);
   const toast = useToast();
+
+  const handleUploadVersion = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    setUploading(true);
+    setActionError(null);
+    try {
+      const staticPreview = await previewStaticFile(file, "static_file");
+      const firstSheet = staticPreview.sheet_profiles[0];
+      if (!firstSheet) {
+        throw new Error("No sheets found in the file");
+      }
+      const newVersion = await reimportDatasetVersion(
+        datasetId,
+        staticPreview.source_file_path,
+        firstSheet.preview_columns,
+      );
+      toast.success(
+        "New version uploaded",
+        `v${newVersion.version_number} is now active.`,
+      );
+      await load();
+      await loadPreview();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      setActionError(message);
+      toast.danger("Upload failed", message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const activeVersion = versions.find((v) => v.id === dataset?.active_version_id);
   const activeVersionNumber = activeVersion?.version_number;
@@ -353,6 +394,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
             activeVersionId={dataset!.active_version_id}
             onDeleteVersion={handleDeleteVersion}
             deletingVersionId={deletingVersionId}
+            onUploadVersion={handleUploadVersion}
           />
         )}
 
@@ -401,9 +443,27 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
         )}
       </div>
     </div>
+    <input
+      ref={fileInputRef}
+      type="file"
+      className="hidden"
+      accept=".xlsx,.csv"
+      onChange={handleFileSelected}
+    />
+    {uploading && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+        <div className="rounded-lg bg-white px-6 py-4 shadow-lg">
+          <LoadingSpinner text="Uploading new version..." />
+        </div>
+      </div>
+    )}
     <ConfirmDialog
       open={deleteDialogKind !== null}
-      title={deleteDialogKind === "dataset" ? "Delete dataset?" : "Delete version?"}
+      title={
+        deleteDialogKind === "dataset"
+          ? "Delete dataset?"
+          : "Delete version?"
+      }
       description={
         deleteDialogKind === "dataset"
           ? `Delete "${dataset!.name}" and all stored versions?`
@@ -411,7 +471,11 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
             ? `Delete version v${selectedVersion.version_number} from "${dataset!.name}"?`
             : undefined
       }
-      confirmLabel={deleteDialogKind === "dataset" ? "Delete Dataset" : "Delete Version"}
+      confirmLabel={
+        deleteDialogKind === "dataset"
+          ? "Delete Dataset"
+          : "Delete Version"
+      }
       confirmTone="danger"
       busy={deletingDataset || deletingVersionId !== null}
       onConfirm={confirmDelete}

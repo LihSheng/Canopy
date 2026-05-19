@@ -69,8 +69,9 @@ class AuthService:
 
         self._repo.update_login_timestamp(user)
 
-        token, expires_at = _create_token(user.id)
         tenants = self.get_user_tenants(user.id)
+        first_tenant_id = tenants[0]["tenant_id"] if tenants else None
+        token, expires_at = _create_token(user.id, tenant_id=first_tenant_id)
         return LoginOutput(
             user=LoginOutputUser(
                 id=user.id, email=user.email, display_name=user.display_name
@@ -95,19 +96,23 @@ class AuthService:
         tenant_ids = [m.tenant_id for m in memberships]
         tenants = (
             self._db.query(TenantModel)
-            .filter(TenantModel.id.in_(tenant_ids))
+            .filter(
+                TenantModel.id.in_(tenant_ids),
+                TenantModel.lifecycle_state == "active",
+            )
+            .order_by(TenantModel.name)
             .all()
         )
         tenant_map = {t.id: t for t in tenants}
+        membership_map = {m.tenant_id: m for m in memberships}
         return [
             {
-                "tenant_id": m.tenant_id,
-                "tenant_name": tenant_map[m.tenant_id].name
-                if m.tenant_id in tenant_map
-                else "Unknown",
-                "role": m.role,
+                "tenant_id": t.id,
+                "tenant_name": t.name,
+                "role": membership_map[t.id].role,
             }
-            for m in memberships
+            for t in tenants
+            if t.id in membership_map
         ]
 
     def switch_tenant(self, user_id: str, tenant_id: str) -> str:

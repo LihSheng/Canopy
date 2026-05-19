@@ -1,4 +1,4 @@
-Execute the requested HERD Aggregator task directly.
+Execute the requested Canopy Intelligence task directly.
 
 Rules:
 - Keep changes minimal and local to the task.

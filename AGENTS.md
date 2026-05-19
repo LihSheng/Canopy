@@ -1,4 +1,4 @@
-# HERD Aggregator Agent Guide
+# Canopy Intelligence Agent Guide
 
 Read in this order:
 1. [`ARCHITECTURE.md`](./ARCHITECTURE.md)

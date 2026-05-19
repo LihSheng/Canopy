@@ -20,6 +20,7 @@ Use the versioned folders for planning and design docs.
 - [Plan](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/plan.md)
 - [UI/UX Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/uiux-design.md)
 - [Detailed Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/detailed-design.md)
+- [Tenant Switching PRD](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/tenant-switching-prd.md)
 
 ## V3 Planning
 

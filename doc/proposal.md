@@ -111,7 +111,7 @@ This task does not include:
 
 - A user can delete an app-owned connection record when it has no active downstream dependencies.
 - The system blocks deletion when the connection is still referenced by active datasets, runs, or other modeled downstream assets.
-- Deletion applies to the HERD Aggregator record only, not the upstream source system.
+- Deletion applies to the Canopy Intelligence record only, not the upstream source system.
 
 ## Non-Functional Requirements
 

@@ -1,4 +1,4 @@
-You are coding inside HERD Aggregator.
+You are coding inside Canopy Intelligence.
 
 Rules:
 - Read `ARCHITECTURE.md`, `CONTEXT.md`, and `DESIGN.md` before changing code.

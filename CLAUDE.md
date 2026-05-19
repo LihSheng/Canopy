@@ -1,4 +1,4 @@
-# HERD Aggregator
+# Canopy Intelligence
 
 Claude instructions live in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 

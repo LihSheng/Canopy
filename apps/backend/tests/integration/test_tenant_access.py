@@ -74,15 +74,51 @@ class TestLoginReturnsTenantList:
         assert response.status_code == 200
         data = response.json()
         assert "tenants" in data
-        assert len(data["tenants"]) == 3
-        tenant_names = {t["name"] for t in data["tenants"]}
-        assert "Tenant One" in tenant_names
-        assert "Tenant Two" in tenant_names
-        assert "Suspended Co" in tenant_names
+        # Suspended Co is filtered out — only active tenants are returned
+        assert len(data["tenants"]) == 2
+        tenant_names = [t["name"] for t in data["tenants"]]
+        assert tenant_names == ["Tenant One", "Tenant Two"]
 
         roles = {t["role"] for t in data["tenants"]}
         assert "admin" in roles
         assert "member" in roles
+
+
+class TestTenantListOrdering:
+    def test_tenant_order_is_deterministic_and_alphabetical(
+        self, client: TestClient, seed_user, seed_tenants, seed_memberships, db_session
+    ):
+        # Add an extra active tenant that sorts before the existing ones
+        from control_plane.schemas.tenants import TenantModel
+        from control_plane.schemas.memberships import TenantMembershipModel
+
+        t_a = TenantModel(
+            id="tenant-a",
+            tenant_uuid="tuuid-a",
+            name="Aardvark Ltd",
+            slug="aardvark",
+            lifecycle_state="active",
+            status="active",
+        )
+        db_session.add(t_a)
+        db_session.commit()
+        db_session.add(
+            TenantMembershipModel(
+                user_id=seed_user.id,
+                tenant_id="tenant-a",
+                role="member",
+                status="active",
+            )
+        )
+        db_session.commit()
+
+        login_resp = client.post(
+            "/api/auth/login",
+            json={"email": "admin@herd.example", "password": "admin123"},
+        )
+        data = login_resp.json()
+        tenant_names = [t["name"] for t in data["tenants"]]
+        assert tenant_names == ["Aardvark Ltd", "Tenant One", "Tenant Two"]
 
 
 class TestSwitchTenant:
@@ -204,7 +240,7 @@ class TestSwitchTenant:
 
 
 class TestSessionAfterLogin:
-    def test_session_without_tenant_selection(
+    def test_session_after_login_has_auto_entered_first_tenant(
         self, client: TestClient, seed_user, seed_tenants, seed_memberships
     ):
         login_resp = client.post(
@@ -221,8 +257,12 @@ class TestSessionAfterLogin:
         assert response.status_code == 200
         data = response.json()
         assert data["authenticated"] is True
-        assert data["tenant"] is None
-        assert len(data["tenants"]) == 3
+        # First active tenant by name is auto-entered (Tenant One)
+        assert data["tenant"] is not None
+        assert data["tenant"]["tenant_id"] == "tenant-1"
+        assert data["tenant"]["role"] == "admin"
+        # Suspended tenant is filtered out
+        assert len(data["tenants"]) == 2
 
     def test_session_with_active_tenant(
         self, client: TestClient, seed_user, seed_tenants, seed_memberships

@@ -1,4 +1,4 @@
-# HERD Aggregator
+# Canopy Intelligence
 
 Executive HR spend intelligence platform. Read-only system for C-level users.
 It consolidates internal operational data, maps it into business objects,

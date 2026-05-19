@@ -1,4 +1,4 @@
-Explore the HERD Aggregator codebase quickly and report only useful facts.
+Explore the Canopy Intelligence codebase quickly and report only useful facts.
 
 Rules:
 - Start with `ARCHITECTURE.md`, then inspect the smallest relevant code surface.

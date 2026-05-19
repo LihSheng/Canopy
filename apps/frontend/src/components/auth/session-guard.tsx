@@ -1,9 +1,9 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { TenantSwitcher } from "@/components/auth/tenant-switcher";
+import { switchTenant } from "@/lib/api/auth";
 import { useSession } from "@/hooks/use-session";
 import { getSession } from "@/lib/api/auth";
 import type { TenantContextResponse, TenantInfo } from "@/lib/api/types";
@@ -35,6 +35,7 @@ export function SessionGuard({ children }: SessionGuardProps) {
   const [tenant, setTenant] = useState<TenantContextResponse | null>(null);
   const [tenants, setTenants] = useState<TenantInfo[]>([]);
   const [sessionLoading, setSessionLoading] = useState(false);
+  const autoEnterAttempted = useRef(false);
 
   const fetchTenantInfo = useCallback(async () => {
     setSessionLoading(true);
@@ -56,6 +57,21 @@ export function SessionGuard({ children }: SessionGuardProps) {
     }
   }, [user, fetchTenantInfo]);
 
+  // Auto-enter first tenant when authenticated but no tenant is active
+  useEffect(() => {
+    if (user && tenants.length > 0 && !tenant && !sessionLoading && !autoEnterAttempted.current) {
+      autoEnterAttempted.current = true;
+      (async () => {
+        try {
+          await switchTenant(tenants[0].tenant_id);
+          await fetchTenantInfo();
+        } catch {
+          // Auto-enter failed — leave tenant as null
+        }
+      })();
+    }
+  }, [user, tenants, tenant, sessionLoading, fetchTenantInfo]);
+
   useEffect(() => {
     if (!loading && !user) {
       router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
@@ -72,26 +88,6 @@ export function SessionGuard({ children }: SessionGuardProps) {
 
   if (!user) {
     return null;
-  }
-
-  if (tenants.length > 0 && !tenant) {
-    return (
-      <div className="flex min-h-full flex-col items-center justify-center gap-8 px-4">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            Select a Tenant
-          </h1>
-          <p className="text-sm text-zinc-500">
-            Choose the tenant you want to work with
-          </p>
-        </div>
-        <TenantSwitcher
-          tenants={tenants}
-          activeTenantId={null}
-          onTenantSwitch={fetchTenantInfo}
-        />
-      </div>
-    );
   }
 
   return (

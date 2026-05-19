@@ -32,4 +32,5 @@ class DatasetVersionModel(Base):
     storage_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     raw_storage_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     cleaning_issues: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
+    failure_reason: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)

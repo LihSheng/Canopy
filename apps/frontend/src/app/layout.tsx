@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HERD Aggregator",
+  title: "Canopy Intelligence",
   description: "Executive HR spend intelligence platform",
 };
 

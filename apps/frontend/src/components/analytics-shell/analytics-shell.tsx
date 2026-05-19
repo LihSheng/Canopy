@@ -36,7 +36,7 @@ function ShellInner({ children }: { children: ReactNode }) {
             </svg>
           </button>
           <span className="text-sm font-semibold tracking-tight text-zinc-900">
-            Herd Aggregator
+            Canopy Intelligence
           </span>
         </div>
 

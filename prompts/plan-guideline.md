@@ -1,4 +1,4 @@
-Produce a compact implementation plan for HERD Aggregator.
+Produce a compact implementation plan for Canopy Intelligence.
 
 Plan rules:
 - Start from the repo docs and current code paths.

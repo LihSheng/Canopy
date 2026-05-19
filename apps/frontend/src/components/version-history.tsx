@@ -5,6 +5,7 @@ type Props = {
   activeVersionId: string | null | undefined;
   onDeleteVersion?: (version: DatasetVersion) => void | Promise<void>;
   deletingVersionId?: string | null;
+  onUploadVersion?: () => void;
 };
 
 const statusStyles: Record<string, string> = {
@@ -19,6 +20,7 @@ export function VersionHistory({
   activeVersionId,
   onDeleteVersion,
   deletingVersionId = null,
+  onUploadVersion,
 }: Props) {
   if (!versions || versions.length === 0) {
     return (
@@ -30,12 +32,24 @@ export function VersionHistory({
 
   return (
     <div className="space-y-3">
-      {onDeleteVersion && activeVersionId && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Active version is locked. Use Delete Version only for non-active snapshots.
-        </div>
-      )}
+      <div className="flex items-center justify-between">
+        {onDeleteVersion && activeVersionId && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Active version is locked. Use Delete Version only for non-active snapshots.
+          </div>
+        )}
+        {onUploadVersion && (
+          <button
+            type="button"
+            onClick={onUploadVersion}
+            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            Upload New Version
+          </button>
+        )}
+      </div>
       <div className="overflow-hidden rounded-lg border border-zinc-200">
+
       <table className="min-w-full divide-y divide-zinc-200 text-sm">
         <thead>
           <tr className="bg-zinc-50">
@@ -67,6 +81,8 @@ export function VersionHistory({
         <tbody className="divide-y divide-zinc-100">
           {versions.map((version) => {
             const isActive = version.id === activeVersionId;
+            const isSuperseded = !isActive && version.status === "ready";
+            const isFailed = version.status === "failed";
             return (
               <tr key={version.id} className="hover:bg-zinc-50">
                 <td className="px-4 py-2">
@@ -74,13 +90,18 @@ export function VersionHistory({
                     className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
                       isActive
                         ? "bg-zinc-900 text-white"
-                        : "bg-zinc-100 text-zinc-700"
+                        : isSuperseded
+                          ? "bg-zinc-200 text-zinc-600"
+                          : "bg-zinc-100 text-zinc-700"
                     }`}
                   >
                     v{version.version_number}
                   </span>
                   {isActive && (
                     <span className="ml-2 text-xs font-medium text-zinc-500">Active</span>
+                  )}
+                  {isSuperseded && (
+                    <span className="ml-2 text-xs font-medium text-zinc-400">Superseded</span>
                   )}
                 </td>
                 <td className="px-4 py-2">
@@ -132,6 +153,18 @@ export function VersionHistory({
         </tbody>
       </table>
       </div>
+
+      {/* Show failed version details below the table */}
+      {versions.filter(v => v.status === "failed" && v.failure_reason).length > 0 && (
+        <div className="mt-4 space-y-2">
+          <h4 className="text-sm font-semibold text-zinc-700">Failed Versions</h4>
+          {versions.filter(v => v.status === "failed" && v.failure_reason).map(v => (
+            <div key={v.id} className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              <span className="font-medium">v{v.version_number}:</span> {v.failure_reason}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

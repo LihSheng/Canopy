@@ -1,7 +1,7 @@
 [project]
 name = "herd-aggregator-backend"
 version = "0.1.0"
-description = "HERD Aggregator backend API"
+description = "Canopy Intelligence backend API"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi[standard]>=0.115.0",

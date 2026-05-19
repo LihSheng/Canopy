@@ -41,4 +41,5 @@ class DatasetVersion:
     storage_path: str = ""
     raw_storage_path: str = ""
     cleaning_issues: list[dict] = field(default_factory=list)
+    failure_reason: str = ""
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

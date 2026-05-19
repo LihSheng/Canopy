@@ -13,6 +13,17 @@ vi.mock("@/hooks/use-session", () => ({
   }),
 }));
 
+vi.mock("@/components/auth/session-guard", () => ({
+  useTenant: () => ({
+    tenant: { tenant_id: "tenant-1", role: "admin" },
+    tenants: [
+      { tenant_id: "tenant-1", name: "Alpha Corp", role: "admin" },
+      { tenant_id: "tenant-2", name: "Beta Inc", role: "member" },
+    ],
+    refetch: vi.fn(),
+  }),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => mockPathname,

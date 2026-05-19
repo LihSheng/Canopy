@@ -10,3 +10,4 @@
 - [x] [Profile V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/profile-v2.md)
 - [x] [API Contracts V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/api-contracts-v2.md)
 - [x] [Quality Gates V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/quality-gates-v2.md)
+- [ ] [Tenant Switching Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/tenant-switching.md)

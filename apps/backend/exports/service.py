@@ -50,7 +50,7 @@ def _default_export_dir() -> str:
     if os.name == "nt":
         app_data_dir = os.environ.get("LOCALAPPDATA")
         if app_data_dir:
-            return str(Path(app_data_dir) / "HERD Aggregator" / "exports")
+            return str(Path(app_data_dir) / "Canopy Intelligence" / "exports")
 
     return str(Path.home() / ".herd-aggregator" / "exports")
 

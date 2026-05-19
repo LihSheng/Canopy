@@ -18,9 +18,9 @@ export function AnalyticsSidebarBrand({ collapsed }: Props) {
         className="flex items-center gap-2 font-semibold tracking-tight text-zinc-900"
       >
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-900 text-xs font-bold text-white">
-          H
+          C
         </span>
-        {!collapsed && <span className="text-sm">Herd Aggregator</span>}
+        {!collapsed && <span className="text-sm">Canopy Intelligence</span>}
       </Link>
     </div>
   );

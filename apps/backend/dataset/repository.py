@@ -62,6 +62,13 @@ class DatasetVersionRepository:
         self._db.refresh(model)
         return self._to_domain(model)
 
+    def update(self, domain: DatasetVersion) -> DatasetVersion:
+        model = self._to_model(domain)
+        merged = self._db.merge(model)
+        self._db.commit()
+        self._db.refresh(merged)
+        return self._to_domain(merged)
+
     def get(self, id: str) -> DatasetVersion | None:
         model = self._db.query(DatasetVersionModel).filter(DatasetVersionModel.id == id).first()
         return self._to_domain(model) if model else None

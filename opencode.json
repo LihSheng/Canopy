@@ -41,7 +41,7 @@
   },
   "agent": {
     "build": {
-      "description": "Primary coding agent for HERD Aggregator",
+      "description": "Primary coding agent for Canopy Intelligence",
       "model": "opencode-go/kimi-k2.6",
       "permission": {
         "bash": "deny"

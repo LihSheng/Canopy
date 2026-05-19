@@ -68,7 +68,7 @@ def create_app() -> FastAPI:
             _cache_listeners_registered = True
         yield
 
-    app = FastAPI(title="HERD Aggregator API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Canopy Intelligence API", version="0.1.0", lifespan=lifespan)
 
     @app.exception_handler(AppError)
     async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:

@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { AnalyticsSidebarBrand } from "./analytics-sidebar-brand";
 import { AnalyticsSidebarItem } from "./analytics-sidebar-item";
+import { AnalyticsSidebarTenantSwitcher } from "./analytics-sidebar-tenant-switcher";
 import { AnalyticsSidebarUtilities } from "./analytics-sidebar-utilities";
 import { useAnalyticsLayout } from "./analytics-layout-context";
 
@@ -122,6 +123,7 @@ export function AnalyticsSidebar({ onNavigate }: Props) {
         ))}
       </nav>
 
+      <AnalyticsSidebarTenantSwitcher collapsed={!sidebarExpanded} />
       <AnalyticsSidebarUtilities collapsed={!sidebarExpanded} onNavigate={onNavigate} />
     </aside>
   );

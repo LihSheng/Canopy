@@ -177,6 +177,7 @@ export interface DatasetVersion {
   column_count: number;
   storage_path: string;
   cleaning_issues: { issue: string; column?: string; row?: number }[];
+  failure_reason: string;
   created_at: string;
 }
 

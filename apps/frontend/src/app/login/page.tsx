@@ -32,7 +32,7 @@ export default function LoginPage() {
       <div className="flex w-full max-w-sm flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            HERD Aggregator
+            Canopy Intelligence
           </h1>
           <p className="text-sm text-zinc-500">
             Sign in to your account

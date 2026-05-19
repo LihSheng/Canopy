@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-HERD Aggregator currently renders tables with several one-off components. The
+Canopy Intelligence currently renders tables with several one-off components. The
 dataset preview grid, dataset list, run history, dashboard drill-down tables,
 and schema table each own their own table markup and behavior.
 
@@ -21,7 +21,7 @@ assets, immutable dataset versions, and a quiet operational workspace.
 
 ## Solution
 
-Build a reusable data table component family for HERD Aggregator.
+Build a reusable data table component family for Canopy Intelligence.
 
 The component should become the standard table surface for all product tables.
 It should support two main use cases:

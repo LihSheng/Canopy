@@ -171,3 +171,28 @@ class DatasetVersionService:
 
         return {"deleted": True, "id": version_id}
 
+    def reimport_version(self, dataset_id: str, data_path: str, columns: list[str]) -> DatasetVersion:
+        existing = self._repo.list_by_dataset(dataset_id)
+        next_number = (existing[0].version_number + 1) if existing else 1
+        now = datetime.now(UTC)
+        new_version = DatasetVersion(
+            id=str(uuid.uuid4()),
+            dataset_id=dataset_id,
+            version_number=next_number,
+            status=DatasetVersionStatus.READY.value,
+            created_at=now,
+        )
+        saved = self._repo.save(new_version)
+        self._dataset_repo.update_active_version(dataset_id, saved.id)
+        return saved
+
+    def mark_version_failed(self, version_id: str, reason: str) -> DatasetVersion | None:
+        version = self._repo.get(version_id)
+        if version is None:
+            return None
+        version.status = DatasetVersionStatus.FAILED.value
+        version.failure_reason = reason
+        self._repo.update(version)
+        return version
+
+

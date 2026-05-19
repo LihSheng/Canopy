@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Mock } from "vitest";
 
@@ -16,10 +16,26 @@ vi.mock("@/hooks/use-session", () => ({
   }),
 }));
 
+vi.mock("@/components/auth/session-guard", () => ({
+  useTenant: () => ({
+    tenant: { tenant_id: "tenant-1", role: "admin" },
+    tenants: [
+      { tenant_id: "tenant-1", name: "Alpha Corp", role: "admin" },
+      { tenant_id: "tenant-2", name: "Beta Inc", role: "member" },
+    ],
+    refetch: vi.fn(),
+  }),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
   usePathname: () => mockPathname,
   useSearchParams: () => new URLSearchParams(),
+}));
+
+import { switchTenant } from "@/lib/api/auth";
+vi.mock("@/lib/api/auth", () => ({
+  switchTenant: vi.fn(),
 }));
 
 import { AnalyticsLayoutProvider } from "@/components/analytics-shell/analytics-layout-context";
@@ -110,12 +126,12 @@ describe("AnalyticsSidebarItem", () => {
 describe("AnalyticsSidebarBrand", () => {
   it("renders brand text when expanded", () => {
     render(<AnalyticsSidebarBrand collapsed={false} />);
-    expect(screen.getByText("Herd Aggregator")).toBeInTheDocument();
+    expect(screen.getByText("Canopy Intelligence")).toBeInTheDocument();
   });
 
   it("hides brand text when collapsed", () => {
     render(<AnalyticsSidebarBrand collapsed />);
-    expect(screen.queryByText("Herd Aggregator")).not.toBeInTheDocument();
+    expect(screen.queryByText("Canopy Intelligence")).not.toBeInTheDocument();
   });
 
   it("has link to dashboard", () => {
@@ -497,5 +513,153 @@ describe("AnalyticsShell - localstorage persistence", () => {
     fireEvent.click(toggle);
 
     expect(storage["herd-analytics-sidebar-collapsed"]).toBe("false");
+  });
+});
+
+describe("AnalyticsSidebarTenantSwitcher", () => {
+  beforeEach(() => {
+    mockPathname = "/dashboard";
+    vi.clearAllMocks();
+    // Clear localStorage to ensure sidebar starts expanded
+    try {
+      localStorage.removeItem("herd-analytics-sidebar-collapsed");
+    } catch {
+      // ignore
+    }
+  });
+
+  async function expandSidebar() {
+    // The sidebar might be collapsed from a previous test's localStorage side effect.
+    // Look for the collapse button as evidence the sidebar is expanded.
+    const collapseBtn = screen.queryByLabelText("Collapse sidebar");
+    if (!collapseBtn) {
+      // Sidebar is collapsed — find expand button and click it
+      const expandBtn = await screen.findByLabelText("Expand sidebar");
+      fireEvent.click(expandBtn);
+    }
+  }
+
+  it("shows current tenant name in expanded sidebar", async () => {
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    await expandSidebar();
+    expect(await screen.findByText("Alpha Corp")).toBeInTheDocument();
+  });
+
+  it("shows tenant initial when sidebar is collapsed", async () => {
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    // Ensure sidebar is expanded first, then collapse it
+    await expandSidebar();
+    fireEvent.click(screen.getByLabelText("Collapse sidebar"));
+
+    // The tenant initial should be visible as a tooltip target
+    const collapsedTenantButton = screen.getByTitle("Alpha Corp");
+    expect(collapsedTenantButton).toBeInTheDocument();
+  });
+
+  it("opens tenant picker dropdown on click", async () => {
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    await expandSidebar();
+    // Click the tenant switcher button to open dropdown
+    fireEvent.click(await screen.findByText("Alpha Corp"));
+
+    // After opening the dropdown, "Alpha Corp" appears twice (button + dropdown).
+    // The other tenant should also be visible
+    expect(screen.getByText("Beta Inc")).toBeInTheDocument();
+    // Role labels should also be shown
+    expect(screen.getByText("admin")).toBeInTheDocument();
+    expect(screen.getByText("member")).toBeInTheDocument();
+  });
+
+  it("calls switchTenant and redirects to dashboard on tenant switch", async () => {
+    const mockSwitchTenant = vi.mocked(switchTenant).mockResolvedValue({
+      authenticated: true,
+      user: { id: "u1", email: "test@test.com", display_name: "Test" },
+      tenant: { tenant_id: "tenant-2", role: "member" },
+      tenants: [],
+    });
+
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    await expandSidebar();
+    // Open the dropdown
+    fireEvent.click(await screen.findByText("Alpha Corp"));
+    // Click a different tenant
+    fireEvent.click(screen.getByText("Beta Inc"));
+
+    await waitFor(() => {
+      expect(mockSwitchTenant).toHaveBeenCalledWith("tenant-2");
+      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+    });
+  });
+
+  it("does not switch or redirect when clicking the active tenant", async () => {
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    await expandSidebar();
+    // Click the current tenant button to open dropdown
+    const button = (await screen.findAllByText("Alpha Corp"))[0];
+    fireEvent.click(button);
+    // Click it again to close — the button is the first match
+    const buttonAgain = (await screen.findAllByText("Alpha Corp"))[0];
+    fireEvent.click(buttonAgain);
+
+    // switchTenant should not have been called (no redirect either)
+    // The active tenant click just closes the dropdown
+    await waitFor(() => {
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+  });
+
+  it("shows error message on switch failure", async () => {
+    vi.mocked(switchTenant).mockRejectedValueOnce(new Error("Tenant is suspended"));
+
+    render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    await expandSidebar();
+    fireEvent.click(await screen.findByText("Alpha Corp"));
+    fireEvent.click(screen.getByText("Beta Inc"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Tenant is suspended");
+    });
   });
 });

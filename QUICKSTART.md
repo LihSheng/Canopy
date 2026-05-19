@@ -1,4 +1,4 @@
-# HERD Aggregator — Quick Start
+# Canopy Intelligence — Quick Start
 
 ## Prerequisites
 

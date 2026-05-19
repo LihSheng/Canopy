@@ -32,6 +32,12 @@ class CreateVersionRequest(BaseModel):
     run_id: str | None = None
 
 
+class ReimportRequest(BaseModel):
+    data_path: str
+    columns: list[str]
+
+
+
 class DatasetDeleteSummaryResponse(BaseModel):
     dataset_id: str
     version_count: int
@@ -208,6 +214,22 @@ def create_version(id: str, body: CreateVersionRequest, db: Session = Depends(ge
     dataset_repo = DatasetRepository(db)
     service = DatasetVersionService(repo, dataset_repo)
     return service.create_version(dataset_id=id, run_id=body.run_id)
+
+
+@router.post("/{id}/reimport", status_code=201)
+def reimport_dataset_version(
+    id: str,
+    body: ReimportRequest,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    version_repo = DatasetVersionRepository(db)
+    dataset_repo = DatasetRepository(db)
+    service = DatasetVersionService(version_repo, dataset_repo)
+    return service.reimport_version(
+        dataset_id=id, data_path=body.data_path, columns=body.columns
+    )
+
 
 
 @router.delete("/{id}")
