@@ -14,7 +14,16 @@ class DatasetService:
         self._repo = repo
         self._version_repo = version_repo
 
-    def create_dataset(self, project_id: str, connection_id: str, name: str, source_object_name: str = "") -> Dataset:
+    def create_dataset(
+        self,
+        project_id: str,
+        connection_id: str,
+        name: str,
+        source_object_name: str = "",
+        sync_mode: str | None = None,
+        batch_strategy: str | None = None,
+        cursor_column: str | None = None,
+    ) -> Dataset:
         now = datetime.now(UTC)
         dataset = Dataset(
             id=str(uuid.uuid4()),
@@ -23,6 +32,9 @@ class DatasetService:
             name=name,
             source_object_name=source_object_name,
             status=DatasetStatus.ACTIVE.value,
+            sync_mode=sync_mode,
+            batch_strategy=batch_strategy,
+            cursor_column=cursor_column,
             created_at=now,
         )
         return self._repo.save(dataset)
@@ -106,6 +118,38 @@ class DatasetService:
             "last_published_version": active_version.version_number if active_version else None,
             "freshness_at": last_run_started,
         }
+
+    def update_sync_policy(
+        self,
+        dataset_id: str,
+        sync_mode: str | None = None,
+        batch_strategy: str | None = None,
+        cursor_column: str | None = None,
+        frequency_minutes: int | None = None,
+    ) -> Dataset:
+        from dataset.domain import SyncMode, BatchStrategy
+
+        dataset = self._repo.get(dataset_id)
+        if dataset is None:
+            raise NotFoundError("Dataset not found")
+
+        if sync_mode is not None:
+            valid_modes = {m.value for m in SyncMode}
+            if sync_mode not in valid_modes:
+                raise ValidationError(f"Invalid sync_mode: {sync_mode}")
+            dataset.sync_mode = sync_mode
+        if batch_strategy is not None:
+            valid_strategies = {m.value for m in BatchStrategy}
+            if batch_strategy not in valid_strategies:
+                raise ValidationError(f"Invalid batch_strategy: {batch_strategy}")
+            dataset.batch_strategy = batch_strategy
+        if cursor_column is not None:
+            dataset.cursor_column = cursor_column
+            # Changing cursor column resets last_cursor_value
+            dataset.last_cursor_value = None
+
+        dataset.updated_at = datetime.now(UTC)
+        return self._repo.save(dataset)
 
 
 class DatasetVersionService:

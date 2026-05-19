@@ -10,10 +10,10 @@ from sqlalchemy.orm import Session
 from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
-from common.errors import NotFoundError
+from common.errors import NotFoundError, ValidationError
 from connection.repository import ConnectionRepository
 from dataset.cleaning import clean_source_file
-from dataset.domain import DatasetVersion, DatasetVersionStatus
+from dataset.domain import DatasetVersion, DatasetVersionStatus, SyncMode, BatchStrategy
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from dataset.service import DatasetService, DatasetVersionService
 from run.repository import RunRepository
@@ -26,6 +26,10 @@ class CreateDatasetRequest(BaseModel):
     connection_id: str
     name: str
     source_object_name: str = ""
+    sync_mode: str | None = None
+    batch_strategy: str | None = None
+    cursor_column: str | None = None
+    last_cursor_value: str | None = None
 
 
 class CreateVersionRequest(BaseModel):
@@ -35,6 +39,13 @@ class CreateVersionRequest(BaseModel):
 class ReimportRequest(BaseModel):
     data_path: str
     columns: list[str]
+
+
+class SyncPolicyUpdateRequest(BaseModel):
+    sync_mode: str | None = None
+    batch_strategy: str | None = None
+    cursor_column: str | None = None
+    frequency_minutes: int | None = None
 
 
 
@@ -143,6 +154,9 @@ def create_dataset(body: CreateDatasetRequest, db: Session = Depends(get_db), us
         connection_id=body.connection_id,
         name=body.name,
         source_object_name=body.source_object_name,
+        sync_mode=body.sync_mode,
+        batch_strategy=body.batch_strategy,
+        cursor_column=body.cursor_column,
     )
 
     connection = ConnectionRepository(db).get(body.connection_id)
@@ -330,4 +344,22 @@ def get_dataset_health(id: str, db: Session = Depends(get_db), user: SessionUser
     version_repo = DatasetVersionRepository(db)
     service = DatasetService(DatasetRepository(db), version_repo)
     return service.get_dataset_health(id)
+
+
+@router.patch("/{id}/sync-policy")
+def update_sync_policy(
+    id: str,
+    body: SyncPolicyUpdateRequest,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    version_repo = DatasetVersionRepository(db)
+    service = DatasetService(DatasetRepository(db), version_repo)
+    return service.update_sync_policy(
+        dataset_id=id,
+        sync_mode=body.sync_mode,
+        batch_strategy=body.batch_strategy,
+        cursor_column=body.cursor_column,
+        frequency_minutes=body.frequency_minutes,
+    )
 
