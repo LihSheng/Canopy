@@ -7,10 +7,10 @@ import ConnectionsHomeContent from "./connections-home-content";
 export default function ConnectionsPage() {
   return (
     <AnalyticsPageShell
-      title="Data Connections"
-      breadcrumbItems={buildConnectionsBreadcrumbs({ label: "Data Connections" })}
+      title="Data Studio"
+      breadcrumbItems={buildConnectionsBreadcrumbs({ label: "Data Studio" })}
     >
-      <Suspense fallback={<LoadingSpinner text="Loading connections..." />}>
+      <Suspense fallback={<LoadingSpinner text="Loading..." />}>
         <ConnectionsHomeContent />
       </Suspense>
     </AnalyticsPageShell>

@@ -2,7 +2,7 @@ import type { BreadcrumbItem } from "@/components/analytics-shell/analytics-brea
 
 const DASHBOARD_ITEM: BreadcrumbItem = { label: "Dashboard", href: "/dashboard" };
 const CONNECTIONS_ITEM: BreadcrumbItem = {
-  label: "Data Connections",
+  label: "Data Studio",
   href: "/dashboard/connections",
 };
 
