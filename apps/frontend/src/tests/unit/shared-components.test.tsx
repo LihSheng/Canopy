@@ -33,6 +33,12 @@ describe("EmptyState", () => {
     expect(screen.getByText("Nothing here")).toBeInTheDocument();
     expect(screen.getByText("Check back later")).toBeInTheDocument();
   });
+
+  it("renders minimal variant without notice banner styling", () => {
+    render(<EmptyState variant="minimal" title="No data" description="Check back later" />);
+    expect(screen.getByText("No data")).toBeInTheDocument();
+    expect(screen.getByText("Check back later")).toBeInTheDocument();
+  });
 });
 
 describe("ErrorState", () => {

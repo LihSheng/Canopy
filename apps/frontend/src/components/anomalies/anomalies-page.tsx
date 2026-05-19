@@ -97,6 +97,7 @@ export function AnomaliesPage() {
 
       {data.status === "success" && data.allAnomalies.length === 0 && (
         <EmptyState
+          variant="minimal"
           title="No anomalies detected"
           description="All departments are within expected spend ranges for this period."
         />

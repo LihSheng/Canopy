@@ -110,6 +110,7 @@ export function DepartmentDetailPage({ id }: Props) {
 
       {view && view.topEmployees.length === 0 && view.topClaimTypes.length === 0 && (
         <EmptyState
+          variant="minimal"
           title="No department data"
           description="Data will appear after the first sync completes."
         />

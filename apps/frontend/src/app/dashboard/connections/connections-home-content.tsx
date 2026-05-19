@@ -129,7 +129,7 @@ export default function ConnectionsHomeContent() {
           </div>
           <div className="max-h-[28rem] overflow-auto p-4">
             {filtered_connections.length === 0 ? (
-              <EmptyState title="No connections" description="Create a source to start importing data." />
+              <EmptyState variant="minimal" title="No connections" description="Create a source to start importing data." />
             ) : (
               <ul className="space-y-2">
                 {filtered_connections.map((connection) => (
@@ -171,7 +171,7 @@ export default function ConnectionsHomeContent() {
           </div>
           <div className="p-4">
             {datasets.length === 0 ? (
-              <EmptyState title="No datasets" description="Create your first dataset from a source." />
+              <EmptyState variant="minimal" title="No datasets" description="Create your first dataset from a source." />
             ) : (
               <ul className="space-y-2">
                 {datasets.slice(0, 5).map((ds) => (
@@ -196,7 +196,7 @@ export default function ConnectionsHomeContent() {
           </div>
           <div className="p-4">
             {runs.length === 0 ? (
-              <EmptyState title="No runs" description="Run a dataset to see results here." />
+              <EmptyState variant="minimal" title="No runs" description="Run a dataset to see results here." />
             ) : (
               <ul className="space-y-2">
                 {runs.slice(0, 5).map((run) => (

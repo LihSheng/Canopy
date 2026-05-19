@@ -112,6 +112,7 @@ export function DepartmentsPage() {
 
       {data.status === "success" && data.items.length === 0 && (
         <EmptyState
+          variant="minimal"
           title="No departments"
           description="Department data will appear after the first sync completes."
         />

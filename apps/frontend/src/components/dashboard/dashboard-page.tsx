@@ -100,6 +100,7 @@ export function DashboardPage() {
       data.view.summaryCards.totalSpend.value === 0 &&
       data.view.topDepartments.length === 0 ? (
         <EmptyState
+          variant="minimal"
           title="No dashboard data"
           description="Data will appear after the first sync completes. Try refreshing."
         />
