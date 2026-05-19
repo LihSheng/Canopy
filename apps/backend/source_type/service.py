@@ -7,8 +7,8 @@ from source_type.repository import SourceTypeRepository
 
 _SEED_TYPES = [
     {"key": "static_file", "label": "Static File", "category": SourceTypeCategory.FILE.value, "enabled": True, "tags": ["file"], "description": "Upload a static file (CSV, Excel, JSON, Parquet)"},
-    {"key": "mysql", "label": "MySQL", "category": SourceTypeCategory.DATABASE.value, "enabled": False, "tags": ["database", "sql"], "description": "MySQL database connection"},
-    {"key": "postgresql", "label": "PostgreSQL", "category": SourceTypeCategory.DATABASE.value, "enabled": False, "tags": ["database", "sql"], "description": "PostgreSQL database connection"},
+    {"key": "mysql", "label": "MySQL", "category": SourceTypeCategory.DATABASE.value, "enabled": True, "tags": ["database", "sql"], "description": "MySQL database connection"},
+    {"key": "postgresql", "label": "PostgreSQL", "category": SourceTypeCategory.DATABASE.value, "enabled": True, "tags": ["database", "sql"], "description": "PostgreSQL database connection"},
     {"key": "rest_api", "label": "REST API", "category": SourceTypeCategory.API.value, "enabled": False, "tags": ["api", "http"], "description": "REST API endpoint"},
     {"key": "google_sheets", "label": "Google Sheets", "category": SourceTypeCategory.API.value, "enabled": False, "tags": ["api", "sheets"], "description": "Google Sheets integration"},
     {"key": "csv", "label": "CSV File", "category": SourceTypeCategory.FILE.value, "enabled": False, "tags": ["file", "csv"], "description": "CSV file upload"},

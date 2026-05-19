@@ -21,5 +21,7 @@ class Connection:
     name: str
     status: str = ConnectionStatus.ACTIVE.value
     config_json: dict = field(default_factory=dict)
+    test_status: str | None = None
+    last_tested_at: datetime | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = None

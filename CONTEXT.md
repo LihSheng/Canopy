@@ -61,10 +61,44 @@ _Avoid_: Host agent, upstream source system
 The app-owned state flow for pausing, archiving, restoring, soft-deleting, and permanently deleting a data connector record inside Canopy Intelligence.
 _Avoid_: Host uninstallation, upstream decommissioning
 
+### Sync mode
+
+The per-dataset policy that determines how data moves from a third-party source into Canopy Intelligence. Values: `batch` (scheduled pull), `real_time` (accelerated polling, future CDC), `direct_query` (no copy — query source live at request time).
+
+### Batch strategy
+
+The sub-policy for `batch` sync mode datasets. Values: `full_snapshot` (wipe and repull all rows) or `incremental_cursor` (pull only rows where a timestamp column exceeds the last sync cursor).
+
+### Cursor column
+
+The source table column (auto-detected from schema, user-overridable) used by incremental cursor pulls to determine which rows are new or changed since the last sync.
+
+### Data Studio
+
+The configuration section in the analytics shell sidebar where users manage Connections and Datasets. Separate from the consumption-oriented Dashboard, Departments, Anomalies, and Reports sections.
+_Avoid_: Admin panel, settings page
+
+### Connection Wizard
+
+The 3-step UI flow inside Data Studio for adding a new data source: authenticate (enter credentials and test), select objects (tick tables to import), configure sync policy (choose sync mode and batch strategy per selected table).
+
+### SecretStore
+
+The encryption interface that protects third-party database credentials at rest. The runtime implementation uses AES-256-GCM with an application key; the interface is designed for a future swap to AWS Secrets Manager without schema or service changes.
+
+### Live Explorer
+
+A future module (separate from the snapshot-based dashboard) that hosts Direct Query datasets with their own auto-refresh and freshness indicators. Queries the source database in real time; never feeds analytics, exports, or AI summaries.
+
 ## Relationships
 
 - A **Data connector** produces one or more datasets.
+- A **Dataset** carries a **sync mode** and optional **batch strategy** and **cursor column**.
+- A **Connection Wizard** creates a **data connector** and its associated **datasets** through a 3-step flow.
 - A **Connector lifecycle** changes the app-owned connector record and related Canopy Intelligence resources, not the upstream system or host machine.
+- **Data Studio** hosts the **Connection Wizard** and presents the connection/dataset catalog to the user.
+- **Live Explorer** will host **direct_query** datasets in a separate module outside the snapshot pipeline.
+- The **SecretStore** encrypts third-party credentials stored in the **data connector** config.
 
 ## Example dialogue
 
@@ -74,3 +108,5 @@ _Avoid_: Host uninstallation, upstream decommissioning
 ## Flagged ambiguities
 
 - "Data source decommissioning" can mean upstream/host removal or Canopy Intelligence connector lifecycle. Resolved: implement Canopy Intelligence **Connector lifecycle** first; do not automate upstream writes or host commands.
+
+- "Direct Query" datasets return live source data that may diverge from the snapshot backing the dashboard, export, and AI summary. Resolved: Direct Query datasets go into a separate **Live Explorer** module, not the executive dashboard; the dashboard remains snapshot-consistent.

@@ -9,6 +9,17 @@ class DatasetStatus(StrEnum):
     ERROR = "error"
 
 
+class SyncMode(StrEnum):
+    BATCH = "batch"
+    REAL_TIME = "real_time"
+    DIRECT_QUERY = "direct_query"
+
+
+class BatchStrategy(StrEnum):
+    FULL_SNAPSHOT = "full_snapshot"
+    INCREMENTAL_CURSOR = "incremental_cursor"
+
+
 @dataclass
 class Dataset:
     id: str
@@ -18,6 +29,10 @@ class Dataset:
     source_object_name: str = ""
     status: str = DatasetStatus.ACTIVE.value
     active_version_id: str | None = None
+    sync_mode: str | None = None
+    batch_strategy: str | None = None
+    cursor_column: str | None = None
+    last_cursor_value: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = None
 

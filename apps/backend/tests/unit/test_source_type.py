@@ -35,10 +35,10 @@ class TestSeedTypes:
         else:
             pytest.fail("static_file not found in _SEED_TYPES")
 
-    def test_mysql_is_disabled(self):
+    def test_mysql_is_enabled(self):
         for entry in _SEED_TYPES:
             if entry["key"] == "mysql":
-                assert entry["enabled"] is False
+                assert entry["enabled"] is True
                 break
         else:
             pytest.fail("mysql not found in _SEED_TYPES")
@@ -104,16 +104,15 @@ class TestSourceTypeService:
         finally:
             session.close()
 
-    def test_get_enabled_returns_only_static_file(self):
+    def test_get_enabled_returns_database_types(self):
         session = _make_sqlite_session()
         try:
             repo = SourceTypeRepository(session)
             service = SourceTypeService(repo)
             service.ensure_seeded()
             enabled = service.get_enabled()
-            assert len(enabled) == 1
-            assert enabled[0].key == "static_file"
-            assert enabled[0].enabled is True
+            keys = {t.key for t in enabled}
+            assert keys == {"static_file", "mysql", "postgresql"}
         finally:
             session.close()
 
@@ -125,8 +124,9 @@ class TestSourceTypeService:
             service.ensure_seeded()
             enabled = service.get_enabled()
             enabled_keys = {t.key for t in enabled}
-            assert "mysql" not in enabled_keys
-            assert "postgresql" not in enabled_keys
+            assert "rest_api" not in enabled_keys
+            assert "google_sheets" not in enabled_keys
+            assert "csv" not in enabled_keys
         finally:
             session.close()
 
@@ -163,7 +163,7 @@ class TestSourceTypeRepository:
             assert st is not None
             assert st.key == "mysql"
             assert st.label == "MySQL"
-            assert st.enabled is False
+            assert st.enabled is True
         finally:
             session.close()
 
