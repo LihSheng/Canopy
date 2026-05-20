@@ -1,6 +1,13 @@
-# Canopy Intelligence
+## Agent skills
 
-Claude instructions live in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+### Issue tracker
 
-If you are editing this repo, read `ARCHITECTURE.md` first and follow it.
-This file stays short on purpose.
+Local markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context. See `docs/agents/domain.md`.

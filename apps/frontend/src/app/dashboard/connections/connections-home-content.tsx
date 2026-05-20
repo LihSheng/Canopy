@@ -96,12 +96,6 @@ export default function ConnectionsHomeContent() {
         <div className="flex gap-2">
           <Link
             href="/dashboard/connections/sources"
-            className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
-          >
-            Source Catalog
-          </Link>
-          <Link
-            href="/dashboard/data-studio/connections/new"
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
           >
             + New Connection
@@ -110,9 +104,6 @@ export default function ConnectionsHomeContent() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <CardLink href="/dashboard/connections/sources" title="Source Catalog" description="Browse and connect to data sources" icon={
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" /></svg>
-        } />
         <CardLink href="/dashboard/connections/datasets" title="Datasets" description={`${datasets.length} dataset${datasets.length !== 1 ? "s" : ""}`} icon={
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M12.232 4.232a3 3 0 014.242 4.242L6.828 18.07a2 2 0 01-1.414.586H3.5a.5.5 0 01-.5-.5v-1.914a2 2 0 01.586-1.414l8.646-8.646z" /><path d="M9.172 5.172a1 1 0 011.414 0l.707.707-5.657 5.657-.707-.707a1 1 0 010-1.414l4.243-4.243z" /></svg>
         } />

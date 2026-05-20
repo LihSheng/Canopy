@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   createConnection,
   fetchConnectionTest,
@@ -22,10 +22,13 @@ const DEFAULT_POLICY: SyncPolicy = {
 
 export function ConnectionWizard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialSource = searchParams.get("source") ?? "postgresql";
   const [step, setStep] = useState<Step>(1);
 
   // Step 1: Authenticate
-  const [sourceType, setSourceType] = useState("postgresql");
+  const [sourceType, setSourceType] = useState(initialSource);
+  const [file, setFile] = useState<File | null>(null);
   const [host, setHost] = useState("");
   const [port, setPort] = useState("5432");
   const [database, setDatabase] = useState("");

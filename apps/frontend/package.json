@@ -25,6 +25,7 @@
     "recharts": "^3.8.1"
   },
   "devDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.0.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

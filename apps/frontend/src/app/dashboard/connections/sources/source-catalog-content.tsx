@@ -12,7 +12,6 @@ export default function SourceCatalogContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [selectedSource, setSelectedSource] = useState<SourceType | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,11 +64,7 @@ export default function SourceCatalogContent() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((source) => (
-          <SourceCard
-            key={source.id}
-            source={source}
-            onSelect={setSelectedSource}
-          />
+          <SourceCard key={source.id} source={source} />
         ))}
       </div>
 
@@ -78,73 +73,18 @@ export default function SourceCatalogContent() {
           No sources match your search
         </div>
       )}
-
-      {selectedSource && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-          onClick={() => setSelectedSource(null)}
-        >
-          <div
-            className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-zinc-900">
-                {selectedSource.label}
-              </h3>
-              <button
-                onClick={() => setSelectedSource(null)}
-                className="text-zinc-400 hover:text-zinc-600"
-              >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                </svg>
-              </button>
-            </div>
-            <p className="mt-2 text-sm text-zinc-600">{selectedSource.description}</p>
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {selectedSource.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-            {selectedSource.enabled ? (
-              <Link
-                href={`/dashboard/connections/setup?source=${selectedSource.key}`}
-                className="mt-4 inline-block rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
-              >
-                Connect Source
-              </Link>
-            ) : (
-              <div className="mt-4 rounded-lg bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
-                This source is not yet available.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function SourceCard({
-  source,
-  onSelect,
-}: {
-  source: SourceType;
-  onSelect: (s: SourceType) => void;
-}) {
+function SourceCard({ source }: { source: SourceType }) {
   return (
-    <button
-      onClick={() => onSelect(source)}
-      className={`w-full rounded-lg border p-4 text-left shadow-sm transition-all ${
+    <Link
+      href={source.enabled ? `/dashboard/connections/setup?source=${source.key}` : "#"}
+      className={`block w-full rounded-lg border p-4 text-left shadow-sm transition-all ${
         source.enabled
           ? "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-md"
-          : "border-zinc-100 bg-zinc-50 opacity-60"
+          : "border-zinc-100 bg-zinc-50 opacity-60 cursor-not-allowed"
       }`}
     >
       <div className="flex items-center justify-between">
@@ -174,6 +114,6 @@ function SourceCard({
           ))}
         </div>
       )}
-    </button>
+    </Link>
   );
 }
