@@ -111,6 +111,7 @@ export function createDataset(data: {
   source_object_name?: string;
   sync_mode?: string | null;
   batch_strategy?: string | null;
+  real_time_strategy?: string | null;
   cursor_column?: string | null;
 }): Promise<Dataset> {
   return request<Dataset>("/api/datasets/", {

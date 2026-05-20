@@ -46,34 +46,9 @@ export function ReportsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
-
-  const handleTrigger = useCallback(
-    async (key: ExportPreset["key"]) => {
-      setExporting(key);
-      try {
-        const job = await triggerExport(key, timeRange);
-        await waitForJobCompletion(job.job_id);
-      } catch {
-        setExporting(null);
-      }
-    },
-    [timeRange],
-  );
-
-  const handleRerun = useCallback(
-    async (jobId: string) => {
-      setRerunning(jobId);
-      try {
-        const job = await rerunExportJob(jobId);
-        await waitForJobCompletion(job.job_id);
-      } catch {
-        setRerunning(null);
-      }
-    },
-    [],
-  );
 
   const waitForJobCompletion = useCallback(async (jobId: string) => {
     let attempts = 0;
@@ -89,6 +64,32 @@ export function ReportsPage() {
     setRerunning(null);
     await load();
   }, [load]);
+
+  const handleTrigger = useCallback(
+    async (key: ExportPreset["key"]) => {
+      setExporting(key);
+      try {
+        const job = await triggerExport(key, timeRange);
+        await waitForJobCompletion(job.job_id);
+      } catch {
+        setExporting(null);
+      }
+    },
+    [timeRange, waitForJobCompletion],
+  );
+
+  const handleRerun = useCallback(
+    async (jobId: string) => {
+      setRerunning(jobId);
+      try {
+        const job = await rerunExportJob(jobId);
+        await waitForJobCompletion(job.job_id);
+      } catch {
+        setRerunning(null);
+      }
+    },
+    [waitForJobCompletion],
+  );
 
   const contextLabel = TIME_RANGE_LABELS[timeRange];
 

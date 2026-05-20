@@ -20,6 +20,11 @@ class BatchStrategy(StrEnum):
     INCREMENTAL_CURSOR = "incremental_cursor"
 
 
+class RealTimeStrategy(StrEnum):
+    CDC = "cdc"
+    POLLING = "polling"
+
+
 @dataclass
 class Dataset:
     id: str
@@ -31,6 +36,7 @@ class Dataset:
     active_version_id: str | None = None
     sync_mode: str | None = None
     batch_strategy: str | None = None
+    real_time_strategy: str | None = None
     cursor_column: str | None = None
     last_cursor_value: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

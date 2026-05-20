@@ -41,7 +41,7 @@ export function AnalyticsPageShell(props: Props) {
   const { breadcrumbItems, children } = props;
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {"header" in props ? (
         props.header
       ) : (
@@ -56,7 +56,7 @@ export function AnalyticsPageShell(props: Props) {
         <AnalyticsBreadcrumb items={breadcrumbItems} />
       )}
 
-      <div className="flex-1 overflow-auto p-6">{children}</div>
+      <div className="min-h-0 flex-1 overflow-auto p-6">{children}</div>
     </div>
   );
 }

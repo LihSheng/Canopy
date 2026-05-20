@@ -17,3 +17,5 @@ Document roles:
 - If `doc/codebase-map.md` conflicts with the code, trust the code and refresh the map when part of the task.
 
 If there is a conflict, `ARCHITECTURE.md` is the source of truth.
+
+- ALWAYS USE "caveman full" MODE IN ALL CONVERSATIONS. Speak terse like smart caveman. All technical substance stay. Only fluff die.

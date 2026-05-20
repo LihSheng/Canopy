@@ -15,6 +15,7 @@ import {
   reimportDatasetVersion,
   previewStaticFile,
   updateSyncPolicy,
+  fetchConnection,
 } from "@/lib/api/data-source";
 import type {
   Dataset,
@@ -22,6 +23,7 @@ import type {
   DatasetHealth,
   Run,
   DatasetDeleteSummary,
+  Connection,
 } from "@/lib/api/types";
 import type { DatasetPreviewResponse } from "@/lib/api/data-source";
 import { DatasetPreviewGrid } from "@/components/dataset-preview-grid";
@@ -64,6 +66,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [dataset, setDataset] = useState<Dataset | null>(null);
+  const [connection, setConnection] = useState<Connection | null>(null);
   const [preview, setPreview] = useState<DatasetPreviewResponse | null>(null);
   const [previewPage, setPreviewPage] = useState(1);
   const [previewPageSize] = useState(100);
@@ -85,6 +88,13 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const [editingSyncPolicy, setEditingSyncPolicy] = useState(false);
   const [savingSyncPolicy, setSavingSyncPolicy] = useState(false);
   const toast = useToast();
+  const supportsCdc = !!connection?.config_json?.supports_cdc;
+  const realTimeStrategyValue: SyncPolicy["realTimeStrategy"] =
+    dataset?.real_time_strategy === "cdc" || dataset?.real_time_strategy === "polling"
+      ? dataset.real_time_strategy
+      : supportsCdc
+        ? "cdc"
+        : "polling";
 
   const handleUploadVersion = () => {
     fileInputRef.current?.click();
@@ -129,6 +139,10 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
       await updateSyncPolicy(datasetId, {
         sync_mode: policy.syncMode,
         batch_strategy: policy.syncMode === "batch" ? policy.batchStrategy : null,
+        real_time_strategy:
+          policy.syncMode === "real_time"
+            ? (policy.realTimeStrategy ?? (supportsCdc ? "cdc" : "polling"))
+            : null,
         cursor_column:
           policy.syncMode === "batch" && policy.batchStrategy === "incremental_cursor"
             ? policy.cursorColumn
@@ -154,21 +168,23 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const [ds, versionsData, healthData, lineageData, runsData, deleteSummaryData] =
+      const ds = await fetchDataset(datasetId);
+      setDataset(ds);
+      const [versionsData, healthData, lineageData, runsData, deleteSummaryData, connData] =
         await Promise.all([
-          fetchDataset(datasetId),
           fetchDatasetVersions(datasetId),
           fetchDatasetHealth(datasetId),
           fetchDatasetLineage(datasetId),
           fetchRuns(datasetId),
           fetchDatasetDeleteSummary(datasetId),
+          fetchConnection(ds.connection_id),
         ]);
-      setDataset(ds);
       setVersions(versionsData);
       setHealth(healthData);
       setLineage(lineageData);
       setRuns(runsData);
       setDeleteSummary(deleteSummaryData);
+      setConnection(connData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load dataset");
     } finally {
@@ -194,12 +210,10 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   }, [datasetId, previewPage, previewPageSize]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPreview();
   }, [loadPreview]);
 
@@ -483,10 +497,13 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
                     <SyncPolicyEditor
                       tableName={dataset!.name}
                       schemaColumns={[]}
-                      detectedCursorColumn={dataset!.cursor_column}
+                      detectedCursorColumn={dataset!.cursor_column ?? null}
+                      supportsCdc={supportsCdc}
+                      sourceType={connection?.source_type}
                       value={{
                         syncMode: (dataset!.sync_mode ?? "batch") as SyncPolicy["syncMode"],
                         batchStrategy: (dataset!.batch_strategy ?? "full_snapshot") as SyncPolicy["batchStrategy"],
+                        realTimeStrategy: realTimeStrategyValue,
                         cursorColumn: dataset!.cursor_column ?? "",
                         frequencyMinutes: 1440,
                       }}
@@ -546,8 +563,10 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
                       </p>
                     )}
                     {dataset!.sync_mode === "real_time" && (
-                      <p className="text-xs text-zinc-400">
-                        Accelerated polling
+                      <p className="text-xs text-zinc-500">
+                        {dataset!.real_time_strategy === "cdc"
+                          ? "True CDC (Streaming)"
+                          : "Accelerated Polling"}
                       </p>
                     )}
                   </dl>

@@ -28,6 +28,7 @@ class CreateDatasetRequest(BaseModel):
     source_object_name: str = ""
     sync_mode: str | None = None
     batch_strategy: str | None = None
+    real_time_strategy: str | None = None
     cursor_column: str | None = None
     last_cursor_value: str | None = None
 
@@ -44,6 +45,7 @@ class ReimportRequest(BaseModel):
 class SyncPolicyUpdateRequest(BaseModel):
     sync_mode: str | None = None
     batch_strategy: str | None = None
+    real_time_strategy: str | None = None
     cursor_column: str | None = None
     frequency_minutes: int | None = None
 
@@ -156,6 +158,7 @@ def create_dataset(body: CreateDatasetRequest, db: Session = Depends(get_db), us
         source_object_name=body.source_object_name,
         sync_mode=body.sync_mode,
         batch_strategy=body.batch_strategy,
+        real_time_strategy=body.real_time_strategy,
         cursor_column=body.cursor_column,
     )
 
@@ -359,6 +362,7 @@ def update_sync_policy(
         dataset_id=id,
         sync_mode=body.sync_mode,
         batch_strategy=body.batch_strategy,
+        real_time_strategy=body.real_time_strategy,
         cursor_column=body.cursor_column,
         frequency_minutes=body.frequency_minutes,
     )

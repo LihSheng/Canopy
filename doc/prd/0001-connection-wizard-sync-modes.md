@@ -6,7 +6,7 @@ Status: ready-for-agent
 
 Today, Canopy Intelligence connects to a single internal database and pulls all data on one schedule. Users who want to bring in data from external databases (Postgres, Oracle, MySQL) have no way to connect them. Users who manage both small lookup tables and multi-million-row transaction tables have no way to tune the sync strategy. They are forced to pull everything fresh every time, placing unnecessary load on the source system. Users with sensitive data that must never leave their infrastructure have no option to query it live without copying.
 
-The system needs to become a multi-connector data hub where users can connect external databases, pick which tables to import, and choose per table how data should move: on a schedule (batch), near-real-time (streaming), or not at all (live query).
+The system needs to become a multi-connector data hub where users can connect external databases, pick which tables to import, and choose per table how data should move: on a schedule (batch), via CDC-backed ingestion where supported, or not at all (live query).
 
 ## Solution
 
@@ -64,7 +64,7 @@ Third-party database credentials are encrypted at rest via a SecretStore interfa
 
 18. As a data engineer, I want to set a sync frequency for Batch datasets (e.g., every 1 hour, every 24 hours), so that I control how often the source database is queried.
 
-19. As a data engineer, I want to select "Real-Time" for operational tables that change constantly, so that my dashboards reflect near-real-time data (currently via accelerated polling, with CDC infrastructure planned for the future).
+19. As a data engineer, I want to select "Real-Time" for operational tables that change constantly, so that my dashboards reflect near-real-time data through CDC-backed ingestion when the source supports it, with accelerated polling as a fallback when CDC prerequisites are missing.
 
 20. As a data engineer, I want to select "Direct View" for tables containing sensitive data that must not be copied into Canopy Intelligence storage, so that queries run live against the source and no data is persisted.
 
@@ -108,7 +108,7 @@ Third-party database credentials are encrypted at rest via a SecretStore interfa
 
 - **Direct Query isolation.** Direct Query datasets are never pulled by the refresh pipeline and never feed the executive dashboard, exports, or AI summaries. They will live in a separate Live Explorer module (future). This preserves the snapshot consistency rule (ARCHITECTURE.md Rule 3).
 
-- **Real-Time = accelerated polling v1.** The real_time sync mode exists in the domain model but maps to fast-interval batch polling (e.g., 30-second pulls) using the same sync reader infrastructure. True CDC (Kafka, Debezium) is a future infrastructure swap that does not require a schema migration or domain model change.
+- **Real-Time = CDC-first with polling fallback.** The real_time sync mode exists in the domain model and uses transaction-log ingestion for supported sources. PostgreSQL sources read WAL when replication prerequisites are met, MySQL sources read binlog when binary logging and row format are enabled, and unsupported sources fall back to accelerated polling using the same sync reader infrastructure.
 
 - **Same refresh job, smarter sync reader.** The global refresh job still triggers periodically. During the source sync phase, each dataset's reader inspects its sync mode and batch_strategy: full snapshot runs SELECT *, incremental cursor runs SELECT * WHERE cursor_col > last_cursor, Direct View is skipped. No per-dataset scheduling infrastructure in v1; the frequency field is stored but not yet honored independently.
 
@@ -214,7 +214,7 @@ Existing backend unit tests in tests/unit/ (e.g., test_dataset_versioning.py, te
 
 ## Out of Scope
 
-- True CDC infrastructure (Kafka, Debezium, WAL reading). The real_time sync mode is implemented as accelerated polling in this PRD. CDC is deferred to a future infrastructure project.
+- Managed CDC platform integrations such as Kafka or Debezium are not required for this slice. The current real_time mode uses source-native CDC where available and polling fallback elsewhere.
 - Live Explorer module for Direct Query datasets. The sync mode is stored and respected (Direct Query datasets are skipped by the refresh pipeline), but the live query UI is a separate PRD.
 - Per-dataset independent scheduling. The frequency field is stored but not yet honored independently. All Batch datasets refresh on the same global schedule for now.
 - Multi-source import beyond database types (APIs, cloud storage, streaming sources). Only PostgreSQL and MySQL database connections are in scope.

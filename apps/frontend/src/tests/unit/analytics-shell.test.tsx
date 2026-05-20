@@ -43,6 +43,7 @@ import { AnalyticsSidebarItem } from "@/components/analytics-shell/analytics-sid
 import { AnalyticsSidebarBrand } from "@/components/analytics-shell/analytics-sidebar-brand";
 import { AnalyticsHeader } from "@/components/analytics-shell/analytics-header";
 import { AnalyticsBreadcrumb } from "@/components/analytics-shell/analytics-breadcrumb";
+import { AnalyticsPageShell } from "@/components/analytics-shell/analytics-page-shell";
 import { AnalyticsShell } from "@/components/analytics-shell/analytics-shell";
 
 function Wrapper({ children }: { children: React.ReactNode }) {
@@ -205,6 +206,10 @@ describe("AnalyticsShell - sidebar collapse and expand", () => {
   beforeEach(() => {
     mockPathname = "/dashboard";
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
+    try {
+      localStorage.clear();
+    } catch {}
   });
 
   it("renders sidebar with navigation items on desktop", () => {
@@ -304,12 +309,46 @@ describe("AnalyticsShell - sidebar collapse and expand", () => {
 
     expect(screen.getByText("My Page")).toBeInTheDocument();
   });
+
+  it("keeps the dashboard shell clipped to the viewport", () => {
+    const { container } = render(
+      <Wrapper>
+        <AnalyticsShell>
+          <div>Page content</div>
+        </AnalyticsShell>
+      </Wrapper>
+    );
+
+    expect(container.firstChild).toHaveClass("h-dvh");
+    expect(container.firstChild).toHaveClass("overflow-hidden");
+  });
+});
+
+describe("AnalyticsPageShell", () => {
+  it("makes the page body the scroll area", () => {
+    const { container } = render(
+      <AnalyticsPageShell title="Dataset Workspace">
+        <div>Body</div>
+      </AnalyticsPageShell>
+    );
+
+    expect(container.firstChild).toHaveClass("min-h-0");
+    expect(container.firstChild).toHaveClass("overflow-hidden");
+    const scrollArea = container.querySelector(".overflow-auto");
+    expect(scrollArea).toHaveClass("overflow-auto");
+    expect(screen.getByText("Dataset Workspace")).toBeInTheDocument();
+    expect(screen.getByText("Body")).toBeInTheDocument();
+  });
 });
 
 describe("AnalyticsShell - drawer behavior", () => {
   beforeEach(() => {
     mockPathname = "/dashboard";
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
+    try {
+      localStorage.clear();
+    } catch {}
   });
 
   it("shows hamburger menu on mobile-sized viewport", () => {

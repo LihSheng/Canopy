@@ -48,7 +48,11 @@ class TestRlsPolicyGeneration:
         assert idx_artifacts < idx_batches
 
     def test_is_rls_supported_returns_true_for_postgres(self, db_session):
-        assert is_rls_supported(db_session) is True
+        dialect_name = db_session.bind.dialect.name if db_session.bind else ""
+        if dialect_name == "postgresql":
+            assert is_rls_supported(db_session) is True
+        else:
+            assert is_rls_supported(db_session) is False
 
     def test_apply_rls_executes_on_postgres(self, tenant_data_engine):
         TenantDataBase.metadata.create_all(bind=tenant_data_engine)

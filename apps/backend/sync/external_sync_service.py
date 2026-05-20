@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -87,19 +87,65 @@ class ExternalDbSyncService:
             adapter = get_adapter(conn.source_type)
             table_name = ds.source_object_name or ds.name
 
-            # Determine cursor filter for incremental sync
-            cursor_column = ds.cursor_column if ds.batch_strategy == "incremental_cursor" else None
-            cursor_value = ds.last_cursor_value if cursor_column else None
+            supports_cdc = conn.config_json.get("supports_cdc", False)
+            is_cdc = (
+                ds.sync_mode == "real_time"
+                and ds.real_time_strategy == "cdc"
+                and supports_cdc
+            )
+            row_count = 0
+            column_count = 0
 
-            # Stream all rows via the dedicated batch method
-            all_rows: list[dict] = []
-            async for batch in adapter.fetch_table(config, table_name, cursor_column, cursor_value):
-                all_rows.extend(batch)
+            if is_cdc:
+                import asyncio
 
-            completed_at = utcnow()
+                storage_path = storage_root() / ds.id / f"{slugify(table_name)}.jsonl"
 
-            # Persist rows to JSONL storage
-            storage_path = self._write_rows_to_storage(ds.id, table_name, all_rows)
+                if not hasattr(self, "_active_cdc_tasks"):
+                    self.__class__._active_cdc_tasks = {}
+                if ds.id not in self._active_cdc_tasks:
+                    if conn.source_type == "postgresql":
+                        from sync.readers.pg_cdc_reader import PostgresCdcReader
+
+                        reader = PostgresCdcReader(config, ds.id, table_name)
+                    else:
+                        from sync.readers.mysql_cdc_reader import MysqlCdcReader
+
+                        reader = MysqlCdcReader(config, ds.id, table_name)
+
+                    task = asyncio.create_task(reader.start_streaming(storage_path))
+                    self._active_cdc_tasks[ds.id] = (reader, task)
+                row_count = 0
+                if storage_path.exists():
+                    try:
+                        with open(storage_path, encoding="utf-8") as f:
+                            row_count = sum(1 for _ in f)
+                    except Exception:
+                        pass
+                column_count = 1
+                completed_at = utcnow()
+            else:
+                # Determine cursor filter for incremental sync
+                cursor_column = (
+                    ds.cursor_column
+                    if ds.batch_strategy == "incremental_cursor"
+                    else None
+                )
+                cursor_value = ds.last_cursor_value if cursor_column else None
+
+                # Stream all rows via the dedicated batch method
+                all_rows: list[dict] = []
+                async for batch in adapter.fetch_table(
+                    config, table_name, cursor_column, cursor_value
+                ):
+                    all_rows.extend(batch)
+
+                completed_at = utcnow()
+
+                # Persist rows to JSONL storage
+                storage_path = self._write_rows_to_storage(ds.id, table_name, all_rows)
+                row_count = len(all_rows)
+                column_count = len(all_rows[0]) if all_rows else 0
 
             # Create a new version pointing to the persisted data
             version = self._version_repo.save(
@@ -108,8 +154,8 @@ class ExternalDbSyncService:
                     dataset_id=ds.id,
                     version_number=1,
                     status=DatasetVersionStatus.READY.value,
-                    row_count=len(all_rows),
-                    column_count=len(all_rows[0]) if all_rows else 0,
+                    row_count=row_count,
+                    column_count=column_count,
                     storage_path=str(storage_path),
                     raw_storage_path=str(storage_path),
                     created_at=utcnow(),
@@ -117,13 +163,9 @@ class ExternalDbSyncService:
             )
 
             # Update cursor value for incremental sync
-            if cursor_column and cursor_value is not None and all_rows:
+            if not is_cdc and cursor_column and cursor_value is not None and all_rows:
                 new_cursor = max(
-                    (
-                        str(row.get(cursor_column, ""))
-                        for row in all_rows
-                        if isinstance(row, dict)
-                    ),
+                    (str(row.get(cursor_column, "")) for row in all_rows if isinstance(row, dict)),
                     default=ds.last_cursor_value,
                 )
                 if new_cursor != ds.last_cursor_value:
@@ -138,7 +180,7 @@ class ExternalDbSyncService:
                 status="completed",
                 started_at=started_at,
                 completed_at=completed_at,
-                row_count=len(all_rows),
+                row_count=row_count,
             )
 
         except Exception as exc:

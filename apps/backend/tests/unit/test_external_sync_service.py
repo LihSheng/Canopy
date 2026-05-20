@@ -1,4 +1,6 @@
 """Tests for ExternalDbSyncService."""
+
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -18,11 +20,12 @@ def _setup_db():
 
 def _make_session():
     engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
-    import dataset.schema  # noqa: F401
     import connection.schema  # noqa: F401
+    import dataset.schema  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(bind=engine)
-    return SessionLocal()
+    session_local = sessionmaker(bind=engine)
+    return session_local()
 
 
 class MockCursorHelper:
@@ -36,8 +39,10 @@ class MockCursorHelper:
     @staticmethod
     def fetch_table_callback(rows: list[dict]):
         """Return a callable that returns an async generator yielding the given rows."""
+
         async def _fetch(config, table, cursor_column=None, cursor_value=None):
             yield rows
+
         return _fetch
 
 
@@ -49,10 +54,15 @@ class TestExternalDbSyncService:
         session = _make_session()
         try:
             repo = DatasetRepository(session)
-            repo.save(Dataset(
-                id="ds-1", project_id="p-1", connection_id="c-1",
-                name="no_sync", status=DatasetStatus.ACTIVE.value,
-            ))
+            repo.save(
+                Dataset(
+                    id="ds-1",
+                    project_id="p-1",
+                    connection_id="c-1",
+                    name="no_sync",
+                    status=DatasetStatus.ACTIVE.value,
+                )
+            )
 
             service = ExternalDbSyncService(session)
             result = await service.run_async()
@@ -74,18 +84,29 @@ class TestExternalDbSyncService:
 
             # Seed connection + dataset
             conn_repo = ConnectionRepository(session)
-            conn_repo.save(Connection(
-                id="c-1", project_id="p-1", source_type="postgresql",
-                name="test", config_json={"host": "localhost"},
-            ))
+            conn_repo.save(
+                Connection(
+                    id="c-1",
+                    project_id="p-1",
+                    source_type="postgresql",
+                    name="test",
+                    config_json={"host": "localhost"},
+                )
+            )
 
             repo = DatasetRepository(session)
-            repo.save(Dataset(
-                id="ds-1", project_id="p-1", connection_id="c-1",
-                name="users", source_object_name="users",
-                status=DatasetStatus.ACTIVE.value,
-                sync_mode=SyncMode.BATCH, batch_strategy="full_snapshot",
-            ))
+            repo.save(
+                Dataset(
+                    id="ds-1",
+                    project_id="p-1",
+                    connection_id="c-1",
+                    name="users",
+                    source_object_name="users",
+                    status=DatasetStatus.ACTIVE.value,
+                    sync_mode=SyncMode.BATCH,
+                    batch_strategy="full_snapshot",
+                )
+            )
 
             # Mock fetch_table to return rows
             mock_adapter = AsyncMock()
@@ -118,28 +139,40 @@ class TestExternalDbSyncService:
     @patch("sync.external_sync_service.ExternalDbSyncService._write_rows_to_storage")
     @patch("sync.external_sync_service.get_adapter")
     @patch("sync.external_sync_service.AesGcmSecretStore")
-    async def test_incremental_cursor_updates_cursor_value(self, mock_store, mock_get_adapter, mock_write):
+    async def test_incremental_cursor_updates_cursor_value(
+        self, mock_store, mock_get_adapter, mock_write
+    ):
         session = _make_session()
         try:
             from connection.domain import Connection
             from connection.repository import ConnectionRepository
 
             conn_repo = ConnectionRepository(session)
-            conn_repo.save(Connection(
-                id="c-2", project_id="p-1", source_type="postgresql",
-                name="test", config_json={"host": "localhost"},
-            ))
+            conn_repo.save(
+                Connection(
+                    id="c-2",
+                    project_id="p-1",
+                    source_type="postgresql",
+                    name="test",
+                    config_json={"host": "localhost"},
+                )
+            )
 
             repo = DatasetRepository(session)
-            repo.save(Dataset(
-                id="ds-2", project_id="p-1", connection_id="c-2",
-                name="orders", source_object_name="orders",
-                status=DatasetStatus.ACTIVE.value,
-                sync_mode=SyncMode.BATCH,
-                batch_strategy="incremental_cursor",
-                cursor_column="updated_at",
-                last_cursor_value="2026-01-01T00:00:00Z",
-            ))
+            repo.save(
+                Dataset(
+                    id="ds-2",
+                    project_id="p-1",
+                    connection_id="c-2",
+                    name="orders",
+                    source_object_name="orders",
+                    status=DatasetStatus.ACTIVE.value,
+                    sync_mode=SyncMode.BATCH,
+                    batch_strategy="incremental_cursor",
+                    cursor_column="updated_at",
+                    last_cursor_value="2026-01-01T00:00:00Z",
+                )
+            )
 
             rows_batch = [
                 {"id": 1, "updated_at": "2026-06-01T00:00:00Z"},
@@ -160,5 +193,64 @@ class TestExternalDbSyncService:
             updated = repo.get("ds-2")
             assert updated is not None
             assert updated.last_cursor_value == "2026-06-15T00:00:00Z"
+        finally:
+            session.close()
+
+    @pytest.mark.asyncio
+    @patch("sync.readers.pg_cdc_reader.PostgresCdcReader")
+    @patch("sync.external_sync_service.get_adapter")
+    @patch("sync.external_sync_service.AesGcmSecretStore")
+    async def test_cdc_dataset_uses_log_streaming_instead_of_table_polling(
+        self,
+        mock_store,
+        mock_get_adapter,
+        mock_reader_cls,
+    ):
+        session = _make_session()
+        try:
+            from connection.domain import Connection
+            from connection.repository import ConnectionRepository
+
+            conn_repo = ConnectionRepository(session)
+            conn_repo.save(
+                Connection(
+                    id="c-3",
+                    project_id="p-1",
+                    source_type="postgresql",
+                    name="cdc",
+                    config_json={"host": "localhost", "supports_cdc": True},
+                )
+            )
+
+            repo = DatasetRepository(session)
+            repo.save(
+                Dataset(
+                    id="ds-3",
+                    project_id="p-1",
+                    connection_id="c-3",
+                    name="events",
+                    source_object_name="events",
+                    status=DatasetStatus.ACTIVE.value,
+                    sync_mode=SyncMode.REAL_TIME,
+                    real_time_strategy="cdc",
+                )
+            )
+
+            mock_adapter = AsyncMock()
+            mock_adapter.fetch_table = AsyncMock()
+            mock_get_adapter.return_value = mock_adapter
+
+            reader_instance = AsyncMock()
+            reader_instance.start_streaming = AsyncMock(return_value=None)
+            mock_reader_cls.return_value = reader_instance
+
+            service = ExternalDbSyncService(session)
+            result = await service.run_async()
+            await asyncio.sleep(0)
+
+            assert result.status == "completed"
+            mock_adapter.fetch_table.assert_not_called()
+            mock_reader_cls.assert_called_once()
+            reader_instance.start_streaming.assert_called_once()
         finally:
             session.close()

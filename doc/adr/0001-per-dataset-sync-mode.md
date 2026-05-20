@@ -35,9 +35,9 @@ Accepted.
   a separate "Live Explorer" module that queries the source DB directly at request
   time. This preserves the snapshot consistency rule (ARCHITECTURE.md Rule 3) for
   dashboard, export, and AI flows.
-- Real-Time is a domain value today with accelerated polling as the runtime
-  implementation. The schema is ready for a future CDC/streaming pipeline swap
-  without a migration.
+- Real-Time is a domain value today with CDC-backed ingestion for supported
+  sources and accelerated polling fallback for unsupported sources. The schema
+  stays flexible for future connector swaps without a migration.
 - The cursor column is auto-detected from `INFORMATION_SCHEMA.COLUMNS` using a
   priority list of known names (`updated_at`, `last_modified_at`, etc.). Users
   can override it in the connection wizard. If the column changes post-config,

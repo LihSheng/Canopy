@@ -35,12 +35,9 @@ class TestAnomalyDetector:
             _make_spend("dept-b", "2026-05", 30000, 60000),
         ]
 
-        mock_repo = MagicMock()
-        mock_repo.get_monthly_spends_for_month.side_effect = [cur, prev]
-
         with patch(
-            "anomalies.service.AnalyticsRepository",
-            return_value=mock_repo,
+            "anomalies.service.get_monthly_spends_for_month",
+            side_effect=[cur, prev],
         ):
             results = detect_anomalies(db_session, snapshot_id, "2026-05", "2026-04")
 
@@ -51,12 +48,9 @@ class TestAnomalyDetector:
         assert dept_b_found
 
     def test_empty_spends_produces_no_anomalies(self, db_session):
-        mock_repo = MagicMock()
-        mock_repo.get_monthly_spends_for_month.return_value = []
-
         with patch(
-            "anomalies.service.AnalyticsRepository",
-            return_value=mock_repo,
+            "anomalies.service.get_monthly_spends_for_month",
+            return_value=[],
         ):
             results = detect_anomalies(db_session, "snap-1", "2026-05", "2026-04")
 

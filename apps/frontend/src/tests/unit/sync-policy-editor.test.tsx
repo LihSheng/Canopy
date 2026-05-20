@@ -35,7 +35,7 @@ describe("SyncPolicyEditor", () => {
         tableName="users"
         schemaColumns={SCHEMA_COLUMNS}
         detectedCursorColumn="updated_at"
-        value={BASE_POLICY}
+        value={{ ...BASE_POLICY, batchStrategy: "incremental_cursor" }}
         onChange={vi.fn()}
       />,
     );
@@ -48,7 +48,7 @@ describe("SyncPolicyEditor", () => {
         tableName="users"
         schemaColumns={SCHEMA_COLUMNS}
         detectedCursorColumn={null}
-        value={{ ...BASE_POLICY, cursorColumn: "created_at" }}
+        value={{ ...BASE_POLICY, batchStrategy: "incremental_cursor", cursorColumn: "created_at" }}
         onChange={vi.fn()}
       />,
     );
@@ -61,7 +61,7 @@ describe("SyncPolicyEditor", () => {
         tableName="users"
         schemaColumns={[{ name: "id", data_type: "bigint" }]}
         detectedCursorColumn={null}
-        value={BASE_POLICY}
+        value={{ ...BASE_POLICY, batchStrategy: "incremental_cursor" }}
         onChange={vi.fn()}
       />,
     );
@@ -77,11 +77,32 @@ describe("SyncPolicyEditor", () => {
         detectedCursorColumn="updated_at"
         value={BASE_POLICY}
         onChange={onChange}
+        supportsCdc={true}
+        sourceType="postgresql"
       />,
     );
     fireEvent.click(screen.getByText("Real-Time"));
     expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ syncMode: "real_time" }),
+      expect.objectContaining({ syncMode: "real_time", realTimeStrategy: "cdc" }),
+    );
+  });
+
+  it("defaults to polling for real-time mode when CDC is unsupported", () => {
+    const onChange = vi.fn();
+    render(
+      <SyncPolicyEditor
+        tableName="users"
+        schemaColumns={SCHEMA_COLUMNS}
+        detectedCursorColumn="updated_at"
+        value={BASE_POLICY}
+        onChange={onChange}
+        supportsCdc={false}
+        sourceType="postgresql"
+      />,
+    );
+    fireEvent.click(screen.getByText("Real-Time"));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ syncMode: "real_time", realTimeStrategy: "polling" }),
     );
   });
 
@@ -97,7 +118,61 @@ describe("SyncPolicyEditor", () => {
     );
     expect(screen.getByText("Strategy")).toBeInTheDocument();
     expect(screen.getByText("Frequency")).toBeInTheDocument();
-    expect(screen.getByText("Full Snapshot")).toBeInTheDocument();
     expect(screen.getByText("Incremental Cursor")).toBeInTheDocument();
+  });
+
+  it("shows CDC warning and accelerated polling when supportsCdc is false and syncMode is real_time", () => {
+    render(
+      <SyncPolicyEditor
+        tableName="users"
+        schemaColumns={SCHEMA_COLUMNS}
+        detectedCursorColumn="updated_at"
+        value={{ ...BASE_POLICY, syncMode: "real_time" }}
+        onChange={vi.fn()}
+        supportsCdc={false}
+        sourceType="postgresql"
+      />,
+    );
+    expect(screen.getByText("CDC Stream Prerequisites Missing")).toBeInTheDocument();
+    expect(screen.getByText(/wal_level = logical/)).toBeInTheDocument();
+    expect(screen.getByText("Accelerated Polling")).toBeInTheDocument();
+  });
+
+  it("shows mysql CDC prerequisites when sourceType is mysql and supportsCdc is false", () => {
+    render(
+      <SyncPolicyEditor
+        tableName="users"
+        schemaColumns={SCHEMA_COLUMNS}
+        detectedCursorColumn="updated_at"
+        value={{ ...BASE_POLICY, syncMode: "real_time" }}
+        onChange={vi.fn()}
+        supportsCdc={false}
+        sourceType="mysql"
+      />,
+    );
+    expect(screen.getByText("CDC Stream Prerequisites Missing")).toBeInTheDocument();
+    expect(screen.getByText(/log_bin = ON/)).toBeInTheDocument();
+  });
+
+  it("does not show CDC warning and allows CDC selection when supportsCdc is true", () => {
+    const onChange = vi.fn();
+    render(
+      <SyncPolicyEditor
+        tableName="users"
+        schemaColumns={SCHEMA_COLUMNS}
+        detectedCursorColumn="updated_at"
+        value={{ ...BASE_POLICY, syncMode: "real_time", realTimeStrategy: "polling" }}
+        onChange={onChange}
+        supportsCdc={true}
+        sourceType="postgresql"
+      />,
+    );
+    expect(screen.queryByText("CDC Stream Prerequisites Missing")).not.toBeInTheDocument();
+    
+    // We can select "True CDC (Streaming)"
+    fireEvent.click(screen.getByText("True CDC (Streaming)"));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ realTimeStrategy: "cdc" }),
+    );
   });
 });

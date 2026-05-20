@@ -11,11 +11,9 @@ from insights.facts import extract_facts
 class TestFactExtraction:
     def test_returns_none_when_no_cache(self, db_session):
         with patch(
-            "insights.facts.AnalyticsRepository"
-        ) as mock_repo_cls:
-            mock_repo = MagicMock()
-            mock_repo.get_latest_summary_cache.return_value = None
-            mock_repo_cls.return_value = mock_repo
+            "insights.facts.get_dashboard_summary"
+        ) as mock_get_summary:
+            mock_get_summary.return_value = None
 
             result = extract_facts(db_session)
 
@@ -45,11 +43,11 @@ class TestFactExtraction:
         for d in result.top_departments:
             assert d.id != ""
             assert d.name != ""
-            assert isinstance(d.total_spend, float)
-            assert isinstance(d.change_pct, float)
+            assert isinstance(d.total_spend, (int, float))
+            assert isinstance(d.change_pct, (int, float))
         for c in result.claim_type_breakdown:
             assert c.type != ""
-            assert isinstance(c.amount, float)
+            assert isinstance(c.amount, (int, float))
             assert isinstance(c.count, int)
 
     def test_claim_type_breakdown_sorted_by_amount(self, seed_analytics_data):

@@ -6,10 +6,10 @@ import { AnalyticsSidebar } from "./analytics-sidebar";
 import { AnalyticsDrawer } from "./analytics-drawer";
 
 function ShellInner({ children }: { children: ReactNode }) {
-  const { sidebarExpanded, openDrawer } = useAnalyticsLayout();
+  const { openDrawer } = useAnalyticsLayout();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-50">
+    <div className="flex h-dvh overflow-hidden bg-zinc-50">
       {/* Desktop sidebar */}
       <div className="hidden lg:block">
         <AnalyticsSidebar />
@@ -19,7 +19,7 @@ function ShellInner({ children }: { children: ReactNode }) {
       <AnalyticsDrawer />
 
       {/* Main content area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* Mobile top bar with hamburger */}
         <div className="flex items-center gap-3 border-b border-zinc-200 bg-white px-4 py-2.5 lg:hidden">
           <button

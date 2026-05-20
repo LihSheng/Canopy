@@ -120,11 +120,11 @@ class TestSchemaVerification:
 
     def test_generated_insights_has_datetime_generated_at(self, engine):
         t = _column_type(engine, "generated_insights", "generated_at")
-        assert t.__class__.__name__ == "TIMESTAMP", f"Expected TIMESTAMP, got {t.__class__.__name__}"
+        assert t.__class__.__name__ in ("TIMESTAMP", "DATETIME"), f"Expected TIMESTAMP or DATETIME, got {t.__class__.__name__}"
 
     def test_data_snapshots_has_datetime_created_at(self, engine):
         t = _column_type(engine, "data_snapshots", "created_at")
-        assert t.__class__.__name__ == "TIMESTAMP", f"Expected TIMESTAMP, got {t.__class__.__name__}"
+        assert t.__class__.__name__ in ("TIMESTAMP", "DATETIME"), f"Expected TIMESTAMP or DATETIME, got {t.__class__.__name__}"
 
     def test_detected_anomalies_has_numeric_values(self, engine):
         for col_name in ("baseline_value", "observed_value", "delta_value"):

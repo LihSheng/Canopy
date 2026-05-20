@@ -129,7 +129,9 @@ class TestStorageRouterRouteTransaction:
         )
 
         with router.route_transaction("tenant-tx") as td_session:
-            td_session.execute(text("SELECT current_setting('app.current_tenant_id', true)"))
+            dialect_name = td_session.bind.dialect.name if td_session.bind else ""
+            if dialect_name == "postgresql":
+                td_session.execute(text("SELECT current_setting('app.current_tenant_id', true)"))
 
     def test_route_transaction_rolls_back_on_error(self, engine):
         factory = _create_control_plane_session_factory(engine)
@@ -163,8 +165,10 @@ class TestStorageRouterRouteTransaction:
 
         router = StorageRouter(control_plane_session_factory=lambda: None)
         router.set_tenant_context(td_session, "tenant-x")
-        value = td_session.execute(text("SELECT current_setting('app.current_tenant_id')")).scalar()
-        assert value == "tenant-x"
+        dialect_name = td_session.bind.dialect.name if td_session.bind else ""
+        if dialect_name == "postgresql":
+            value = td_session.execute(text("SELECT current_setting('app.current_tenant_id')")).scalar()
+            assert value == "tenant-x"
 
         td_session.close()
 

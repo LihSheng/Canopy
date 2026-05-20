@@ -1,6 +1,5 @@
 """Integration tests for database connection test and table discovery endpoints."""
 
-import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -15,6 +14,7 @@ _TEST_SECRET_KEY = "a1b2c3d4e5f6g7h8a1b2c3d4e5f6g7h8"
 @pytest.fixture(autouse=True)
 def _set_secret_key(monkeypatch):
     monkeypatch.setenv("SECRET_KEY", _TEST_SECRET_KEY)
+
 
 pytestmark = pytest.mark.api_schema
 
@@ -43,12 +43,28 @@ class TestConnectionTestEndpoint:
         # Mock the adapter
         with patch(_ADAPTER_PATCH) as mock_get:
             mock_adapter = mock_get.return_value
-            mock_adapter.test_connection = AsyncMock(return_value={"success": True})
+            mock_adapter.test_connection = AsyncMock(
+                return_value={
+                    "success": True,
+                    "supports_cdc": True,
+                    "cdc_parameters": {
+                        "replication_slot_name": "canopy_slot_testdb",
+                        "wal_level": "logical",
+                    },
+                }
+            )
 
             resp = client.post(f"/api/connections/{conn_id}/test", headers=auth_headers)
 
         assert resp.status_code == 200
         assert resp.json()["success"] is True
+        assert resp.json()["supports_cdc"] is True
+
+        get_resp = client.get(f"/api/connections/{conn_id}", headers=auth_headers)
+        assert get_resp.status_code == 200
+        data = get_resp.json()
+        assert data["config_json"]["supports_cdc"] is True
+        assert data["config_json"]["cdc_parameters"]["wal_level"] == "logical"
 
     def test_test_connection_failure(self, client, auth_headers):
         conn_resp = client.post(

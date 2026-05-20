@@ -1,4 +1,5 @@
 """Integration tests for the sync policy endpoint."""
+
 import pytest
 
 pytestmark = pytest.mark.api_schema
@@ -7,7 +8,9 @@ pytestmark = pytest.mark.api_schema
 class TestSyncPolicyEndpoint:
     def test_update_sync_policy(self, client, auth_headers):
         # Create a project
-        proj_resp = client.post("/api/projects/", json={"name": "Test", "description": ""}, headers=auth_headers)
+        proj_resp = client.post(
+            "/api/projects/", json={"name": "Test", "description": ""}, headers=auth_headers
+        )
         assert proj_resp.status_code == 201
         project_id = proj_resp.json()["id"]
 
@@ -23,7 +26,12 @@ class TestSyncPolicyEndpoint:
         # Create a dataset
         ds_resp = client.post(
             "/api/datasets/",
-            json={"project_id": project_id, "connection_id": conn_id, "name": "users", "source_object_name": "users"},
+            json={
+                "project_id": project_id,
+                "connection_id": conn_id,
+                "name": "users",
+                "source_object_name": "users",
+            },
             headers=auth_headers,
         )
         assert ds_resp.status_code == 201
@@ -55,7 +63,9 @@ class TestSyncPolicyEndpoint:
         assert data["cursor_column"] == "updated_at"
 
     def test_cursor_column_change_resets_cursor_value(self, client, auth_headers):
-        proj_resp = client.post("/api/projects/", json={"name": "Test2", "description": ""}, headers=auth_headers)
+        proj_resp = client.post(
+            "/api/projects/", json={"name": "Test2", "description": ""}, headers=auth_headers
+        )
         assert proj_resp.status_code == 201
         project_id = proj_resp.json()["id"]
 
@@ -93,7 +103,9 @@ class TestSyncPolicyEndpoint:
         assert patch_resp.json()["last_cursor_value"] is None
 
     def test_invalid_sync_mode_returns_400(self, client, auth_headers):
-        proj_resp = client.post("/api/projects/", json={"name": "T", "description": ""}, headers=auth_headers)
+        proj_resp = client.post(
+            "/api/projects/", json={"name": "T", "description": ""}, headers=auth_headers
+        )
         assert proj_resp.status_code == 201
         project_id = proj_resp.json()["id"]
 
@@ -119,3 +131,39 @@ class TestSyncPolicyEndpoint:
             headers=auth_headers,
         )
         assert resp.status_code == 400
+
+    def test_create_dataset_persists_real_time_strategy(self, client, auth_headers):
+        proj_resp = client.post(
+            "/api/projects/", json={"name": "CDC", "description": ""}, headers=auth_headers
+        )
+        assert proj_resp.status_code == 201
+        project_id = proj_resp.json()["id"]
+
+        conn_resp = client.post(
+            "/api/connections/",
+            json={"project_id": project_id, "source_type": "postgresql", "name": "CDC PG"},
+            headers=auth_headers,
+        )
+        assert conn_resp.status_code == 201
+        conn_id = conn_resp.json()["id"]
+
+        ds_resp = client.post(
+            "/api/datasets/",
+            json={
+                "project_id": project_id,
+                "connection_id": conn_id,
+                "name": "events",
+                "source_object_name": "events",
+                "sync_mode": "real_time",
+                "real_time_strategy": "cdc",
+            },
+            headers=auth_headers,
+        )
+        assert ds_resp.status_code == 201
+        data = ds_resp.json()
+        assert data["sync_mode"] == "real_time"
+        assert data["real_time_strategy"] == "cdc"
+
+        get_resp = client.get(f"/api/datasets/{data['id']}", headers=auth_headers)
+        assert get_resp.status_code == 200
+        assert get_resp.json()["real_time_strategy"] == "cdc"

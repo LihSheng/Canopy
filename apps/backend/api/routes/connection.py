@@ -123,7 +123,8 @@ async def test_connection(
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
-    service = ConnectionService(ConnectionRepository(db))
+    repo = ConnectionRepository(db)
+    service = ConnectionService(repo)
     connection = service.get_connection(id)
     if connection is None:
         raise NotFoundError("Connection not found")
@@ -135,6 +136,17 @@ async def test_connection(
 
     adapter = get_adapter(connection.source_type)
     result = await adapter.test_connection(config)
+    
+    if result.get("success"):
+        supports_cdc = result.get("supports_cdc", False)
+        cdc_parameters = result.get("cdc_parameters", {})
+        repo.update_config(
+            id,
+            {
+                "supports_cdc": supports_cdc,
+                "cdc_parameters": cdc_parameters
+            }
+        )
     return result
 
 

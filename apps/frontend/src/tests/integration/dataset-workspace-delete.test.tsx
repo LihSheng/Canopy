@@ -20,6 +20,7 @@ vi.mock("@/lib/api/data-source", () => ({
   fetchRuns: vi.fn(),
   deleteDataset: vi.fn(),
   deleteDatasetVersion: vi.fn(),
+  fetchConnection: vi.fn(),
 }));
 
 const mock_toast = {
@@ -109,6 +110,16 @@ describe("Dataset workspace delete actions", () => {
       total_row_count: 1,
       page: 1,
       page_size: 100,
+    });
+    vi.mocked(api.fetchConnection).mockResolvedValue({
+      id: "conn-1",
+      project_id: "proj-1",
+      source_type: "postgres",
+      name: "My Postgres",
+      status: "connected",
+      config_json: { supports_cdc: true },
+      created_at: "2026-05-18T00:00:00Z",
+      updated_at: "2026-05-18T00:00:00Z",
     });
   }
 

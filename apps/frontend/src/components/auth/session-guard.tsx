@@ -53,6 +53,7 @@ export function SessionGuard({ children }: SessionGuardProps) {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchTenantInfo();
     }
   }, [user, fetchTenantInfo]);

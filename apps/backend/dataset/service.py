@@ -1,11 +1,13 @@
 import uuid
 import shutil
 from datetime import UTC, datetime
+from pathlib import Path
 
 from common.errors import NotFoundError, ValidationError
 from dataset.domain import Dataset, DatasetVersion, DatasetStatus, DatasetVersionStatus
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from connection._shared import storage_root
+from connection.materialization import materialize_dataset_version
 from run.repository import RunRepository
 
 
@@ -22,6 +24,7 @@ class DatasetService:
         source_object_name: str = "",
         sync_mode: str | None = None,
         batch_strategy: str | None = None,
+        real_time_strategy: str | None = None,
         cursor_column: str | None = None,
     ) -> Dataset:
         now = datetime.now(UTC)
@@ -34,6 +37,7 @@ class DatasetService:
             status=DatasetStatus.ACTIVE.value,
             sync_mode=sync_mode,
             batch_strategy=batch_strategy,
+            real_time_strategy=real_time_strategy,
             cursor_column=cursor_column,
             created_at=now,
         )
@@ -124,10 +128,11 @@ class DatasetService:
         dataset_id: str,
         sync_mode: str | None = None,
         batch_strategy: str | None = None,
+        real_time_strategy: str | None = None,
         cursor_column: str | None = None,
         frequency_minutes: int | None = None,
     ) -> Dataset:
-        from dataset.domain import SyncMode, BatchStrategy
+        from dataset.domain import SyncMode, BatchStrategy, RealTimeStrategy
 
         dataset = self._repo.get(dataset_id)
         if dataset is None:
@@ -143,6 +148,11 @@ class DatasetService:
             if batch_strategy not in valid_strategies:
                 raise ValidationError(f"Invalid batch_strategy: {batch_strategy}")
             dataset.batch_strategy = batch_strategy
+        if real_time_strategy is not None:
+            valid_rt_strategies = {m.value for m in RealTimeStrategy}
+            if real_time_strategy not in valid_rt_strategies:
+                raise ValidationError(f"Invalid real_time_strategy: {real_time_strategy}")
+            dataset.real_time_strategy = real_time_strategy
         if cursor_column is not None:
             dataset.cursor_column = cursor_column
             # Changing cursor column resets last_cursor_value
@@ -216,15 +226,29 @@ class DatasetVersionService:
         return {"deleted": True, "id": version_id}
 
     def reimport_version(self, dataset_id: str, data_path: str, columns: list[str]) -> DatasetVersion:
+        dataset = self._dataset_repo.get(dataset_id)
+        if dataset is None:
+            raise NotFoundError("Dataset not found")
+
         existing = self._repo.list_by_dataset(dataset_id)
         next_number = (existing[0].version_number + 1) if existing else 1
         now = datetime.now(UTC)
+        storage_path, row_count, column_count = materialize_dataset_version(
+            Path(data_path),
+            dataset.source_object_name or dataset.name,
+            dataset_id,
+        )
         new_version = DatasetVersion(
             id=str(uuid.uuid4()),
             dataset_id=dataset_id,
             version_number=next_number,
             status=DatasetVersionStatus.READY.value,
             created_at=now,
+            row_count=row_count,
+            column_count=column_count,
+            storage_path=str(storage_path),
+            raw_storage_path=data_path,
+            cleaning_issues=[],
         )
         saved = self._repo.save(new_version)
         self._dataset_repo.update_active_version(dataset_id, saved.id)

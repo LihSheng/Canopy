@@ -34,6 +34,7 @@ _TEST_SOURCE_DATABASE_NAME = os.environ.get(
     "HERD_AGGREGATOR_TEST_SOURCE_DATABASE_NAME",
     "source_staging_test",
 )
+
 _TEST_DATABASE_URL = f"{_TEST_SERVER_URL.rstrip('/')}/{_TEST_CONTROL_PLANE_DATABASE_NAME}"
 _TEST_TENANT_DATA_URL = f"{_TEST_SERVER_URL.rstrip('/')}/{_TEST_TENANT_DATA_DATABASE_NAME}"
 _TEST_SOURCE_URL = f"{_TEST_SERVER_URL.rstrip('/')}/{_TEST_SOURCE_DATABASE_NAME}"
@@ -58,6 +59,8 @@ def pytest_collection_modifyitems(config, items):
 
 
 def _ensure_database_exists(database_url: str) -> None:
+    if "sqlite" in database_url:
+        return
     url = make_url(database_url)
     admin_url = url.set(database="postgres")
     admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")

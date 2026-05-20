@@ -113,7 +113,7 @@ export interface SourceType {
   id: string;
   key: string;
   label: string;
-  category: string;
+  category?: string;
   enabled: boolean;
   tags: string[];
   description: string;
@@ -144,8 +144,8 @@ export interface Connection {
   name: string;
   status: string;
   config_json: Record<string, unknown>;
-  test_status: string | null;
-  last_tested_at: string | null;
+  test_status?: string | null;
+  last_tested_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -165,10 +165,11 @@ export interface Dataset {
   source_object_name: string;
   status: string;
   active_version_id: string | null;
-  sync_mode: string | null;
-  batch_strategy: string | null;
-  cursor_column: string | null;
-  last_cursor_value: string | null;
+  sync_mode?: string | null;
+  batch_strategy?: string | null;
+  real_time_strategy?: string | null;
+  cursor_column?: string | null;
+  last_cursor_value?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -183,7 +184,7 @@ export interface DatasetVersion {
   column_count: number;
   storage_path: string;
   cleaning_issues: { issue: string; column?: string; row?: number }[];
-  failure_reason: string;
+  failure_reason?: string;
   created_at: string;
 }
 
@@ -244,6 +245,8 @@ export interface DatasetVersionDeleteSummary {
 export interface ConnectionTestResult {
   success: boolean;
   message?: string;
+  supports_cdc?: boolean;
+  cdc_parameters?: Record<string, unknown>;
 }
 
 export interface ColumnSchema {
@@ -268,6 +271,7 @@ export interface TablePreview {
 export interface SyncPolicyUpdate {
   sync_mode?: string | null;
   batch_strategy?: string | null;
+  real_time_strategy?: string | null;
   cursor_column?: string | null;
   frequency_minutes?: number | null;
 }

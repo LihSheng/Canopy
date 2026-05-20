@@ -9,7 +9,6 @@ import {
   createDataset,
   previewStaticFile,
   deleteStaticFilePreview,
-  fetchProjects,
   createProject,
 } from "@/lib/api/data-source";
 import type { DiscoveredTable, StaticFilePreview } from "@/lib/api/types";
@@ -49,6 +48,7 @@ export function SourceSetupWizard() {
   const [connectionName, setConnectionName] = useState("");
   const [testing, setTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
+  const [supportsCdc, setSupportsCdc] = useState(false);
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
 
@@ -93,11 +93,14 @@ export function SourceSetupWizard() {
       const result = await fetchConnectionTest(conn.id);
       if (result.success) {
         setTestSuccess(true);
+        setSupportsCdc(result.supports_cdc ?? false);
       } else {
         setError(result.message ?? "Connection test failed");
+        setSupportsCdc(false);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connection failed");
+      setSupportsCdc(false);
     } finally {
       setTesting(false);
     }
@@ -242,6 +245,10 @@ export function SourceSetupWizard() {
               sync_mode: policy.syncMode,
               batch_strategy:
                 policy.syncMode === "batch" ? policy.batchStrategy : null,
+              real_time_strategy:
+                policy.syncMode === "real_time"
+                  ? (policy.realTimeStrategy ?? (supportsCdc ? "cdc" : "polling"))
+                  : null,
               cursor_column:
                 policy.syncMode === "batch" && policy.batchStrategy === "incremental_cursor"
                   ? policy.cursorColumn
@@ -254,7 +261,6 @@ export function SourceSetupWizard() {
         }
       } else if (preview && file) {
         // Create connection from static file preview
-        const projects = await fetchProjects();
         let pid = projectId;
         if (!pid) {
           const project = await createProject({ name: "Default Project" });
@@ -288,7 +294,7 @@ export function SourceSetupWizard() {
     } finally {
       setDeploying(false);
     }
-  }, [connectionId, projectId, isDb, preview, file, selectedTables, selectedSheets, tablePolicies, router]);
+  }, [connectionId, projectId, isDb, preview, file, selectedTables, selectedSheets, tablePolicies, router, supportsCdc]);
 
   // ---- Derived state ----
 
@@ -714,6 +720,8 @@ export function SourceSetupWizard() {
                       tableName={tableName}
                       schemaColumns={table?.columns ?? []}
                       detectedCursorColumn={table?.detected_cursor_column ?? null}
+                      supportsCdc={supportsCdc}
+                      sourceType={sourceType}
                       value={policy}
                       onChange={(p) => updatePolicy(tableName, p)}
                     />

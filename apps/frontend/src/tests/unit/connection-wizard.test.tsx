@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ConnectionWizard } from "@/components/data-studio/connection-wizard";
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
+  useSearchParams: () => ({
+    get: (key: string) => null,
+  }),
 }));
+
+import { ConnectionWizard } from "@/components/data-studio/connection-wizard";
 
 vi.mock("@/lib/api/data-source", () => ({
   createConnection: vi.fn().mockResolvedValue({

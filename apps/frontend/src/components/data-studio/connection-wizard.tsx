@@ -28,7 +28,6 @@ export function ConnectionWizard() {
 
   // Step 1: Authenticate
   const [sourceType, setSourceType] = useState(initialSource);
-  const [file, setFile] = useState<File | null>(null);
   const [host, setHost] = useState("");
   const [port, setPort] = useState("5432");
   const [database, setDatabase] = useState("");
@@ -38,6 +37,7 @@ export function ConnectionWizard() {
   const [testing, setTesting] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
   const [testSuccess, setTestSuccess] = useState(false);
+  const [supportsCdc, setSupportsCdc] = useState(false);
   const [connectionId, setConnectionId] = useState<string | null>(null);
 
   // Step 2: Select Objects
@@ -50,6 +50,22 @@ export function ConnectionWizard() {
   const [deploying, setDeploying] = useState(false);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
+
+  const handleSourceTypeChange = useCallback(
+    (value: string) => {
+      setSourceType(value);
+      setStep(1);
+      setTestSuccess(false);
+      setTestError(null);
+      setSupportsCdc(false);
+      setConnectionId(null);
+      setTables([]);
+      setSelectedTables(new Set());
+      setTablePolicies({});
+      setDeployError(null);
+    },
+    [],
+  );
 
   // --- Step 1 handlers ---
 
@@ -77,11 +93,14 @@ export function ConnectionWizard() {
       const result = await fetchConnectionTest(conn.id);
       if (result.success) {
         setTestSuccess(true);
+        setSupportsCdc(result.supports_cdc ?? false);
       } else {
         setTestError(result.message ?? "Connection test failed");
+        setSupportsCdc(false);
       }
     } catch (err) {
       setTestError(err instanceof Error ? err.message : "Connection failed");
+      setSupportsCdc(false);
     } finally {
       setTesting(false);
     }
@@ -159,8 +178,11 @@ export function ConnectionWizard() {
             name: tableName,
             source_object_name: tableName,
             sync_mode: policy.syncMode,
-            batch_strategy:
-              policy.syncMode === "batch" ? policy.batchStrategy : null,
+            batch_strategy: policy.syncMode === "batch" ? policy.batchStrategy : null,
+            real_time_strategy:
+              policy.syncMode === "real_time"
+                ? (policy.realTimeStrategy ?? (supportsCdc ? "cdc" : "polling"))
+                : null,
             cursor_column:
               policy.syncMode === "batch" && policy.batchStrategy === "incremental_cursor"
                 ? policy.cursorColumn
@@ -176,7 +198,7 @@ export function ConnectionWizard() {
     } finally {
       setDeploying(false);
     }
-  }, [connectionId, projectId, selectedTables, tablePolicies, router]);
+  }, [connectionId, projectId, selectedTables, tablePolicies, router, supportsCdc]);
 
   const selectedCount = selectedTables.size;
   const canProceedToStep2 = testSuccess && connectionId != null;
@@ -216,7 +238,7 @@ export function ConnectionWizard() {
             <label className="block text-xs font-medium text-zinc-500">Source type</label>
             <select
               value={sourceType}
-              onChange={(e) => setSourceType(e.target.value)}
+              onChange={(e) => handleSourceTypeChange(e.target.value)}
               className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none"
             >
               <option value="postgresql">PostgreSQL</option>
@@ -411,6 +433,8 @@ export function ConnectionWizard() {
                   tableName={tableName}
                   schemaColumns={table?.columns ?? []}
                   detectedCursorColumn={table?.detected_cursor_column ?? null}
+                  supportsCdc={supportsCdc}
+                  sourceType={sourceType}
                   value={policy}
                   onChange={(p) => updatePolicy(tableName, p)}
                 />

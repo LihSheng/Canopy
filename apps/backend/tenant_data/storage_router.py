@@ -59,10 +59,12 @@ class StorageRouter:
         return tenant_session_factory()
 
     def set_tenant_context(self, db_session: Session, tenant_id: str) -> None:
-        db_session.execute(
-            text("SELECT set_config('app.current_tenant_id', :tid, true)"),
-            {"tid": tenant_id},
-        )
+        dialect_name = db_session.bind.dialect.name if db_session.bind else ""
+        if dialect_name == "postgresql":
+            db_session.execute(
+                text("SELECT set_config('app.current_tenant_id', :tid, true)"),
+                {"tid": tenant_id},
+            )
 
     @contextmanager
     def route_transaction(self, tenant_id: str):

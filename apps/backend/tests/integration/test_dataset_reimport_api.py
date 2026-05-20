@@ -37,11 +37,14 @@ def test_reimport_dataset_version_api(client: TestClient, auth_headers, monkeypa
         _make_xlsx_bytes([["name", "amount"], ["Alice", 100]]),
         "Reimport Project", "Reimport Conn", "Reimport Dataset",
     )
+
+    csv_path = tmp_path / "new.csv"
+    csv_path.write_text("name,amount\nAlice,100\n", encoding="utf-8")
     
     # Act: Reimport
     resp = client.post(
         f"/api/datasets/{dataset_id}/reimport",
-        json={"data_path": "/tmp/new.csv", "columns": ["name", "amount", "new_col"]},
+        json={"data_path": str(csv_path), "columns": ["name", "amount", "new_col"]},
         headers=auth_headers,
     )
     
@@ -53,3 +56,12 @@ def test_reimport_dataset_version_api(client: TestClient, auth_headers, monkeypa
     
     dataset_resp = client.get(f"/api/datasets/{dataset_id}", headers=auth_headers)
     assert dataset_resp.json()["active_version_id"] == data["id"]
+
+    preview_resp = client.get(
+        f"/api/datasets/{dataset_id}/preview?page=1&page_size=100",
+        headers=auth_headers,
+    )
+    assert preview_resp.status_code == 200
+    preview = preview_resp.json()
+    assert preview["columns"] == ["name", "amount"]
+    assert preview["rows"] == [["Alice", "100"]]

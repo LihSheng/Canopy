@@ -51,6 +51,18 @@ class ConnectionRepository:
         self._db.refresh(model)
         return self._to_domain(model)
 
+    def update_config(self, id: str, config_json: dict) -> Connection | None:
+        model = self._db.query(ConnectionModel).filter(ConnectionModel.id == id).first()
+        if model is None:
+            return None
+        # Merge dict to preserve other configurations
+        current_config = dict(model.config_json or {})
+        current_config.update(config_json)
+        model.config_json = current_config
+        self._db.commit()
+        self._db.refresh(model)
+        return self._to_domain(model)
+
     def count_active_datasets(self, connection_id: str) -> int:
         return (
             self._db.query(DatasetModel)
@@ -76,7 +88,13 @@ class ConnectionRepository:
         return True
 
     def _to_model(self, d: Connection) -> ConnectionModel:
-        return ConnectionModel(**{k: getattr(d, k) for k in d.__dataclass_fields__})
+        # Only persist columns that exist in the current control-plane schema.
+        payload = {
+            key: getattr(d, key)
+            for key in ConnectionModel.__table__.columns.keys()
+            if getattr(d, key) is not None
+        }
+        return ConnectionModel(**payload)
 
     def _to_domain(self, m: ConnectionModel) -> Connection:
         return Connection(**{c.name: getattr(m, c.name) for c in m.__table__.columns})
