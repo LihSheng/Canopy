@@ -188,10 +188,11 @@ export function reimportDatasetVersion(
   datasetId: string,
   data_path: string,
   columns: string[],
+  sheet_name?: string,
 ): Promise<DatasetVersion> {
   return request<DatasetVersion>(`/api/datasets/${datasetId}/reimport`, {
     method: "POST",
-    body: JSON.stringify({ data_path, columns }),
+    body: JSON.stringify({ data_path, columns, sheet_name }),
   });
 }
 

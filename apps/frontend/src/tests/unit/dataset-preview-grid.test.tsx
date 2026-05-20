@@ -94,6 +94,7 @@ describe("DatasetPreviewGrid", () => {
 
     expect(screen.getByTestId("glide-grid")).toBeInTheDocument();
     const grid_props = data_editor_mock.mock.calls[0][0] as {
+      className: string;
       columns: Array<{ title: string; width: number }>;
       rows: number;
       rowMarkers: { kind: string; startIndex: number };
@@ -103,8 +104,11 @@ describe("DatasetPreviewGrid", () => {
       keybindings: { search: boolean };
     };
 
+    expect(grid_props.className).toBe("h-full w-full");
     expect(grid_props.rows).toBe(2);
     expect(grid_props.columns.map((column) => column.title)).toEqual(columns);
+    expect(grid_props.columns[0].width).toBeGreaterThan(0);
+    expect(grid_props.columns[1].width).toBeGreaterThan(0);
     expect(grid_props.rowMarkers).toEqual({ kind: "number", startIndex: 1 });
     expect(grid_props.getCellContent([0, 0]).displayData).toBe("Alice");
     expect(grid_props.getCellContent([1, 1]).displayData).toBe("200");

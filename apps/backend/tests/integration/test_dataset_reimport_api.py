@@ -38,13 +38,25 @@ def test_reimport_dataset_version_api(client: TestClient, auth_headers, monkeypa
         "Reimport Project", "Reimport Conn", "Reimport Dataset",
     )
 
-    csv_path = tmp_path / "new.csv"
-    csv_path.write_text("name,amount\nAlice,100\n", encoding="utf-8")
+    workbook = openpyxl.Workbook()
+    cover = workbook.active
+    cover.title = "Cover"
+    cover.append(["note"])
+    payroll = workbook.create_sheet("Payroll")
+    payroll.append(["name", "amount"])
+    payroll.append(["Alice", 100])
+    xlsx_path = tmp_path / "new.xlsx"
+    workbook.save(xlsx_path)
+    workbook.close()
     
     # Act: Reimport
     resp = client.post(
         f"/api/datasets/{dataset_id}/reimport",
-        json={"data_path": str(csv_path), "columns": ["name", "amount", "new_col"]},
+        json={
+            "data_path": str(xlsx_path),
+            "columns": ["name", "amount", "new_col"],
+            "sheet_name": "Payroll",
+        },
         headers=auth_headers,
     )
     
@@ -64,4 +76,4 @@ def test_reimport_dataset_version_api(client: TestClient, auth_headers, monkeypa
     assert preview_resp.status_code == 200
     preview = preview_resp.json()
     assert preview["columns"] == ["name", "amount"]
-    assert preview["rows"] == [["Alice", "100"]]
+    assert preview["rows"] == [["Alice", 100]]

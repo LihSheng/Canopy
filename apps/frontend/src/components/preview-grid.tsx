@@ -33,10 +33,12 @@ function formatCellValue(value: string | number | boolean | null): GridCell {
 }
 
 function buildGridColumns(columns: string[]): GridColumn[] {
-  return columns.map((column_name) => ({
+  return columns.map((column_name, column_index) => ({
     id: column_name,
     title: column_name,
-    width: Math.max(160, Math.min(320, column_name.length * 12 + 48)),
+    ...(column_index === columns.length - 1
+      ? { grow: 1 }
+      : { width: Math.max(160, Math.min(320, column_name.length * 12 + 48)) }),
   }));
 }
 

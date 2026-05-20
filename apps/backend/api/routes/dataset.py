@@ -40,6 +40,7 @@ class CreateVersionRequest(BaseModel):
 class ReimportRequest(BaseModel):
     data_path: str
     columns: list[str]
+    sheet_name: str | None = None
 
 
 class SyncPolicyUpdateRequest(BaseModel):
@@ -244,7 +245,10 @@ def reimport_dataset_version(
     dataset_repo = DatasetRepository(db)
     service = DatasetVersionService(version_repo, dataset_repo)
     return service.reimport_version(
-        dataset_id=id, data_path=body.data_path, columns=body.columns
+        dataset_id=id,
+        data_path=body.data_path,
+        columns=body.columns,
+        sheet_name=body.sheet_name,
     )
 
 

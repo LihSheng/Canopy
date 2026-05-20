@@ -7,6 +7,7 @@ from common.errors import NotFoundError, ValidationError
 from dataset.domain import Dataset, DatasetVersion, DatasetStatus, DatasetVersionStatus
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from connection._shared import storage_root
+from connection.preview import build_sheet_profiles
 from connection.materialization import materialize_dataset_version
 from run.repository import RunRepository
 
@@ -225,7 +226,13 @@ class DatasetVersionService:
 
         return {"deleted": True, "id": version_id}
 
-    def reimport_version(self, dataset_id: str, data_path: str, columns: list[str]) -> DatasetVersion:
+    def reimport_version(
+        self,
+        dataset_id: str,
+        data_path: str,
+        columns: list[str],
+        sheet_name: str | None = None,
+    ) -> DatasetVersion:
         dataset = self._dataset_repo.get(dataset_id)
         if dataset is None:
             raise NotFoundError("Dataset not found")
@@ -233,9 +240,14 @@ class DatasetVersionService:
         existing = self._repo.list_by_dataset(dataset_id)
         next_number = (existing[0].version_number + 1) if existing else 1
         now = datetime.now(UTC)
+        resolved_sheet_name = self._resolve_reimport_sheet_name(
+            Path(data_path),
+            sheet_name,
+            dataset.source_object_name or dataset.name,
+        )
         storage_path, row_count, column_count = materialize_dataset_version(
             Path(data_path),
-            dataset.source_object_name or dataset.name,
+            resolved_sheet_name,
             dataset_id,
         )
         new_version = DatasetVersion(
@@ -253,6 +265,36 @@ class DatasetVersionService:
         saved = self._repo.save(new_version)
         self._dataset_repo.update_active_version(dataset_id, saved.id)
         return saved
+
+    def _resolve_reimport_sheet_name(
+        self,
+        data_path: Path,
+        requested_sheet_name: str | None,
+        default_sheet_name: str,
+    ) -> str:
+        profiles = build_sheet_profiles(data_path)
+        if not profiles:
+            return requested_sheet_name or default_sheet_name
+
+        if requested_sheet_name:
+            requested_profile = next(
+                (profile for profile in profiles if profile["sheet_name"] == requested_sheet_name),
+                None,
+            )
+            if requested_profile and requested_profile.get("data_row_count", 0) > 0:
+                return requested_sheet_name
+
+        populated_profile = next(
+            (profile for profile in profiles if profile.get("data_row_count", 0) > 0),
+            None,
+        )
+        if populated_profile:
+            return str(populated_profile["sheet_name"])
+
+        if requested_sheet_name and any(profile["sheet_name"] == requested_sheet_name for profile in profiles):
+            return requested_sheet_name
+
+        return str(profiles[0]["sheet_name"])
 
     def mark_version_failed(self, version_id: str, reason: str) -> DatasetVersion | None:
         version = self._repo.get(version_id)

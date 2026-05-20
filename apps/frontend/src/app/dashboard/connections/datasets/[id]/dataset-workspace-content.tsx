@@ -69,7 +69,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
   const [connection, setConnection] = useState<Connection | null>(null);
   const [preview, setPreview] = useState<DatasetPreviewResponse | null>(null);
   const [previewPage, setPreviewPage] = useState(1);
-  const [previewPageSize] = useState(100);
+  const previewPageSize = 25;
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [versions, setVersions] = useState<DatasetVersion[]>([]);
@@ -109,7 +109,9 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
     setActionError(null);
     try {
       const staticPreview = await previewStaticFile(file, "static_file");
-      const firstSheet = staticPreview.sheet_profiles[0];
+      const firstSheet =
+        staticPreview.sheet_profiles.find((sheet) => sheet.data_row_count > 0) ??
+        staticPreview.sheet_profiles[0];
       if (!firstSheet) {
         throw new Error("No sheets found in the file");
       }
@@ -117,6 +119,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
         datasetId,
         staticPreview.source_file_path,
         firstSheet.preview_columns,
+        firstSheet.sheet_name,
       );
       toast.success(
         "New version uploaded",
@@ -366,7 +369,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
         )}
 
         {activeTab === "Preview" && (
-          <div className="space-y-3">
+          <div className="flex min-h-0 flex-col gap-3">
             <span className="inline-block rounded-full border border-zinc-300 bg-zinc-50 px-2.5 py-0.5 text-xs font-medium text-zinc-500">
               Read only
             </span>

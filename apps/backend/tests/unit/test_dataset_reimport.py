@@ -1,7 +1,9 @@
 import uuid
+import io
 from pathlib import Path
 
 import pytest
+import openpyxl
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from common.database import Base
@@ -98,6 +100,102 @@ class TestDatasetReimportService:
             assert preview["columns"] == ["name", "amount"]
             assert preview["rows"] == [["Alice", "100"]]
             assert preview["total_row_count"] == 1
+        finally:
+            session.close()
+
+    def test_reimport_uses_explicit_sheet_name_for_workbooks(self, tmp_path):
+        session = _make_sqlite_session()
+        try:
+            version_repo = DatasetVersionRepository(session)
+            dataset_repo = DatasetRepository(session)
+            service = DatasetVersionService(version_repo, dataset_repo)
+
+            ds_id = str(uuid.uuid4())
+            dataset = Dataset(
+                id=ds_id,
+                project_id="p1",
+                connection_id="c1",
+                name="payroll",
+                source_object_name="Payroll",
+                status=DatasetStatus.ACTIVE.value,
+            )
+            dataset_repo.save(dataset)
+
+            workbook = openpyxl.Workbook()
+            first = workbook.active
+            first.title = "Cover"
+            first.append(["note"])
+            payroll = workbook.create_sheet("Payroll")
+            payroll.append(["name", "amount"])
+            payroll.append(["Alice", 100])
+
+            buffer = io.BytesIO()
+            workbook.save(buffer)
+            workbook.close()
+
+            xlsx_path = tmp_path / "payload.xlsx"
+            xlsx_path.write_bytes(buffer.getvalue())
+
+            new_version = service.reimport_version(
+                ds_id,
+                data_path=str(xlsx_path),
+                columns=["name", "amount"],
+                sheet_name="Payroll",
+            )
+
+            assert new_version.row_count == 1
+            assert new_version.column_count == 2
+            preview = read_dataset_preview(new_version.storage_path)
+            assert preview["columns"] == ["name", "amount"]
+            assert preview["rows"] == [["Alice", 100]]
+        finally:
+            session.close()
+
+    def test_reimport_falls_back_when_requested_sheet_is_missing(self, tmp_path):
+        session = _make_sqlite_session()
+        try:
+            version_repo = DatasetVersionRepository(session)
+            dataset_repo = DatasetRepository(session)
+            service = DatasetVersionService(version_repo, dataset_repo)
+
+            ds_id = str(uuid.uuid4())
+            dataset = Dataset(
+                id=ds_id,
+                project_id="p1",
+                connection_id="c1",
+                name="payroll",
+                source_object_name="Payroll",
+                status=DatasetStatus.ACTIVE.value,
+            )
+            dataset_repo.save(dataset)
+
+            workbook = openpyxl.Workbook()
+            cover = workbook.active
+            cover.title = "Cover"
+            cover.append(["note"])
+            payroll = workbook.create_sheet("Payroll")
+            payroll.append(["name", "amount"])
+            payroll.append(["Alice", 100])
+
+            buffer = io.BytesIO()
+            workbook.save(buffer)
+            workbook.close()
+
+            xlsx_path = tmp_path / "payload.xlsx"
+            xlsx_path.write_bytes(buffer.getvalue())
+
+            new_version = service.reimport_version(
+                ds_id,
+                data_path=str(xlsx_path),
+                columns=["name", "amount"],
+                sheet_name="MissingSheet",
+            )
+
+            assert new_version.row_count == 1
+            assert new_version.column_count == 2
+            preview = read_dataset_preview(new_version.storage_path)
+            assert preview["columns"] == ["name", "amount"]
+            assert preview["rows"] == [["Alice", 100]]
         finally:
             session.close()
 
