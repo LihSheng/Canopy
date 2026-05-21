@@ -4,11 +4,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from common.errors import NotFoundError, ValidationError
+from dataset.cleaning import clean_source_file
 from dataset.domain import Dataset, DatasetVersion, DatasetStatus, DatasetVersionStatus
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from connection._shared import storage_root
 from connection.preview import build_sheet_profiles
 from connection.materialization import materialize_dataset_version
+from connection.repository import ConnectionRepository
 from run.repository import RunRepository
 
 
@@ -42,7 +44,34 @@ class DatasetService:
             cursor_column=cursor_column,
             created_at=now,
         )
-        return self._repo.save(dataset)
+        dataset = self._repo.save(dataset)
+
+        connection = ConnectionRepository(self._repo._db).get(connection_id)
+        if connection is not None:
+            source_file_path = ConnectionRepository(self._repo._db).resolve_static_source_file_path(connection)
+            if connection.source_type == "static_file" and source_file_path:
+                result = clean_source_file(
+                    source_file_path=Path(source_file_path),
+                    sheet_name=source_object_name or name,
+                    dataset_id=dataset.id,
+                )
+                version = self._version_repo.save(
+                    DatasetVersion(
+                        id=str(uuid.uuid4()),
+                        dataset_id=dataset.id,
+                        run_id=None,
+                        version_number=1,
+                        status=DatasetVersionStatus.READY.value,
+                        row_count=result["row_count"],
+                        column_count=result["column_count"],
+                        storage_path=result["cleaned_path"],
+                        raw_storage_path=result["raw_path"],
+                        cleaning_issues=result["cleaning_issues"],
+                    ),
+                )
+                dataset = self._repo.update_active_version(dataset.id, version.id) or dataset
+
+        return dataset
 
     def get_dataset(self, id: str) -> Dataset | None:
         return self._repo.get(id)
@@ -161,6 +190,110 @@ class DatasetService:
 
         dataset.updated_at = datetime.now(UTC)
         return self._repo.save(dataset)
+
+    def _hydrate_dataset_version(self, dataset: Dataset) -> Dataset:
+        if dataset.active_version_id:
+            return dataset
+
+        latest_version = self._version_repo.get_latest_by_dataset(dataset.id)
+        if latest_version is not None:
+            return self._repo.update_active_version(dataset.id, latest_version.id) or dataset
+
+        connection = ConnectionRepository(self._repo._db).get(dataset.connection_id)
+        if connection is None:
+            return dataset
+
+        source_file_path = ConnectionRepository(self._repo._db).resolve_static_source_file_path(connection)
+        if connection.source_type != "static_file" or not source_file_path:
+            return dataset
+
+        result = clean_source_file(
+            source_file_path=Path(source_file_path),
+            sheet_name=dataset.source_object_name or dataset.name,
+            dataset_id=dataset.id,
+        )
+        version_number = 1
+        if latest_version is not None:
+            version_number = latest_version.version_number + 1
+
+        version = self._version_repo.save(
+            DatasetVersion(
+                id=str(uuid.uuid4()),
+                dataset_id=dataset.id,
+                run_id=None,
+                version_number=version_number,
+                status=DatasetVersionStatus.READY.value,
+                row_count=result["row_count"],
+                column_count=result["column_count"],
+                storage_path=result["cleaned_path"],
+                raw_storage_path=result["raw_path"],
+                cleaning_issues=result["cleaning_issues"],
+            ),
+        )
+        return self._repo.update_active_version(dataset.id, version.id) or dataset
+
+    def preview_dataset(
+        self,
+        id: str,
+        page: int = 1,
+        page_size: int = 100,
+        search: str = "",
+    ) -> dict:
+        dataset = self._repo.get(id)
+        if dataset is None:
+            raise NotFoundError("Dataset not found")
+
+        dataset = self._hydrate_dataset_version(dataset)
+
+        version = self._version_repo.get_active_version(id, dataset.active_version_id)
+        if version is None or not version.storage_path:
+            return {"columns": [], "rows": [], "total_row_count": 0, "filtered_row_count": 0, "page": page, "page_size": page_size}
+
+        from dataset.preview_service import read_dataset_preview
+
+        return read_dataset_preview(
+            storage_path=version.storage_path,
+            page=page,
+            page_size=page_size,
+            search=search or None,
+        )
+
+    def get_lineage(self, id: str) -> dict:
+        dataset = self._repo.get(id)
+        if dataset is None:
+            raise NotFoundError("Dataset not found")
+
+        runs = RunRepository(self._repo._db).list_by_dataset(id)
+        versions = self._version_repo.list_by_dataset(id)
+
+        connection = ConnectionRepository(self._repo._db).get(dataset.connection_id)
+
+        nodes: list[dict] = []
+        edges: list[dict] = []
+
+        if dataset.source_object_name:
+            nodes.append({"id": f"source_{id}", "type": "source_object", "label": dataset.source_object_name})
+
+        if connection is not None:
+            nodes.append({"id": f"connection_{dataset.connection_id}", "type": "connection", "label": connection.name})
+
+        nodes.append({"id": f"dataset_{id}", "type": "dataset", "label": dataset.name})
+
+        if dataset.source_object_name and connection is not None:
+            edges.append({"from": f"source_{id}", "to": f"connection_{dataset.connection_id}", "type": "feeds"})
+
+        if connection is not None:
+            edges.append({"from": f"connection_{dataset.connection_id}", "to": f"dataset_{id}", "type": "provides"})
+
+        for v in versions:
+            nodes.append({"id": f"version_{v.id}", "type": "version", "label": f"v{v.version_number}"})
+            edges.append({"from": f"version_{v.id}", "to": f"dataset_{id}", "type": "belongs_to"})
+
+        for r in runs:
+            nodes.append({"id": f"run_{r.id}", "type": "run", "label": r.status})
+            edges.append({"from": f"run_{r.id}", "to": f"dataset_{id}", "type": "produces"})
+
+        return {"nodes": nodes, "edges": edges}
 
 
 class DatasetVersionService:

@@ -1,3 +1,5 @@
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from connection.domain import Connection
@@ -78,6 +80,26 @@ class ConnectionRepository:
             .filter(RunModel.status.in_(["queued", "running"]))
             .count()
         )
+
+    def resolve_static_source_file_path(self, connection: Connection) -> str:
+        source_file_path = connection.config_json.get("source_file_path")
+        if isinstance(source_file_path, str) and source_file_path:
+            return source_file_path
+
+        upload_id = connection.config_json.get("upload_id")
+        if not isinstance(upload_id, str) or not upload_id:
+            return ""
+
+        try:
+            return (
+                self._db.execute(
+                    text("select storage_path from uploads where id = :upload_id"),
+                    {"upload_id": upload_id},
+                ).scalar_one_or_none()
+                or ""
+            )
+        except SQLAlchemyError:
+            return ""
 
     def delete(self, id: str) -> bool:
         model = self._db.query(ConnectionModel).filter(ConnectionModel.id == id).first()

@@ -7,13 +7,12 @@ from sqlalchemy.orm import sessionmaker
 
 pytestmark = pytest.mark.unit
 
-from api.routes.dataset import get_lineage
-from api.schemas.auth import SessionUser
 from common.database import Base
 from connection.domain import Connection
 from connection.repository import ConnectionRepository
 from dataset.domain import Dataset, DatasetVersion
 from dataset.repository import DatasetRepository, DatasetVersionRepository
+from dataset.service import DatasetService
 from ingestion.domain import (
     LineageEdgeType,
     LineageNodeType,
@@ -329,9 +328,6 @@ class TestBuildLineageGraph:
 
 
 class TestDatasetLineageHandler:
-    def _make_user(self):
-        return SessionUser(id="user-1", email="a@b.com", display_name="Test User")
-
     def test_includes_source_object_and_connection_nodes(self):
         session = _make_lineage_sqlite_session()
         try:
@@ -341,8 +337,7 @@ class TestDatasetLineageHandler:
             dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="sheet1")
             DatasetRepository(session).save(dataset)
 
-            user = self._make_user()
-            result = get_lineage(id="ds-1", db=session, user=user)
+            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
             node_types = {n["type"] for n in result["nodes"]}
             assert "source_object" in node_types
@@ -360,8 +355,7 @@ class TestDatasetLineageHandler:
             dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="sheet1")
             DatasetRepository(session).save(dataset)
 
-            user = self._make_user()
-            result = get_lineage(id="ds-1", db=session, user=user)
+            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
             source = [n for n in result["nodes"] if n["type"] == "source_object"][0]
             assert source["label"] == "sheet1"
@@ -377,8 +371,7 @@ class TestDatasetLineageHandler:
             dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="")
             DatasetRepository(session).save(dataset)
 
-            user = self._make_user()
-            result = get_lineage(id="ds-1", db=session, user=user)
+            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
             node_types = {n["type"] for n in result["nodes"]}
             assert "source_object" not in node_types
@@ -402,8 +395,7 @@ class TestDatasetLineageHandler:
             r = Run(id="run-1", project_id="proj-1", connection_id="conn-1", dataset_id="ds-1", status="completed")
             run_repo.save(r)
 
-            user = self._make_user()
-            result = get_lineage(id="ds-1", db=session, user=user)
+            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
             node_types = {n["type"] for n in result["nodes"]}
             assert node_types == {"source_object", "connection", "dataset", "version", "run"}
@@ -419,8 +411,7 @@ class TestDatasetLineageHandler:
             dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="tbl")
             DatasetRepository(session).save(dataset)
 
-            user = self._make_user()
-            result = get_lineage(id="ds-1", db=session, user=user)
+            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
             so_to_conn = [e for e in result["edges"] if e["from"].startswith("source_") and e["to"].startswith("connection_")]
             assert len(so_to_conn) == 1
@@ -437,8 +428,7 @@ class TestDatasetLineageHandler:
             dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs")
             DatasetRepository(session).save(dataset)
 
-            user = self._make_user()
-            result = get_lineage(id="ds-1", db=session, user=user)
+            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
             conn_to_ds = [e for e in result["edges"] if e["from"].startswith("connection_") and e["to"].startswith("dataset_")]
             assert len(conn_to_ds) == 1
@@ -459,8 +449,7 @@ class TestDatasetLineageHandler:
             version_repo.save(DatasetVersion(id="ver-1", dataset_id="ds-1", version_number=1))
             version_repo.save(DatasetVersion(id="ver-2", dataset_id="ds-1", version_number=2))
 
-            user = self._make_user()
-            result = get_lineage(id="ds-1", db=session, user=user)
+            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
             ver_to_ds = [e for e in result["edges"] if e["from"].startswith("version_") and e["to"].startswith("dataset_")]
             assert len(ver_to_ds) == 2
@@ -482,8 +471,7 @@ class TestDatasetLineageHandler:
             run_repo.save(Run(id="run-1", project_id="proj-1", connection_id="conn-1", dataset_id="ds-1", status="completed"))
             run_repo.save(Run(id="run-2", project_id="proj-1", connection_id="conn-1", dataset_id="ds-1", status="failed"))
 
-            user = self._make_user()
-            result = get_lineage(id="ds-1", db=session, user=user)
+            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
             run_to_ds = [e for e in result["edges"] if e["from"].startswith("run_") and e["to"].startswith("dataset_")]
             assert len(run_to_ds) == 2
@@ -504,8 +492,7 @@ class TestDatasetLineageHandler:
             version_repo = DatasetVersionRepository(session)
             version_repo.save(DatasetVersion(id="ver-1", dataset_id="ds-1", version_number=3))
 
-            user = self._make_user()
-            result = get_lineage(id="ds-1", db=session, user=user)
+            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
             version_nodes = [n for n in result["nodes"] if n["type"] == "version"]
             assert len(version_nodes) == 1
@@ -516,10 +503,9 @@ class TestDatasetLineageHandler:
     def test_dataset_not_found_raises_error(self):
         session = _make_lineage_sqlite_session()
         try:
-            user = self._make_user()
             from common.errors import NotFoundError
             with pytest.raises(NotFoundError, match="Dataset not found"):
-                get_lineage(id="no-such-ds", db=session, user=user)
+                DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("no-such-ds")
         finally:
             session.close()
 
@@ -529,8 +515,7 @@ class TestDatasetLineageHandler:
             dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="bad-conn", name="MyDs", source_object_name="tbl")
             DatasetRepository(session).save(dataset)
 
-            user = self._make_user()
-            result = get_lineage(id="ds-1", db=session, user=user)
+            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
             node_types = {n["type"] for n in result["nodes"]}
             assert "connection" not in node_types

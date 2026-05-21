@@ -163,6 +163,63 @@ class ConnectionService:
                 f"{active_datasets} active dataset(s), {active_runs} queued/running run(s)"
             )
 
+    def _decrypt_config(self, connection: Connection) -> dict:
+        from connection.secret_store import AesGcmSecretStore
+
+        store = AesGcmSecretStore()
+        config = dict(connection.config_json or {})
+        if "password" in config:
+            config["password"] = store.decrypt(config["password"])
+        return config
+
+    async def test_connection(self, id: str) -> dict:
+        connection = self._require_connection(id)
+        config = self._decrypt_config(connection)
+
+        from connection.database_adapter import get_adapter
+
+        adapter = get_adapter(connection.source_type)
+        result = await adapter.test_connection(config)
+
+        if result.get("success"):
+            self._repo.update_config(
+                id,
+                {
+                    "supports_cdc": result.get("supports_cdc", False),
+                    "cdc_parameters": result.get("cdc_parameters", {}),
+                },
+            )
+        return result
+
+    async def discover_tables(self, id: str) -> list[dict]:
+        connection = self._require_connection(id)
+        config = self._decrypt_config(connection)
+
+        from connection.database_adapter import get_adapter
+        from connection.cursor_detection import detect_cursor_column
+
+        adapter = get_adapter(connection.source_type)
+        tables = await adapter.discover_tables(config)
+
+        for table in tables:
+            table["detected_cursor_column"] = detect_cursor_column(table.get("columns", []))
+
+        return tables
+
+    async def preview_table(self, id: str, table: str) -> dict:
+        connection = self._require_connection(id)
+        config = self._decrypt_config(connection)
+
+        from connection.database_adapter import get_adapter
+        from connection.cursor_detection import detect_cursor_column
+
+        adapter = get_adapter(connection.source_type)
+        preview = await adapter.preview_table(config, table)
+
+        cursor = detect_cursor_column(preview.get("columns", []))
+        preview["detected_cursor_column"] = cursor
+        return preview
+
     def _record_event(self, connection: Connection, actor_user_id: str, event_type: str) -> None:
         if self._audit is None:
             return

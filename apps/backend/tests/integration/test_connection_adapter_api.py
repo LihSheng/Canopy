@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-# Patch at the route module where get_adapter is imported
-_ADAPTER_PATCH = "api.routes.connection.get_adapter"
+# Patch at the module where get_adapter is defined
+_ADAPTER_PATCH = "connection.database_adapter.get_adapter"
 
 # Ensure SecretStore has a key for the test environment
 _TEST_SECRET_KEY = "a1b2c3d4e5f6g7h8a1b2c3d4e5f6g7h8"
