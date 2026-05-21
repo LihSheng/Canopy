@@ -8,10 +8,10 @@ import openpyxl
 from common.config import settings
 from connection.importer import (
     build_sheet_profiles,
-    delete_uploaded_file,
     materialize_dataset_version,
     save_uploaded_file,
 )
+from connection.preview import delete_uploaded_file
 
 
 def _make_xlsx() -> bytes:
