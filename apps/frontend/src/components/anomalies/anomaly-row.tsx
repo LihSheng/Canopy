@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatPercent, getSeverityColor, getChangeBgColor } from "@/lib/formatters";
-import { buildAnomalyToDepartmentDetailLink } from "@/lib/navigation/anomaly-links";
+import { buildAnomalyToDepartmentDetailLink } from "@/lib/navigation/links";
 import type { TimeRangeKey } from "@/lib/navigation/time-range";
 import type { AnomalyListItem } from "./anomaly-mappers";
 

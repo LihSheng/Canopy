@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { DashboardAttentionItem } from "./dashboard-attention-item";
-import { buildDashboardToAnomaliesLink } from "@/lib/navigation/dashboard-links";
+import { buildDashboardToAnomaliesLink } from "@/lib/navigation/links";
 import type { TimeRangeKey } from "@/lib/navigation/time-range";
 import type { AttentionListItem } from "./dashboard-mappers";
 

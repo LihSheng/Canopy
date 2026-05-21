@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatPercent, getSeverityColor, getChangeBgColor } from "@/lib/formatters";
-import { buildDashboardToDepartmentDetailLink } from "@/lib/navigation/dashboard-links";
+import { buildDashboardToDepartmentDetailLink } from "@/lib/navigation/links";
 import type { TimeRangeKey } from "@/lib/navigation/time-range";
 import type { AttentionListItem } from "./dashboard-mappers";
 

@@ -1,7 +1,8 @@
 import pytest
 
 from analytics.domain import DashboardSummaryCache, MonthlyDepartmentSpend
-from analytics.repositories.analytics import AnalyticsRepository
+from analytics.repositories.spend import SpendRepository
+from analytics.repositories.dashboard_cache import DashboardCacheRepository
 from analytics.services.builder import run_aggregation_pipeline
 from ontology.schema import (
     DepartmentModel,
@@ -70,7 +71,7 @@ class TestAnalyticsPersistence:
             previous_month="2026-04",
         )
 
-        repo = AnalyticsRepository(db_session)
+        repo = SpendRepository(db_session)
         spends = repo.get_monthly_spends_for_month("2026-05")
         assert len(spends) == 2
 
@@ -91,7 +92,7 @@ class TestAnalyticsPersistence:
             previous_month="2026-04",
         )
 
-        repo = AnalyticsRepository(db_session)
+        repo = SpendRepository(db_session)
         spends = repo.get_employee_spends_for_department("d1", month="2026-05")
         assert len(spends) == 1
         assert spends[0].employee_id == "e1"
@@ -106,7 +107,7 @@ class TestAnalyticsPersistence:
             previous_month="2026-04",
         )
 
-        repo = AnalyticsRepository(db_session)
+        repo = SpendRepository(db_session)
         type_spends = repo.get_claim_type_spends(month="2026-05")
         assert len(type_spends) == 2
 
@@ -125,8 +126,8 @@ class TestAnalyticsPersistence:
             previous_month="2026-04",
         )
 
-        repo = AnalyticsRepository(db_session)
-        cache = repo.get_latest_summary_cache()
+        cache_repo = DashboardCacheRepository(db_session)
+        cache = cache_repo.get_latest_summary_cache()
         assert cache is not None
         assert cache.year == 2026
         assert cache.total_payroll > 0
@@ -139,10 +140,12 @@ class TestAnalyticsPersistence:
             previous_month="2026-04",
         )
 
-        repo = AnalyticsRepository(db_session)
-        repo.clear_snapshot(SNAPSHOT_ID)
+        spend_repo = SpendRepository(db_session)
+        cache_repo = DashboardCacheRepository(db_session)
+        spend_repo.clear_spends_for_snapshot(SNAPSHOT_ID)
+        cache_repo.clear_snapshot(SNAPSHOT_ID)
 
-        spends = repo.get_monthly_spends_for_month("2026-05")
+        spends = spend_repo.get_monthly_spends_for_month("2026-05")
         assert len(spends) == 0
 
     def test_pipeline_with_empty_data(self, db_session):
@@ -164,7 +167,7 @@ class TestAnalyticsPersistence:
             previous_month="2026-04",
         )
 
-        repo = AnalyticsRepository(db_session)
+        repo = SpendRepository(db_session)
         months = repo.get_distinct_months()
         assert months[0] == "2026-05"
         assert months[1] == "2026-04"
@@ -177,7 +180,7 @@ class TestAnalyticsPersistence:
             previous_month="2026-04",
         )
 
-        repo = AnalyticsRepository(db_session)
+        repo = SpendRepository(db_session)
         contributions = repo.get_employee_contributions("d1", month="2026-05")
         assert len(contributions) == 1
         assert contributions[0].employee_name == "Alice"
@@ -191,7 +194,7 @@ class TestAnalyticsPersistence:
             previous_month="2026-04",
         )
 
-        repo = AnalyticsRepository(db_session)
+        repo = SpendRepository(db_session)
         details = repo.get_claim_details(department_id="d1")
         assert len(details) == 2
         assert all(c.department_name == "Engineering" for c in details)
@@ -205,11 +208,11 @@ class TestAnalyticsPersistence:
             previous_month="2026-04",
         )
 
-        repo = AnalyticsRepository(db_session)
+        repo = SpendRepository(db_session)
         names = repo.get_department_map(SNAPSHOT_ID)
         assert names == {"d1": "Engineering", "d2": "Sales"}
 
     def test_department_map_without_filter(self, db_session, seed_analytics_ontology):
-        repo = AnalyticsRepository(db_session)
+        repo = SpendRepository(db_session)
         names = repo.get_department_map()
         assert len(names) == 2

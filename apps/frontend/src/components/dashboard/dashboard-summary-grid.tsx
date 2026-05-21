@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatCurrency } from "@/lib/formatters";
-import { buildDashboardToAnomaliesLink } from "@/lib/navigation/dashboard-links";
+import { buildDashboardToAnomaliesLink } from "@/lib/navigation/links";
 import type { TimeRangeKey } from "@/lib/navigation/time-range";
 import type { MetricCard } from "./dashboard-mappers";
 

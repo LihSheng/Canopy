@@ -3,13 +3,9 @@ import {
   buildDashboardToAnomaliesLink,
   buildDashboardToAnomaliesWithSeverityLink,
   buildDashboardToDepartmentDetailLink,
-} from "@/lib/navigation/dashboard-links";
-import {
   buildAnomalyToDepartmentDetailLink,
-} from "@/lib/navigation/anomaly-links";
-import {
   buildDepartmentToAnomaliesLink,
-} from "@/lib/navigation/department-links";
+} from "@/lib/navigation/links";
 
 describe("dashboard-links", () => {
   describe("buildDashboardToAnomaliesLink", () => {

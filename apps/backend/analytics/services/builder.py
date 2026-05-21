@@ -19,7 +19,8 @@ from analytics.aggregators.payroll import (
     aggregate_payroll_by_employee,
 )
 from analytics.domain import DashboardSummaryCache, DepartmentRanking, MonthlyDepartmentSpend
-from analytics.repositories.analytics import AnalyticsRepository
+from analytics.repositories.spend import SpendRepository
+from analytics.repositories.dashboard_cache import DashboardCacheRepository
 from common.clock import utcnow
 from ontology.schema import ExpenseClaimModel, PayrollExpenseModel
 
@@ -31,8 +32,10 @@ def run_aggregation_pipeline(
     previous_month: str,
     anomaly_count: int = 0,
 ) -> DashboardSummaryCache:
-    repo = AnalyticsRepository(db)
-    repo.clear_snapshot(snapshot_id)
+    spend_repo = SpendRepository(db)
+    cache_repo = DashboardCacheRepository(db)
+    spend_repo.clear_spends_for_snapshot(snapshot_id)
+    cache_repo.clear_snapshot(snapshot_id)
 
     payroll_rows = _read_payroll_rows(db, snapshot_id)
     claim_rows = _read_claim_rows(db, snapshot_id)
@@ -41,36 +44,36 @@ def run_aggregation_pipeline(
     claim_dept_spends = aggregate_claims_by_department(snapshot_id, claim_rows)
     merged_dept_spends = merge_department_spend(snapshot_id, payroll_dept_spends, claim_dept_spends)
 
-    repo.save_department_spends(merged_dept_spends)
+    spend_repo.save_department_spends(merged_dept_spends)
 
     payroll_emp = aggregate_payroll_by_employee(snapshot_id, payroll_rows)
     claim_emp = aggregate_claims_by_employee(snapshot_id, claim_rows)
     merged_emp_spends = merge_employee_spend(snapshot_id, payroll_emp, claim_emp)
-    repo.save_employee_spends(merged_emp_spends)
+    spend_repo.save_employee_spends(merged_emp_spends)
 
     claim_type_spends = aggregate_claims_by_type(snapshot_id, claim_rows)
-    repo.save_claim_type_spends(claim_type_spends)
+    spend_repo.save_claim_type_spends(claim_type_spends)
 
     summary = _build_summary(
-        repo=repo,
+        spend_repo=spend_repo,
         snapshot_id=snapshot_id,
         merged_spends=merged_dept_spends,
         current_month=current_month,
         anomaly_count=anomaly_count,
     )
-    repo.save_summary_cache(summary)
+    cache_repo.save_summary_cache(summary)
 
     return summary
 
 
 def _build_summary(
-    repo: AnalyticsRepository,
+    spend_repo: SpendRepository,
     snapshot_id: str,
     merged_spends: list[MonthlyDepartmentSpend],
     current_month: str,
     anomaly_count: int,
 ) -> DashboardSummaryCache:
-    dept_count = repo.get_department_count_for_snapshot(snapshot_id)
+    dept_count = spend_repo.get_department_count_for_snapshot(snapshot_id)
 
     total_payroll = sum(s.payroll_total for s in merged_spends if s.month == current_month)
     total_claims = sum(s.claims_total for s in merged_spends if s.month == current_month)

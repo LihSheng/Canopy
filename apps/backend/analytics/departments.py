@@ -13,7 +13,7 @@ from analytics.domain import (
     EmployeeContribution,
     MonthlyTrend,
 )
-from analytics.repositories.analytics import AnalyticsRepository
+from analytics.repositories.spend import SpendRepository
 
 
 def get_departments(
@@ -21,7 +21,7 @@ def get_departments(
     sort_by: str | None = None,
     snapshot_id: str | None = None,
 ) -> list[DepartmentSummary]:
-    repo = AnalyticsRepository(db)
+    repo = SpendRepository(db)
     months = repo.get_distinct_months(snapshot_id=snapshot_id)
 
     if not months:
@@ -71,7 +71,7 @@ def get_departments(
 
 
 def get_department(db: Session, department_id: str) -> DepartmentDetail | None:
-    repo = AnalyticsRepository(db)
+    repo = SpendRepository(db)
     months = repo.get_distinct_months()
     snapshot_id = repo.get_snapshot_id_from_aggregates() or ""
     names = repo.get_department_map(snapshot_id)
@@ -125,7 +125,7 @@ def get_department(db: Session, department_id: str) -> DepartmentDetail | None:
 def get_department_employees(
     db: Session, department_id: str
 ) -> list[EmployeeContribution]:
-    repo = AnalyticsRepository(db)
+    repo = SpendRepository(db)
     months = repo.get_distinct_months()
 
     if not months:
@@ -150,7 +150,7 @@ def get_department_employees(
 def get_department_trends(
     db: Session, department_id: str
 ) -> list[MonthlyTrend]:
-    repo = AnalyticsRepository(db)
+    repo = SpendRepository(db)
     spends = repo.get_monthly_spends_for_department(department_id)
 
     return [
@@ -167,7 +167,7 @@ def get_department_trends(
 def get_department_claim_types(
     db: Session, department_id: str
 ) -> list[DepartmentClaimType]:
-    repo = AnalyticsRepository(db)
+    repo = SpendRepository(db)
     months = repo.get_distinct_months()
 
     if not months:
@@ -189,7 +189,7 @@ def get_department_claim_types(
 def get_claims(
     db: Session, department_id: str | None = None
 ) -> list[ClaimDetail]:
-    repo = AnalyticsRepository(db)
+    repo = SpendRepository(db)
     details = repo.get_claim_details(department_id=department_id)
 
     return [

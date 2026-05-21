@@ -13,7 +13,7 @@ import { DepartmentContributorsSplit, DepartmentContributorsSplitSkeleton } from
 import { mapDepartmentDetailView } from "./department-detail-mappers";
 import type { DepartmentDetailView } from "./department-detail-mappers";
 import { readDepartmentDetailState } from "@/lib/navigation/route-state";
-import { buildDepartmentToAnomaliesLink } from "@/lib/navigation/department-links";
+import { buildDepartmentToAnomaliesLink } from "@/lib/navigation/links";
 import { TIME_RANGE_LABELS, type TimeRangeKey } from "@/lib/navigation/time-range";
 import { request } from "@/lib/api/client";
 import {
