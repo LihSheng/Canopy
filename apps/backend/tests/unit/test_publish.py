@@ -1,17 +1,13 @@
 import uuid
-from datetime import UTC, datetime
 
 import pytest
 
 from ingestion.domain import (
     CleanedSnapshot,
-    CleanedSnapshotStatus,
     MappingDecision,
     PublishRecord,
     PublishStatus,
-    PublishValidationResult,
     TemplateVersion,
-    TemplateVersionState,
     UploadRecord,
     UploadStatus,
 )
@@ -277,6 +273,7 @@ class TestActivatePublish:
 
     def test_history_ordered_newest_first(self):
         import time
+
         repo = FakeRepo()
         r1 = activate_publish(repo, "upload-1", "snap-1", "ver-1")
         time.sleep(0.01)
@@ -290,4 +287,3 @@ class TestActivatePublish:
         repo = FakeRepo()
         repo.deactivate_publish("nonexistent")
         assert len(repo.records) == 0
-

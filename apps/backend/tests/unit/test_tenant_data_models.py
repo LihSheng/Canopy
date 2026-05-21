@@ -2,8 +2,7 @@ import pytest
 from sqlalchemy.orm import sessionmaker
 
 from tenant_data.base import TenantDataBase
-from tenant_data.schemas.raw import UploadBatchModel, RawArtifactModel
-from tenant_data.schemas.staging import NormalizedRowModel
+from tenant_data.schemas.__all_models__ import __all__ as all_model_names
 from tenant_data.schemas.clean import CleanedRecordModel, DerivedReadModel
 from tenant_data.schemas.metadata import (
     JobRunModel,
@@ -12,7 +11,8 @@ from tenant_data.schemas.metadata import (
     PublishStateModel,
     StorageObjectModel,
 )
-from tenant_data.schemas.__all_models__ import __all__ as all_model_names
+from tenant_data.schemas.raw import RawArtifactModel, UploadBatchModel
+from tenant_data.schemas.staging import NormalizedRowModel
 
 ALL_TENANT_DATA_MODELS = [
     UploadBatchModel,
@@ -48,36 +48,29 @@ def td_session(td_engine):
 class TestTenantDataBaseIsSeparate:
     def test_tenant_data_base_is_not_common_base(self):
         from common.database import Base
+
         assert TenantDataBase is not Base
         assert issubclass(TenantDataBase.mro()[0], object)
 
     def test_all_tenant_models_extend_tenant_data_base(self):
         for model in ALL_TENANT_DATA_MODELS:
-            assert issubclass(model, TenantDataBase), (
-                f"{model.__name__} does not extend TenantDataBase"
-            )
+            assert issubclass(model, TenantDataBase), f"{model.__name__} does not extend TenantDataBase"
 
 
 class TestEveryModelHasTenantId:
     def test_all_models_have_tenant_id(self):
         for model in ALL_TENANT_DATA_MODELS:
-            assert hasattr(model, "tenant_id"), (
-                f"{model.__name__} missing tenant_id"
-            )
+            assert hasattr(model, "tenant_id"), f"{model.__name__} missing tenant_id"
 
     def test_all_models_tenant_id_is_not_nullable(self):
         for model in ALL_TENANT_DATA_MODELS:
             col = model.__table__.columns["tenant_id"]
-            assert not col.nullable, (
-                f"{model.__name__}.tenant_id should be NOT NULL"
-            )
+            assert not col.nullable, f"{model.__name__}.tenant_id should be NOT NULL"
 
     def test_all_models_tenant_id_is_indexed(self):
         for model in ALL_TENANT_DATA_MODELS:
             col = model.__table__.columns["tenant_id"]
-            assert col.index is True, (
-                f"{model.__name__}.tenant_id should be indexed"
-            )
+            assert col.index is True, f"{model.__name__}.tenant_id should be indexed"
 
 
 class TestModelCreation:
@@ -274,7 +267,4 @@ class TestAllModelsExported:
     def test_all_model_names_match_implementation(self):
         expected = {m.__name__ for m in ALL_TENANT_DATA_MODELS}
         actual = set(all_model_names)
-        assert expected == actual, (
-            f"__all_models__ missing: {expected - actual}, extra: {actual - expected}"
-        )
-
+        assert expected == actual, f"__all_models__ missing: {expected - actual}, extra: {actual - expected}"

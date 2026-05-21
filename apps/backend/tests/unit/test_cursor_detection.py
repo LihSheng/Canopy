@@ -1,5 +1,4 @@
 """Tests for cursor column auto-detection service."""
-import pytest
 
 from connection.cursor_detection import detect_cursor_column
 
@@ -47,8 +46,14 @@ class TestDetectCursorColumn:
         assert detect_cursor_column(columns) == "updated_at"
 
     def test_handles_various_timestamp_type_names(self):
-        for ts_type in ("timestamp", "timestamptz", "timestamp without time zone",
-                        "timestamp with time zone", "datetime", "date"):
+        for ts_type in (
+            "timestamp",
+            "timestamptz",
+            "timestamp without time zone",
+            "timestamp with time zone",
+            "datetime",
+            "date",
+        ):
             columns = [
                 {"name": "updated_at", "data_type": ts_type},
             ]

@@ -1,7 +1,4 @@
-import time
 from unittest.mock import MagicMock
-
-import pytest
 
 from cache.cache_store import CacheStore
 from cache.config_cache import ConfigCache
@@ -112,10 +109,12 @@ class TestRoutingCache:
         class MockSession:
             def close(self):
                 pass
+
             def query(self, model):
                 class MockQuery:
                     def filter(self, *args):
                         return self
+
                     def first(self):
                         return type(
                             "FakeTarget",
@@ -126,6 +125,7 @@ class TestRoutingCache:
                                 "tenant_id": "tenant-a",
                             },
                         )()
+
                 return MockQuery()
 
         store = CacheStore()
@@ -143,12 +143,15 @@ class TestRoutingCache:
         class MockSession:
             def close(self):
                 pass
+
             def query(self, model):
                 class MockQuery:
                     def filter(self, *args):
                         return self
+
                     def first(self):
                         return None
+
                 return MockQuery()
 
         store = CacheStore()
@@ -193,6 +196,7 @@ class TestConfigCache:
     def test_get_tenant_config_falls_back_to_repo(self):
         class FakeConfig:
             config_value_json = '{"max":100}'
+
         class MockRepo:
             def get_config(self, tenant_id, key):
                 return FakeConfig()
@@ -325,4 +329,3 @@ class TestCacheInvalidator:
         invalidator.on_schema_rollout()
         assert store.get("routing:tenant-a") is None
         assert store.get("routing:tenant-b") is None
-

@@ -11,14 +11,9 @@ def generate_tenant_prefix(tenant_id: str) -> str:
     return f"tenants/{tenant_id}"
 
 
-def generate_object_key(
-    tenant_id: str, data_category: str, filename: str, *, use_uuid_subdir: bool = True
-) -> str:
+def generate_object_key(tenant_id: str, data_category: str, filename: str, *, use_uuid_subdir: bool = True) -> str:
     if data_category not in _VALID_DATA_CATEGORIES:
-        raise ValueError(
-            f"Invalid data_category '{data_category}'. "
-            f"Must be one of: {sorted(_VALID_DATA_CATEGORIES)}"
-        )
+        raise ValueError(f"Invalid data_category '{data_category}'. Must be one of: {sorted(_VALID_DATA_CATEGORIES)}")
     if use_uuid_subdir:
         return f"tenants/{tenant_id}/{data_category}/{uuid4()}/{filename}"
     return f"tenants/{tenant_id}/{data_category}/{filename}"

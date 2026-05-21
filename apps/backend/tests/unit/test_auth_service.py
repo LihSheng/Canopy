@@ -134,6 +134,7 @@ class TestLogout:
 
     def test_logout_does_nothing(self):
         from unittest.mock import MagicMock
+
         from auth.service import AuthService
 
         service = AuthService(MagicMock())

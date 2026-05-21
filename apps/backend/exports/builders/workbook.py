@@ -9,7 +9,6 @@ from exports.builders.formatting import (
     apply_money_format,
     apply_pct_format,
     auto_width,
-    write_title_row,
 )
 from exports.domain import ExportPayload
 
@@ -63,9 +62,7 @@ def _build_summary_sheet(wb: Workbook, payload: ExportPayload) -> None:
     auto_width(ws, len(headers))
 
 
-def _build_departments_sheet(
-    wb: Workbook, departments: list
-) -> None:
+def _build_departments_sheet(wb: Workbook, departments: list) -> None:
     ws = wb.create_sheet(title="Departments")
     headers = ["Rank", "Department", "Total Spend", "Payroll", "Claims", "Change %"]
     _write_headers(ws, 1, headers)
@@ -86,9 +83,7 @@ def _build_departments_sheet(
     auto_width(ws, len(headers))
 
 
-def _build_anomalies_sheet(
-    wb: Workbook, anomalies: list
-) -> None:
+def _build_anomalies_sheet(wb: Workbook, anomalies: list) -> None:
     ws = wb.create_sheet(title="Anomalies")
     headers = ["Department", "Period", "Description", "Severity", "Change %"]
     _write_headers(ws, 1, headers)
@@ -106,9 +101,7 @@ def _build_anomalies_sheet(
     auto_width(ws, len(headers))
 
 
-def _build_trends_sheet(
-    wb: Workbook, trends: list
-) -> None:
+def _build_trends_sheet(wb: Workbook, trends: list) -> None:
     ws = wb.create_sheet(title="Monthly Trends")
     headers = ["Month", "Payroll", "Claims", "Total"]
     _write_headers(ws, 1, headers)

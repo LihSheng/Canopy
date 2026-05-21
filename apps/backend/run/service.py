@@ -33,4 +33,3 @@ class RunService:
 
     def list_runs_by_project(self, project_id: str) -> list[Run]:
         return self._repo.list_by_project(project_id)
-

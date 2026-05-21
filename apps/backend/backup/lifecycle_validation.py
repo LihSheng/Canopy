@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from control_plane.schemas.tenants import TenantModel
 
@@ -28,12 +28,9 @@ class LifecycleValidator:
         return errors
 
     @staticmethod
-    def is_restorable_from_archive(
-        tenant: TenantModel, archive_date: datetime, retention_days: int
-    ) -> bool:
-        now = datetime.now(timezone.utc)
+    def is_restorable_from_archive(tenant: TenantModel, archive_date: datetime, retention_days: int) -> bool:
+        now = datetime.now(UTC)
         if archive_date.tzinfo is None:
-            archive_date = archive_date.replace(tzinfo=timezone.utc)
+            archive_date = archive_date.replace(tzinfo=UTC)
         delta = now - archive_date
         return delta.days <= retention_days
-

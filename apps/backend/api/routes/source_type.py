@@ -16,4 +16,3 @@ def list_source_types(db: Session = Depends(get_db), user: SessionUser = Depends
     service = SourceTypeService(repo)
     service.ensure_seeded()
     return service.list_source_types()
-

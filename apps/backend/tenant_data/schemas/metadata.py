@@ -13,15 +13,11 @@ RLS_POLICY_NAME = "tenant_isolation"
 class LineageNodeModel(TenantDataBase):
     __tablename__ = "lineage_nodes"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     node_type: Mapped[str] = mapped_column(String(100), nullable=False)
     node_ref: Mapped[str] = mapped_column(String(500), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     @staticmethod
     def get_rls_policy_sql() -> str:
@@ -38,16 +34,12 @@ class LineageNodeModel(TenantDataBase):
 class LineageEdgeModel(TenantDataBase):
     __tablename__ = "lineage_edges"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     from_node_id: Mapped[str] = mapped_column(String(36), nullable=False)
     to_node_id: Mapped[str] = mapped_column(String(36), nullable=False)
     edge_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     @staticmethod
     def get_rls_policy_sql() -> str:
@@ -64,18 +56,12 @@ class LineageEdgeModel(TenantDataBase):
 class PublishStateModel(TenantDataBase):
     __tablename__ = "publish_states"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     binding_key: Mapped[str] = mapped_column(String(500), nullable=False)
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    published_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     @staticmethod
     def get_rls_policy_sql() -> str:
@@ -92,23 +78,15 @@ class PublishStateModel(TenantDataBase):
 class StorageObjectModel(TenantDataBase):
     __tablename__ = "storage_objects"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     storage_key: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
     checksum: Mapped[str | None] = mapped_column(String(128), nullable=True)
     mime_type: Mapped[str | None] = mapped_column(String(255), nullable=True)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    lifecycle_state: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="active"
-    )
-    retention_state: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="retained"
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    lifecycle_state: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+    retention_state: Mapped[str] = mapped_column(String(50), nullable=False, default="retained")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     @staticmethod
     def get_rls_policy_sql() -> str:
@@ -125,22 +103,14 @@ class StorageObjectModel(TenantDataBase):
 class JobRunModel(TenantDataBase):
     __tablename__ = "job_runs"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     job_type: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
-    started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    finished_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     @staticmethod
     def get_rls_policy_sql() -> str:
@@ -151,4 +121,3 @@ class JobRunModel(TenantDataBase):
             f"CREATE POLICY tenant_isolation ON {table} "
             "USING (tenant_id = current_setting('app.current_tenant_id')::uuid);"
         )
-

@@ -3,16 +3,13 @@ import uuid
 from sqlalchemy.orm import Session, joinedload
 
 from control_plane.schemas.memberships import TenantMembershipModel
-from control_plane.schemas.tenants import TenantModel
 
 
 class MembershipRepository:
     def __init__(self, db: Session):
         self._db = db
 
-    def add_member(
-        self, user_id: str, tenant_id: str, role: str = "member"
-    ) -> TenantMembershipModel:
+    def add_member(self, user_id: str, tenant_id: str, role: str = "member") -> TenantMembershipModel:
         membership = TenantMembershipModel(
             id=str(uuid.uuid4()),
             user_id=user_id,
@@ -37,9 +34,7 @@ class MembershipRepository:
             self._db.delete(membership)
             self._db.commit()
 
-    def get_membership(
-        self, user_id: str, tenant_id: str
-    ) -> TenantMembershipModel | None:
+    def get_membership(self, user_id: str, tenant_id: str) -> TenantMembershipModel | None:
         return (
             self._db.query(TenantMembershipModel)
             .filter(
@@ -58,15 +53,9 @@ class MembershipRepository:
         )
 
     def get_tenant_members(self, tenant_id: str) -> list[TenantMembershipModel]:
-        return (
-            self._db.query(TenantMembershipModel)
-            .filter(TenantMembershipModel.tenant_id == tenant_id)
-            .all()
-        )
+        return self._db.query(TenantMembershipModel).filter(TenantMembershipModel.tenant_id == tenant_id).all()
 
-    def update_role(
-        self, user_id: str, tenant_id: str, new_role: str
-    ) -> TenantMembershipModel:
+    def update_role(self, user_id: str, tenant_id: str, new_role: str) -> TenantMembershipModel:
         membership = (
             self._db.query(TenantMembershipModel)
             .filter(
@@ -81,4 +70,3 @@ class MembershipRepository:
         self._db.commit()
         self._db.refresh(membership)
         return membership
-

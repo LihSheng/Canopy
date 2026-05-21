@@ -1,10 +1,7 @@
 import time
-from unittest.mock import MagicMock
-
-import pytest
 
 from backup.backup_engine import BackupEngine
-from backup.domain import BackupRun, BackupStatus, BackupType, RestoreRun
+from backup.domain import BackupRun, BackupStatus, BackupType
 from backup.restore_engine import RestoreEngine
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
@@ -75,7 +72,7 @@ class TestRestoreValidatesTenantState:
 
 class TestRestoreRecordsAudit:
     def test_restore_records_audit_event(self, db_session, tmp_path):
-        tenant = _seed_tenant(db_session, "t-audit")
+        _seed_tenant(db_session, "t-audit")
         backup_engine, restore_engine = _make_engines(db_session, str(tmp_path))
 
         backup_run = backup_engine.create_backup("t-audit")
@@ -83,16 +80,12 @@ class TestRestoreRecordsAudit:
 
         backup_run = backup_engine.get_backup(backup_run.id)
         if backup_run and backup_run.status == BackupStatus.COMPLETED:
-            restore_run = restore_engine.create_restore("t-audit", backup_run.id)
+            restore_engine.create_restore("t-audit", backup_run.id)
             time.sleep(0.5)
 
             from control_plane.schemas.audit import AuditEventModel
 
-            events = (
-                db_session.query(AuditEventModel)
-                .filter(AuditEventModel.tenant_id == "t-audit")
-                .all()
-            )
+            events = db_session.query(AuditEventModel).filter(AuditEventModel.tenant_id == "t-audit").all()
             restored_events = [e for e in events if e.event_type == "tenant.restored"]
             assert len(restored_events) >= 1
 
@@ -159,4 +152,3 @@ class TestRestoreListAndGet:
     def test_get_restore_returns_none_for_missing(self, db_session, tmp_path):
         _, restore_engine = _make_engines(db_session, str(tmp_path))
         assert restore_engine.get_restore("nonexistent") is None
-

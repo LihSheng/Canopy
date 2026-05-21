@@ -55,4 +55,3 @@ DEFAULT_QUOTAS: dict[QuotaType, QuotaDefinition] = {
 
 def get_quota_definition(quota_type: QuotaType) -> QuotaDefinition:
     return DEFAULT_QUOTAS[quota_type]
-

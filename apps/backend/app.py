@@ -7,12 +7,17 @@ from fastapi.responses import JSONResponse
 from api.routes.anomalies import router as anomalies_router
 from api.routes.auth import router as auth_router
 from api.routes.claims import router as claims_router
+from api.routes.connection import router as connection_router
 from api.routes.dashboard import router as dashboard_router
+from api.routes.dataset import router as dataset_router
 from api.routes.departments import router as departments_router
 from api.routes.exports import router as exports_router
 from api.routes.health import router as health_router
 from api.routes.insights import router as insights_router
-from control_plane.admin_router import router as admin_router
+from api.routes.project import router as project_router
+from api.routes.refresh import router as refresh_router
+from api.routes.run import router as run_router
+from api.routes.source_type import router as source_type_router
 from cache.cache_store import CacheStore
 from cache.config_cache import ConfigCache
 from cache.hooks import (
@@ -20,15 +25,9 @@ from cache.hooks import (
 )
 from cache.invalidation import CacheInvalidator
 from cache.routing_cache import RoutingCache
-from api.routes.project import router as project_router
-from api.routes.source_type import router as source_type_router
-from api.routes.connection import router as connection_router
-from api.routes.dataset import router as dataset_router
-from api.routes.run import router as run_router
-from api.routes.refresh import router as refresh_router
-from common.database import init_db
-from common.database import session_factory
+from common.database import init_db, session_factory
 from common.errors import AppError
+from control_plane.admin_router import router as admin_router
 
 _cache_listeners_registered = False
 
@@ -47,14 +46,10 @@ def create_app() -> FastAPI:
 
             def handle_cache_event(event_type: str, tenant_id: str, **kwargs):
                 handlers = {
-                    "provisioned": lambda: invalidator.on_tenant_provisioned(
-                        tenant_id
-                    ),
+                    "provisioned": lambda: invalidator.on_tenant_provisioned(tenant_id),
                     "suspended": lambda: invalidator.on_tenant_suspended(tenant_id),
                     "restored": lambda: invalidator.on_tenant_restored(tenant_id),
-                    "config_changed": lambda: invalidator.on_tenant_config_changed(
-                        tenant_id, kwargs.get("key")
-                    ),
+                    "config_changed": lambda: invalidator.on_tenant_config_changed(tenant_id, kwargs.get("key")),
                     "database_rotation": lambda: invalidator.on_database_rotation(
                         tenant_id, kwargs.get("old_ref", ""), kwargs.get("new_ref", "")
                     ),
@@ -105,4 +100,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-

@@ -1,5 +1,4 @@
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font, PatternFill
 
 from exports.builders.formatting import (
     apply_data_row_style,
@@ -56,7 +55,7 @@ class TestFormattingHelpers:
 
         apply_money_format(ws, 1, 1)
 
-        assert ws.cell(row=1, column=1).number_format == '#,##0.00'
+        assert ws.cell(row=1, column=1).number_format == "#,##0.00"
 
     def test_apply_pct_format(self):
         wb = Workbook()

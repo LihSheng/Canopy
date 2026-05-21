@@ -99,31 +99,20 @@ class TestCleanRows:
         rows = [{"amount": "100"}, {"amount": "abc"}]
         result = clean_rows(rows)
         issues = result["issues"]
-        assert any(
-            i["type"] == "invalid_cell" and i["column"] == "amount"
-            for i in issues
-        )
+        assert any(i["type"] == "invalid_cell" and i["column"] == "amount" for i in issues)
 
     def test_flags_invalid_cells_in_date_column(self):
         rows = [{"dt": "2024-01-15"}, {"dt": "not-a-date"}]
         result = clean_rows(rows)
         issues = result["issues"]
-        assert any(
-            i["type"] == "invalid_cell"
-            and i["column"] == "dt"
-            and i["expected_type"] == "date"
-            for i in issues
-        )
+        assert any(i["type"] == "invalid_cell" and i["column"] == "dt" and i["expected_type"] == "date" for i in issues)
 
     def test_flags_invalid_cells_in_boolean_column(self):
         rows = [{"flag": "true"}, {"flag": "maybe"}]
         result = clean_rows(rows)
         issues = result["issues"]
         assert any(
-            i["type"] == "invalid_cell"
-            and i["column"] == "flag"
-            and i["expected_type"] == "boolean"
-            for i in issues
+            i["type"] == "invalid_cell" and i["column"] == "flag" and i["expected_type"] == "boolean" for i in issues
         )
 
     def test_empty_input_returns_empty_result(self):

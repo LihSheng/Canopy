@@ -32,8 +32,14 @@ class TestOntologyOrchestrator:
             patch("ontology.orchestration.service.PayrollMapper") as mock_pay_mapper,
         ):
             # Each mapper returns a MagicMock with entity_type and mapped/unresolved
-            for m in [mock_dept_mapper, mock_cc_mapper, mock_bc_mapper,
-                      mock_emp_mapper, mock_claim_mapper, mock_pay_mapper]:
+            for m in [
+                mock_dept_mapper,
+                mock_cc_mapper,
+                mock_bc_mapper,
+                mock_emp_mapper,
+                mock_claim_mapper,
+                mock_pay_mapper,
+            ]:
                 instance = MagicMock()
                 result = MagicMock()
                 result.entity_type = "unknown"
@@ -63,7 +69,15 @@ class TestOntologyOrchestrator:
 
     def test_persist_dispatches_by_entity_type(self):
         """lines 73-88: _persist routes to correct save method."""
-        from ontology.domain import Department, Employee, CostCenter, BudgetCode, ExpenseClaim, PayrollExpense, MappingResult
+        from ontology.domain import (
+            BudgetCode,
+            CostCenter,
+            Department,
+            Employee,
+            ExpenseClaim,
+            MappingResult,
+            PayrollExpense,
+        )
         from ontology.orchestration.service import OntologyOrchestrator
 
         mock_db = MagicMock()
@@ -97,7 +111,7 @@ class TestOntologyOrchestrator:
 
     def test_persist_with_unresolved_issues(self):
         """line 87-88: unresolved records are saved."""
-        from ontology.domain import UnresolvedRecord, MappingResult
+        from ontology.domain import MappingResult, UnresolvedRecord
         from ontology.orchestration.service import OntologyOrchestrator
 
         mock_db = MagicMock()
@@ -118,14 +132,16 @@ class TestAttributionResolverEdgeCases:
 
     def test_cost_center_with_mapped_code_returns_none(self):
         """lines 22-25: cost center exists and has a code -> returns None."""
-        from ontology.domain import MappingContext, CostCenter
+        from ontology.domain import CostCenter, MappingContext
         from ontology.mappers.attribution import AttributionResolver
 
         cc = CostCenter(
-            id="cc1", snapshot_id="s1",
+            id="cc1",
+            snapshot_id="s1",
             source_cost_center_key="CC01",
             source_lineage="{}",
-            code="CC01", name="R&D",
+            code="CC01",
+            name="R&D",
         )
         context = MappingContext(snapshot_id="s1", cost_centers={"CC01": cc})
 
@@ -168,12 +184,14 @@ class TestEmployeeMapperCostCenter:
     """Cover EmployeeMapper cost_center_id assignment (departments.py line 94)."""
 
     def test_employee_with_known_cost_center(self):
-        from ontology.domain import MappingContext, Department, CostCenter
+        from ontology.domain import CostCenter, Department, MappingContext
         from ontology.mappers.departments import EmployeeMapper
         from sync.domain import SourceEmployee
 
         dept = Department(id="d1", snapshot_id="s1", source_department_key="D001", source_lineage="{}", name="Eng")
-        cc = CostCenter(id="cc1", snapshot_id="s1", source_cost_center_key="CC01", source_lineage="{}", code="CC01", name="R&D")
+        cc = CostCenter(
+            id="cc1", snapshot_id="s1", source_cost_center_key="CC01", source_lineage="{}", code="CC01", name="R&D"
+        )
         context = MappingContext(
             snapshot_id="s1",
             departments={"D001": dept},
@@ -190,7 +208,7 @@ class TestEmployeeMapperCostCenter:
 
     def test_employee_with_unknown_cost_center(self):
         """line 93-94: cost_center_key not in context -> cost_center_id = None."""
-        from ontology.domain import MappingContext, Department
+        from ontology.domain import Department, MappingContext
         from ontology.mappers.departments import EmployeeMapper
         from sync.domain import SourceEmployee
 

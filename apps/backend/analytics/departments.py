@@ -122,9 +122,7 @@ def get_department(db: Session, department_id: str) -> DepartmentDetail | None:
     )
 
 
-def get_department_employees(
-    db: Session, department_id: str
-) -> list[EmployeeContribution]:
+def get_department_employees(db: Session, department_id: str) -> list[EmployeeContribution]:
     repo = SpendRepository(db)
     months = repo.get_distinct_months()
 
@@ -147,9 +145,7 @@ def get_department_employees(
     ]
 
 
-def get_department_trends(
-    db: Session, department_id: str
-) -> list[MonthlyTrend]:
+def get_department_trends(db: Session, department_id: str) -> list[MonthlyTrend]:
     repo = SpendRepository(db)
     spends = repo.get_monthly_spends_for_department(department_id)
 
@@ -164,9 +160,7 @@ def get_department_trends(
     ]
 
 
-def get_department_claim_types(
-    db: Session, department_id: str
-) -> list[DepartmentClaimType]:
+def get_department_claim_types(db: Session, department_id: str) -> list[DepartmentClaimType]:
     repo = SpendRepository(db)
     months = repo.get_distinct_months()
 
@@ -186,9 +180,7 @@ def get_department_claim_types(
     ]
 
 
-def get_claims(
-    db: Session, department_id: str | None = None
-) -> list[ClaimDetail]:
+def get_claims(db: Session, department_id: str | None = None) -> list[ClaimDetail]:
     repo = SpendRepository(db)
     details = repo.get_claim_details(department_id=department_id)
 

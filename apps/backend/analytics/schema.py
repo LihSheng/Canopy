@@ -10,9 +10,7 @@ from common.database import Base
 class MonthlyDepartmentSpendModel(Base):
     __tablename__ = "analytics_monthly_department_spend"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     snapshot_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     department_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     month: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
@@ -40,9 +38,7 @@ class MonthlyDepartmentSpendModel(Base):
 class MonthlyEmployeeSpendModel(Base):
     __tablename__ = "analytics_monthly_employee_spend"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     snapshot_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     employee_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     department_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
@@ -69,9 +65,7 @@ class MonthlyEmployeeSpendModel(Base):
 class MonthlyClaimTypeSpendModel(Base):
     __tablename__ = "analytics_monthly_claim_type_spend"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     snapshot_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     department_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     claim_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
@@ -91,9 +85,7 @@ class MonthlyClaimTypeSpendModel(Base):
 class DashboardSummaryCacheModel(Base):
     __tablename__ = "analytics_dashboard_summary_cache"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     snapshot_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     month: Mapped[int] = mapped_column(Integer, nullable=False)

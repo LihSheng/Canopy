@@ -1,8 +1,5 @@
 import pytest
 
-import uuid
-from datetime import datetime
-
 from ontology.domain import MappingContext
 from ontology.mappers import (
     BudgetCodeMapper,
@@ -24,11 +21,7 @@ class TestDepartmentMapper:
     def test_maps_single_department(self):
         mapper = DepartmentMapper()
         context = MappingContext(snapshot_id="snap-001")
-        source = [
-            SourceDepartment(
-                source_key="D001", name="Engineering", status="active"
-            )
-        ]
+        source = [SourceDepartment(source_key="D001", name="Engineering", status="active")]
 
         result = mapper.map(source, context)
 
@@ -86,9 +79,7 @@ class TestEmployeeMapper:
             source_lineage="{}",
             name="Engineering",
         )
-        context = MappingContext(
-            snapshot_id="snap-001", departments={"D001": dept}
-        )
+        context = MappingContext(snapshot_id="snap-001", departments={"D001": dept})
         source = [
             SourceEmployee(
                 source_key="E001",
@@ -138,9 +129,7 @@ class TestEmployeeMapper:
             source_lineage="{}",
             name="Marketing",
         )
-        context = MappingContext(
-            snapshot_id="snap-001", departments={"D002": dept}
-        )
+        context = MappingContext(snapshot_id="snap-001", departments={"D002": dept})
         source = [
             SourceEmployee(
                 source_key="E002",
@@ -160,11 +149,7 @@ class TestCostCenterMapper:
     def test_maps_single_cost_center(self):
         mapper = CostCenterMapper()
         context = MappingContext(snapshot_id="snap-001")
-        source = [
-            SourceCostCenter(
-                source_key="CC001", name="R&D", department_key="D001"
-            )
-        ]
+        source = [SourceCostCenter(source_key="CC001", name="R&D", department_key="D001")]
 
         result = mapper.map(source, context)
 
@@ -193,11 +178,7 @@ class TestBudgetCodeMapper:
     def test_maps_single_budget_code(self):
         mapper = BudgetCodeMapper()
         context = MappingContext(snapshot_id="snap-001")
-        source = [
-            SourceBudgetCode(
-                source_key="B001", name="Opex-IT", department_key="D001"
-            )
-        ]
+        source = [SourceBudgetCode(source_key="B001", name="Opex-IT", department_key="D001")]
 
         result = mapper.map(source, context)
 

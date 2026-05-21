@@ -1,7 +1,5 @@
 import pytest
 
-import uuid
-
 from analytics.aggregators.claims import (
     _extract_month,
     aggregate_claims_by_department,
@@ -111,9 +109,27 @@ class TestExtractMonth:
 class TestClaimsMonthlyAggregation:
     def test_groups_by_department_and_extracted_month(self):
         rows = [
-            {"employee_id": "e1", "department_id": "d1", "claim_date": "2026-01-15", "claim_type": "Travel", "amount": 500},
-            {"employee_id": "e2", "department_id": "d1", "claim_date": "2026-01-20", "claim_type": "Meals", "amount": 300},
-            {"employee_id": "e3", "department_id": "d2", "claim_date": "2026-02-01", "claim_type": "Travel", "amount": 400},
+            {
+                "employee_id": "e1",
+                "department_id": "d1",
+                "claim_date": "2026-01-15",
+                "claim_type": "Travel",
+                "amount": 500,
+            },
+            {
+                "employee_id": "e2",
+                "department_id": "d1",
+                "claim_date": "2026-01-20",
+                "claim_type": "Meals",
+                "amount": 300,
+            },
+            {
+                "employee_id": "e3",
+                "department_id": "d2",
+                "claim_date": "2026-02-01",
+                "claim_type": "Travel",
+                "amount": 400,
+            },
         ]
         results = aggregate_claims_by_department(SNAPSHOT_ID, rows)
 
@@ -133,8 +149,20 @@ class TestClaimsMonthlyAggregation:
 class TestClaimsEmployeeAggregation:
     def test_groups_by_employee_department_and_month(self):
         rows = [
-            {"employee_id": "e1", "department_id": "d1", "claim_date": "2026-01-15", "claim_type": "Travel", "amount": 500},
-            {"employee_id": "e1", "department_id": "d1", "claim_date": "2026-01-20", "claim_type": "Meals", "amount": 300},
+            {
+                "employee_id": "e1",
+                "department_id": "d1",
+                "claim_date": "2026-01-15",
+                "claim_type": "Travel",
+                "amount": 500,
+            },
+            {
+                "employee_id": "e1",
+                "department_id": "d1",
+                "claim_date": "2026-01-20",
+                "claim_type": "Meals",
+                "amount": 300,
+            },
         ]
         results = aggregate_claims_by_employee(SNAPSHOT_ID, rows)
         assert len(results) == 1
@@ -150,9 +178,27 @@ class TestClaimsEmployeeAggregation:
 class TestClaimTypeAggregation:
     def test_groups_by_type_and_department(self):
         rows = [
-            {"employee_id": "e1", "department_id": "d1", "claim_date": "2026-01-15", "claim_type": "Travel", "amount": 500},
-            {"employee_id": "e2", "department_id": "d2", "claim_date": "2026-01-20", "claim_type": "Travel", "amount": 300},
-            {"employee_id": "e3", "department_id": "d1", "claim_date": "2026-01-10", "claim_type": "Meals", "amount": 200},
+            {
+                "employee_id": "e1",
+                "department_id": "d1",
+                "claim_date": "2026-01-15",
+                "claim_type": "Travel",
+                "amount": 500,
+            },
+            {
+                "employee_id": "e2",
+                "department_id": "d2",
+                "claim_date": "2026-01-20",
+                "claim_type": "Travel",
+                "amount": 300,
+            },
+            {
+                "employee_id": "e3",
+                "department_id": "d1",
+                "claim_date": "2026-01-10",
+                "claim_type": "Meals",
+                "amount": 200,
+            },
         ]
         results = aggregate_claims_by_type(SNAPSHOT_ID, rows)
         assert len(results) == 3
@@ -169,8 +215,20 @@ class TestClaimTypeAggregation:
 
     def test_filtered_by_department(self):
         rows = [
-            {"employee_id": "e1", "department_id": "d1", "claim_date": "2026-01-15", "claim_type": "Travel", "amount": 500},
-            {"employee_id": "e2", "department_id": "d2", "claim_date": "2026-01-20", "claim_type": "Travel", "amount": 300},
+            {
+                "employee_id": "e1",
+                "department_id": "d1",
+                "claim_date": "2026-01-15",
+                "claim_type": "Travel",
+                "amount": 500,
+            },
+            {
+                "employee_id": "e2",
+                "department_id": "d2",
+                "claim_date": "2026-01-20",
+                "claim_type": "Travel",
+                "amount": 300,
+            },
         ]
         results = aggregate_claims_by_type(SNAPSHOT_ID, rows, department_id="d1")
         assert len(results) == 1
@@ -186,11 +244,23 @@ class TestClaimTypeAggregation:
 class TestDepartmentMerge:
     def test_merges_payroll_and_claims_by_dept_month(self):
         payroll = [
-            MonthlyDepartmentSpend(id="p1", snapshot_id=SNAPSHOT_ID, department_id="d1", month="2026-01", payroll_total=8000, total=8000),
-            MonthlyDepartmentSpend(id="p2", snapshot_id=SNAPSHOT_ID, department_id="d2", month="2026-01", payroll_total=4000, total=4000),
+            MonthlyDepartmentSpend(
+                id="p1", snapshot_id=SNAPSHOT_ID, department_id="d1", month="2026-01", payroll_total=8000, total=8000
+            ),
+            MonthlyDepartmentSpend(
+                id="p2", snapshot_id=SNAPSHOT_ID, department_id="d2", month="2026-01", payroll_total=4000, total=4000
+            ),
         ]
         claims = [
-            MonthlyDepartmentSpend(id="c1", snapshot_id=SNAPSHOT_ID, department_id="d1", month="2026-01", claims_total=800, total=800, claim_count=2),
+            MonthlyDepartmentSpend(
+                id="c1",
+                snapshot_id=SNAPSHOT_ID,
+                department_id="d1",
+                month="2026-01",
+                claims_total=800,
+                total=800,
+                claim_count=2,
+            ),
         ]
 
         merged = merge_department_spend(SNAPSHOT_ID, payroll, claims)
@@ -277,9 +347,33 @@ class TestMoMDeltas:
 class TestDepartmentRanking:
     def test_ranks_by_total_spend_descending(self):
         spends = [
-            MonthlyDepartmentSpend(id="a", snapshot_id=SNAPSHOT_ID, department_id="d1", month="2026-05", total=500, payroll_total=400, claims_total=100),
-            MonthlyDepartmentSpend(id="b", snapshot_id=SNAPSHOT_ID, department_id="d2", month="2026-05", total=1000, payroll_total=800, claims_total=200),
-            MonthlyDepartmentSpend(id="c", snapshot_id=SNAPSHOT_ID, department_id="d3", month="2026-05", total=750, payroll_total=600, claims_total=150),
+            MonthlyDepartmentSpend(
+                id="a",
+                snapshot_id=SNAPSHOT_ID,
+                department_id="d1",
+                month="2026-05",
+                total=500,
+                payroll_total=400,
+                claims_total=100,
+            ),
+            MonthlyDepartmentSpend(
+                id="b",
+                snapshot_id=SNAPSHOT_ID,
+                department_id="d2",
+                month="2026-05",
+                total=1000,
+                payroll_total=800,
+                claims_total=200,
+            ),
+            MonthlyDepartmentSpend(
+                id="c",
+                snapshot_id=SNAPSHOT_ID,
+                department_id="d3",
+                month="2026-05",
+                total=750,
+                payroll_total=600,
+                claims_total=150,
+            ),
         ]
         names = {"d1": "Eng", "d2": "Sales", "d3": "Marketing"}
         rankings = rank_departments(spends, "2026-05", names)
@@ -317,8 +411,12 @@ class TestAttachMoMDeltas:
             type("Ranking", (), {"department_id": "d2", "change_pct": 0.0})(),
         ]
         deltas = [
-            DepartmentMoMDelta(snapshot_id="", department_id="d1", current_month="", previous_month="", total_change_pct=15.5),
-            DepartmentMoMDelta(snapshot_id="", department_id="d2", current_month="", previous_month="", total_change_pct=-3.2),
+            DepartmentMoMDelta(
+                snapshot_id="", department_id="d1", current_month="", previous_month="", total_change_pct=15.5
+            ),
+            DepartmentMoMDelta(
+                snapshot_id="", department_id="d2", current_month="", previous_month="", total_change_pct=-3.2
+            ),
         ]
         result = attach_mom_deltas_to_rankings(rankings, deltas)
         assert result[0].change_pct == 15.5

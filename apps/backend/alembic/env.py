@@ -1,24 +1,23 @@
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
-
-from common.config import settings
-from common.database import Base
 
 # Import every schema module so ORM models register with Base.metadata.
 import analytics.schema  # noqa: F401
 import anomalies.schema  # noqa: F401
 import auth.schema  # noqa: F401
-import insights.schema  # noqa: F401
-import ontology.schema  # noqa: F401
-import refresh.schema  # noqa: F401
-import sync.schema  # noqa: F401
-import project.schema  # noqa: F401
-import source_type.schema  # noqa: F401
 import connection.schema  # noqa: F401
 import dataset.schema  # noqa: F401
+import insights.schema  # noqa: F401
+import ontology.schema  # noqa: F401
+import project.schema  # noqa: F401
+import refresh.schema  # noqa: F401
 import run.schema  # noqa: F401
+import source_type.schema  # noqa: F401
+import sync.schema  # noqa: F401
+from alembic import context
+from common.config import settings
+from common.database import Base
 
 config = context.config
 

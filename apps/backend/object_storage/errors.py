@@ -33,6 +33,4 @@ class ChecksumMismatchError(StorageError):
         self.key = key
         self.expected = expected
         self.actual = actual
-        super().__init__(
-            f"Checksum mismatch for '{key}': expected {expected}, got {actual}"
-        )
+        super().__init__(f"Checksum mismatch for '{key}': expected {expected}, got {actual}")

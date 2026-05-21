@@ -81,4 +81,3 @@ class TestProcessUpload:
                         dataset_type="payroll",
                     )
                     assert result.status == UploadStatus.uploaded
-

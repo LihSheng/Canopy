@@ -7,7 +7,7 @@ from quotas.domain import (
     QuotaType,
     QuotaUsage,
 )
-from quotas.registry import DEFAULT_QUOTAS, get_quota_definition
+from quotas.registry import get_quota_definition
 from quotas.usage_tracker import UsageTracker
 
 
@@ -15,16 +15,12 @@ class QuotaEvaluator:
     def __init__(self, config_repository=None):
         self._config_repository = config_repository
 
-    def get_tenant_quota(
-        self, tenant_id: str, quota_type: QuotaType
-    ) -> QuotaDefinition:
+    def get_tenant_quota(self, tenant_id: str, quota_type: QuotaType) -> QuotaDefinition:
         default = get_quota_definition(quota_type)
         if self._config_repository is None:
             return default
         try:
-            config = self._config_repository.get_config(
-                tenant_id, quota_type.value
-            )
+            config = self._config_repository.get_config(tenant_id, quota_type.value)
             if config is None:
                 return default
             data = json.loads(config.config_value_json)
@@ -32,9 +28,7 @@ class QuotaEvaluator:
                 quota_type=quota_type,
                 limit_type=LimitType(data.get("limit_type", default.limit_type.value)),
                 max_value=data.get("max_value", default.max_value),
-                warning_threshold_pct=data.get(
-                    "warning_threshold_pct", default.warning_threshold_pct
-                ),
+                warning_threshold_pct=data.get("warning_threshold_pct", default.warning_threshold_pct),
                 description=data.get("description", default.description),
             )
         except Exception:
@@ -91,8 +85,7 @@ class QuotaEvaluator:
             max_value=definition.max_value,
             warning_triggered=warning_triggered,
             message=(
-                f"Warning triggered for {quota_type.value}: "
-                f"{current_value}/{definition.max_value}"
+                f"Warning triggered for {quota_type.value}: {current_value}/{definition.max_value}"
                 if warning_triggered
                 else f"{quota_type.value}: {current_value}/{definition.max_value}"
             ),
@@ -120,9 +113,7 @@ class QuotaEvaluator:
             available=available,
         )
 
-    def get_all_quota_status(
-        self, tracker: UsageTracker, tenant_id: str
-    ) -> list[QuotaCheckResult]:
+    def get_all_quota_status(self, tracker: UsageTracker, tenant_id: str) -> list[QuotaCheckResult]:
         results: list[QuotaCheckResult] = []
         for quota_type in QuotaType:
             result = self.check_quota(tracker, tenant_id, quota_type)
@@ -138,4 +129,3 @@ class QuotaEvaluator:
     ) -> bool:
         result = self.check_quota(tracker, tenant_id, quota_type, proposed_delta)
         return not result.allowed
-

@@ -105,4 +105,3 @@ def build_lineage_graph(
         )
 
     return graph
-

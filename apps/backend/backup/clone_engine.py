@@ -1,18 +1,15 @@
-import json
 import threading
 import uuid
-
-from common.executor import background
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from backup.domain import BackupStatus, CloneRun
+from backup.lifecycle_validation import LifecycleValidator
 from common.config import settings
 from common.database import make_session
-from backup.domain import BackupStatus, CloneRun
-from backup.errors import CloneError
-from backup.lifecycle_validation import LifecycleValidator
+from common.executor import background
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
 from control_plane.schemas.database_targets import TenantDatabaseTargetModel
@@ -62,7 +59,7 @@ class CloneEngine:
             return
 
         run.status = BackupStatus.RUNNING
-        run.started_at = datetime.now(timezone.utc)
+        run.started_at = datetime.now(UTC)
 
         session = make_session(self._db_session_factory)
         try:
@@ -97,9 +94,7 @@ class CloneEngine:
                 id=str(uuid.uuid4()),
                 tenant_id=new_tenant.id,
                 database_kind="postgresql",
-                connection_ref=(
-                    settings.resolved_tenant_data_database_url
-                ),
+                connection_ref=(settings.resolved_tenant_data_database_url),
                 status="active",
             )
             session.add(db_target)
@@ -109,7 +104,7 @@ class CloneEngine:
             session.refresh(new_tenant)
 
             run.status = BackupStatus.COMPLETED
-            run.finished_at = datetime.now(timezone.utc)
+            run.finished_at = datetime.now(UTC)
             run.new_database_target_ref = db_target.id
 
             audit_service = self._audit_service_cls(session)
@@ -133,7 +128,7 @@ class CloneEngine:
 
     def _fail_run(self, run: CloneRun, message: str, session: Session) -> None:
         run.status = BackupStatus.FAILED
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(UTC)
         run.error_message = message
         try:
             audit_service = self._audit_service_cls(session)
@@ -173,13 +168,8 @@ class CloneEngine:
         with self._lock:
             if source_tenant_id is None:
                 return list(self._runs.values())
-            return [
-                r
-                for r in self._runs.values()
-                if r.source_tenant_id == source_tenant_id
-            ]
+            return [r for r in self._runs.values() if r.source_tenant_id == source_tenant_id]
 
     def get_clone(self, clone_id: str) -> CloneRun | None:
         with self._lock:
             return self._runs.get(clone_id)
-

@@ -4,12 +4,10 @@ from copy import deepcopy
 
 from sqlalchemy.orm import Session
 
-from common.errors import NotFoundError
 from ingestion.domain import (
     CleanedSnapshot,
     CleaningPipeline,
     CleaningStep,
-    IngestionWorkflowStatus,
     LineageEdge,
     LineageGraph,
     LineageNode,
@@ -111,5 +109,3 @@ class IngestionRepository:
         for record in self._publish_records.values():
             if record.upload_id == upload_id and record.status == "active":
                 record.status = "revoked"
-
-

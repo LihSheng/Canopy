@@ -19,9 +19,7 @@ class StorageService:
         key = generate_object_key(tenant_id, data_category, filename)
         scope = StorageAccessScope(tenant_id=tenant_id, data_category=data_category)
         self._guard.check_write_access(key, scope)
-        return self._adapter.put_object(
-            key=key, data=data, mime_type=mime_type, tenant_id=tenant_id
-        )
+        return self._adapter.put_object(key=key, data=data, mime_type=mime_type, tenant_id=tenant_id)
 
     def download_file(self, tenant_id: str, key: str) -> bytes:
         scope = StorageAccessScope(tenant_id=tenant_id)
@@ -64,11 +62,7 @@ class StorageService:
     def cleanup_expired(self, tenant_id: str) -> int:
         prefix = f"{generate_tenant_prefix(tenant_id)}/"
         all_objects = self._adapter.list_objects(prefix=prefix, tenant_id=tenant_id)
-        expired = [
-            obj
-            for obj in all_objects
-            if obj.lifecycle_state == "expired"
-        ]
+        expired = [obj for obj in all_objects if obj.lifecycle_state == "expired"]
         count = 0
         for obj in expired:
             scope = StorageAccessScope(tenant_id=tenant_id)
@@ -76,4 +70,3 @@ class StorageService:
             self._adapter.delete_object(key=obj.storage_key, tenant_id=tenant_id)
             count += 1
         return count
-

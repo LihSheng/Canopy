@@ -119,4 +119,3 @@ class TestDisabledPolicy:
         manager = BackupPolicyManager(repo)
 
         assert manager.is_backup_enabled("t-new") is True
-

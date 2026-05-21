@@ -39,8 +39,7 @@ def detect_cursor_column(columns: list[dict]) -> str | None:
     Each column must be a dict with at least ``"name"`` and ``"data_type"`` keys.
     Returns ``None`` when no eligible column is found.
     """
-    column_names = {col["name"]: col.get("data_type", "").lower()
-                    for col in columns}
+    column_names = {col["name"]: col.get("data_type", "").lower() for col in columns}
 
     for candidate in _CURSOR_CANDIDATES:
         if candidate in column_names:

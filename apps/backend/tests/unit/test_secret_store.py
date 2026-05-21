@@ -1,9 +1,8 @@
 """Tests for SecretStore encryption."""
-import os
 
 import pytest
 
-from connection.secret_store import SecretStore, AesGcmSecretStore, EncryptionError
+from connection.secret_store import AesGcmSecretStore, EncryptionError
 
 # 32 bytes for AES-256
 _TEST_KEY = bytes(range(32))

@@ -1,10 +1,6 @@
 import pytest
 
-import json
-from dataclasses import asdict
-
 from ontology.domain import (
-    CostCenter,
     Department,
     Employee,
     MappingContext,
@@ -19,15 +15,22 @@ pytestmark = pytest.mark.business_rule
 
 def _make_dept(key, id_, name):
     return Department(
-        id=id_, snapshot_id="s1", source_department_key=key,
-        source_lineage="{}", name=name,
+        id=id_,
+        snapshot_id="s1",
+        source_department_key=key,
+        source_lineage="{}",
+        name=name,
     )
 
 
 def _make_emp(key, id_, dept_id):
     return Employee(
-        id=id_, snapshot_id="s1", source_employee_key=key,
-        source_lineage="{}", department_id=dept_id, full_name="Alice",
+        id=id_,
+        snapshot_id="s1",
+        source_employee_key=key,
+        source_lineage="{}",
+        department_id=dept_id,
+        full_name="Alice",
     )
 
 
@@ -35,9 +38,7 @@ class TestAttributionResolver:
     def test_direct_department_wins(self):
         resolver = AttributionResolver()
         dept = _make_dept("D001", "d1", "Engineering")
-        context = MappingContext(
-            snapshot_id="s1", departments={"D001": dept}
-        )
+        context = MappingContext(snapshot_id="s1", departments={"D001": dept})
         result = resolver.resolve_department(
             context,
             direct_department_key="D001",
@@ -100,8 +101,11 @@ class TestAttributionResolver:
         resolver = AttributionResolver()
         dept = _make_dept("D001", "d1", "Engineering")
         emp = Employee(
-            id="e1", snapshot_id="s1", source_employee_key="E001",
-            source_lineage="{}", department_id="d1",
+            id="e1",
+            snapshot_id="s1",
+            source_employee_key="E001",
+            source_lineage="{}",
+            department_id="d1",
             cost_center_id="cc1",
         )
         context = MappingContext(
@@ -172,9 +176,7 @@ class TestClaimMapperAttribution:
 
     def test_unresolved_department_sets_is_resolved_false(self):
         emp = _make_emp("E001", "e1", "")
-        context = MappingContext(
-            snapshot_id="snap-001", employees={"E001": emp}
-        )
+        context = MappingContext(snapshot_id="snap-001", employees={"E001": emp})
         source = [
             SourceClaim(
                 source_key="C001",
@@ -254,9 +256,7 @@ class TestPayrollMapperAttribution:
 
     def test_unresolved_department_sets_is_resolved_false(self):
         emp = _make_emp("E001", "e1", "")
-        context = MappingContext(
-            snapshot_id="snap-001", employees={"E001": emp}
-        )
+        context = MappingContext(snapshot_id="snap-001", employees={"E001": emp})
         source = [
             SourcePayroll(
                 source_key="P001",

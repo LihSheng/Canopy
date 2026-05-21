@@ -12,10 +12,10 @@ class StubLlmClient:
 
 def _stub_response_json() -> str:
     return (
-        '{\n'
+        "{\n"
         '  "summary": "This month showed stable HR spend across departments '
-        'with payroll as the dominant cost driver. Total organizational spend '
-        'was within expected ranges. A few departments showed elevated claims '
+        "with payroll as the dominant cost driver. Total organizational spend "
+        "was within expected ranges. A few departments showed elevated claims "
         'activity that warrants monitoring in the coming month.",\n'
         '  "recommendations": [\n'
         '    "Review claims activity in the highest-spend departments for '
@@ -28,7 +28,7 @@ def _stub_response_json() -> str:
         'expense policies.",\n'
         '    "Track claim type distribution to identify categories with '
         'above-average growth."\n'
-        '  ],\n'
+        "  ],\n"
         '  "key_findings": [\n'
         '    "Payroll remains the largest cost category across all departments.",\n'
         '    "Claim counts are within expected ranges for the current month.",\n'
@@ -37,6 +37,6 @@ def _stub_response_json() -> str:
         '    "No departments exceeded the high-severity anomaly threshold.",\n'
         '    "Claim type distribution suggests no unusual spending patterns '
         'this period."\n'
-        '  ]\n'
-        '}'
+        "  ]\n"
+        "}"
     )

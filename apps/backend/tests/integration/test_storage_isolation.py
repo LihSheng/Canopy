@@ -6,7 +6,6 @@ import pytest
 from object_storage.access_guard import StorageAccessGuard
 from object_storage.adapter import StorageAccessScope
 from object_storage.errors import ObjectImmutableError, StorageAccessError
-from object_storage.key_generator import generate_object_key
 from object_storage.local_adapter import LocalStorageAdapter
 from object_storage.service import StorageService
 
@@ -167,12 +166,8 @@ class TestStorageIsolation:
         tid_a = "aaaaaaaa-8888-aaaa-aaaa-aaaaaaaaaaaa"
         tid_b = "bbbbbbbb-8888-bbbb-bbbb-bbbbbbbbbbbb"
 
-        storage_service.upload_file(
-            tenant_id=tid_a, data_category="raw", filename="a_file.csv", data=b"A"
-        )
-        storage_service.upload_file(
-            tenant_id=tid_b, data_category="raw", filename="b_file.csv", data=b"B"
-        )
+        storage_service.upload_file(tenant_id=tid_a, data_category="raw", filename="a_file.csv", data=b"A")
+        storage_service.upload_file(tenant_id=tid_b, data_category="raw", filename="b_file.csv", data=b"B")
 
         a_files = storage_service.list_tenant_files(tenant_id=tid_a)
         b_files = storage_service.list_tenant_files(tenant_id=tid_b)
@@ -251,16 +246,12 @@ class TestStorageIsolation:
         key = f"tenants/{tid}/raw/reuse_test/data.csv"
 
         adapter = storage_service._adapter
-        meta1 = adapter.put_object(
-            key=key, data=b"first write", tenant_id=tid
-        )
+        meta1 = adapter.put_object(key=key, data=b"first write", tenant_id=tid)
         adapter.set_lifecycle_state(key, "expired")
         adapter.set_retention_state(key, "deletable")
         adapter.delete_object(key=key)
 
-        meta2 = adapter.put_object(
-            key=key, data=b"second write", tenant_id=tid
-        )
+        meta2 = adapter.put_object(key=key, data=b"second write", tenant_id=tid)
         assert meta1.storage_key == meta2.storage_key
         assert adapter.get_object(key=key) == b"second write"
 
@@ -269,12 +260,8 @@ class TestStorageIsolation:
         tid_b = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 
         adapter = local_adapter
-        adapter.put_object(
-            key=f"tenants/{tid_a}/raw/a.csv", data=b"A", tenant_id=tid_a
-        )
-        adapter.put_object(
-            key=f"tenants/{tid_b}/raw/b.csv", data=b"B", tenant_id=tid_b
-        )
+        adapter.put_object(key=f"tenants/{tid_a}/raw/a.csv", data=b"A", tenant_id=tid_a)
+        adapter.put_object(key=f"tenants/{tid_b}/raw/b.csv", data=b"B", tenant_id=tid_b)
 
         guard = StorageAccessGuard()
         admin_scope = StorageAccessScope(tenant_id="admin-user", is_admin=True)
@@ -286,9 +273,7 @@ class TestStorageIsolation:
 
     def test_upload_to_different_categories_separated(self, storage_service):
         tid = "aaaa0000-1111-aaaa-aaaa-aaaaaaaaaaaa"
-        raw_meta = storage_service.upload_file(
-            tenant_id=tid, data_category="raw", filename="data.csv", data=b"raw"
-        )
+        raw_meta = storage_service.upload_file(tenant_id=tid, data_category="raw", filename="data.csv", data=b"raw")
         clean_meta = storage_service.upload_file(
             tenant_id=tid, data_category="clean", filename="data.csv", data=b"clean"
         )
@@ -304,15 +289,9 @@ class TestStorageIsolation:
         tid = "list-test-tid-123456789-abcdef123456"
         adapter = local_adapter
 
-        adapter.put_object(
-            key=f"tenants/{tid}/raw/file1.csv", data=b"f1", tenant_id=tid
-        )
-        adapter.put_object(
-            key=f"tenants/{tid}/raw/file2.csv", data=b"f2", tenant_id=tid
-        )
-        adapter.put_object(
-            key=f"tenants/{tid}/clean/file3.csv", data=b"f3", tenant_id=tid
-        )
+        adapter.put_object(key=f"tenants/{tid}/raw/file1.csv", data=b"f1", tenant_id=tid)
+        adapter.put_object(key=f"tenants/{tid}/raw/file2.csv", data=b"f2", tenant_id=tid)
+        adapter.put_object(key=f"tenants/{tid}/clean/file3.csv", data=b"f3", tenant_id=tid)
 
         all_results = adapter.list_objects(prefix=f"tenants/{tid}/")
         assert len(all_results) == 3
@@ -322,4 +301,3 @@ class TestStorageIsolation:
 
         clean_results = adapter.list_objects(prefix=f"tenants/{tid}/clean/")
         assert len(clean_results) == 1
-

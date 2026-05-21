@@ -27,9 +27,7 @@ class TestStorageAccessGuardRead:
     def test_deeply_nested_path_same_tenant_allowed(self):
         guard = StorageAccessGuard()
         scope = StorageAccessScope(tenant_id="t1")
-        result = guard.check_read_access(
-            "tenants/t1/raw/uuid1/uuid2/nested/file.csv", scope
-        )
+        result = guard.check_read_access("tenants/t1/raw/uuid1/uuid2/nested/file.csv", scope)
         assert result is True
 
     def test_partial_tenant_match_denied(self):
@@ -110,4 +108,3 @@ class TestStorageAccessScopeDefaults:
     def test_data_category_scope(self):
         scope = StorageAccessScope(tenant_id="t1", data_category="raw")
         assert scope.data_category == "raw"
-

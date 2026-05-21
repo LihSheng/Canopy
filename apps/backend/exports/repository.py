@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 
-from common.clock import utcnow
 from exports.domain import ExportJob
 from exports.schema import ExportJobModel
 
@@ -32,18 +31,10 @@ class ExportRepository:
         return model
 
     def get_job(self, job_id: str) -> ExportJobModel | None:
-        return (
-            self._db.query(ExportJobModel)
-            .filter(ExportJobModel.id == job_id)
-            .first()
-        )
+        return self._db.query(ExportJobModel).filter(ExportJobModel.id == job_id).first()
 
     def update_job(self, job: ExportJob) -> ExportJobModel:
-        model = (
-            self._db.query(ExportJobModel)
-            .filter(ExportJobModel.id == job.id)
-            .first()
-        )
+        model = self._db.query(ExportJobModel).filter(ExportJobModel.id == job.id).first()
         if model is None:
             raise ValueError(f"Export job {job.id} not found")
         model.status = job.status
@@ -57,9 +48,4 @@ class ExportRepository:
         return model
 
     def get_recent_jobs(self, limit: int = 20) -> list[ExportJobModel]:
-        return (
-            self._db.query(ExportJobModel)
-            .order_by(ExportJobModel.started_at.desc())
-            .limit(limit)
-            .all()
-        )
+        return self._db.query(ExportJobModel).order_by(ExportJobModel.started_at.desc()).limit(limit).all()

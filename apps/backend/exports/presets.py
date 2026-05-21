@@ -30,9 +30,7 @@ EXPORT_PRESETS: dict[str, ExportPreset] = {
     ),
 }
 
-EXPORT_PRESETS_BY_LABEL = {
-    preset.label.lower(): preset for preset in EXPORT_PRESETS.values()
-}
+EXPORT_PRESETS_BY_LABEL = {preset.label.lower(): preset for preset in EXPORT_PRESETS.values()}
 
 
 def resolve_export_preset(raw_preset: str | None) -> ExportPreset:
@@ -41,7 +39,5 @@ def resolve_export_preset(raw_preset: str | None) -> ExportPreset:
 
     normalized = raw_preset.strip().lower()
     return (
-        EXPORT_PRESETS.get(normalized)
-        or EXPORT_PRESETS_BY_LABEL.get(normalized)
-        or EXPORT_PRESETS["executive_summary"]
+        EXPORT_PRESETS.get(normalized) or EXPORT_PRESETS_BY_LABEL.get(normalized) or EXPORT_PRESETS["executive_summary"]
     )

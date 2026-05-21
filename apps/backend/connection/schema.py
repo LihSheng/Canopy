@@ -1,7 +1,9 @@
 import uuid
 from datetime import UTC, datetime
-from sqlalchemy import String, DateTime, JSON
+
+from sqlalchemy import JSON, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from common.database import Base
 
 
@@ -16,5 +18,9 @@ class ConnectionModel(Base):
     config_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     test_status: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
     last_tested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False
+    )

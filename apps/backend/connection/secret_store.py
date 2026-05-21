@@ -47,14 +47,10 @@ class AesGcmSecretStore(SecretStore):
         if key is None:
             raw = os.environ.get(self._KEY_ENV_VAR)
             if raw is None:
-                raise EncryptionError(
-                    f"{self._KEY_ENV_VAR} environment variable is not set"
-                )
+                raise EncryptionError(f"{self._KEY_ENV_VAR} environment variable is not set")
             key = raw.encode("utf-8")
         if len(key) not in (16, 24, 32):
-            raise EncryptionError(
-                f"Key must be 16, 24, or 32 bytes long; got {len(key)}"
-            )
+            raise EncryptionError(f"Key must be 16, 24, or 32 bytes long; got {len(key)}")
         self._key = key
 
     def encrypt(self, plaintext: str) -> str:

@@ -139,9 +139,7 @@ class TestExternalDbSyncService:
     @patch("sync.external_sync_service.ExternalDbSyncService._write_rows_to_storage")
     @patch("sync.external_sync_service.get_adapter")
     @patch("sync.external_sync_service.AesGcmSecretStore")
-    async def test_incremental_cursor_updates_cursor_value(
-        self, mock_store, mock_get_adapter, mock_write
-    ):
+    async def test_incremental_cursor_updates_cursor_value(self, mock_store, mock_get_adapter, mock_write):
         session = _make_session()
         try:
             from connection.domain import Connection
@@ -266,19 +264,40 @@ class TestExternalDbSyncService:
         session = _make_session()
         try:
             conn_repo = ConnectionRepository(session)
-            conn_repo.save(Connection(id="c-1", project_id="p-1", source_type="postgresql", name="test", config_json={}))
+            conn_repo.save(
+                Connection(id="c-1", project_id="p-1", source_type="postgresql", name="test", config_json={})
+            )
 
             repo = DatasetRepository(session)
-            repo.save(Dataset(id="ds-1", project_id="p-1", connection_id="c-1", name="good",
-                              status=DatasetStatus.ACTIVE.value, sync_mode=SyncMode.BATCH, batch_strategy="full_snapshot"))
-            repo.save(Dataset(id="ds-2", project_id="p-1", connection_id="c-1", name="bad",
-                              status=DatasetStatus.ACTIVE.value, sync_mode=SyncMode.BATCH, batch_strategy="full_snapshot"))
+            repo.save(
+                Dataset(
+                    id="ds-1",
+                    project_id="p-1",
+                    connection_id="c-1",
+                    name="good",
+                    status=DatasetStatus.ACTIVE.value,
+                    sync_mode=SyncMode.BATCH,
+                    batch_strategy="full_snapshot",
+                )
+            )
+            repo.save(
+                Dataset(
+                    id="ds-2",
+                    project_id="p-1",
+                    connection_id="c-1",
+                    name="bad",
+                    status=DatasetStatus.ACTIVE.value,
+                    sync_mode=SyncMode.BATCH,
+                    batch_strategy="full_snapshot",
+                )
+            )
 
             # Make one dataset fail
             async def _fail(*args, **kwargs):
                 raise RuntimeError("conn refused")
 
             from sync.external_sync_service import ExternalDbSyncService
+
             original_sync_one = ExternalDbSyncService._sync_one
 
             async def side_effect(self, ds, started_at):
@@ -307,9 +326,17 @@ class TestExternalDbSyncService:
             from dataset.repository import DatasetRepository
 
             repo = DatasetRepository(session)
-            repo.save(Dataset(id="ds-orphan", project_id="p-1", connection_id="c-missing",
-                              name="orphan", status=DatasetStatus.ACTIVE.value,
-                              sync_mode=SyncMode.BATCH, batch_strategy="full_snapshot"))
+            repo.save(
+                Dataset(
+                    id="ds-orphan",
+                    project_id="p-1",
+                    connection_id="c-missing",
+                    name="orphan",
+                    status=DatasetStatus.ACTIVE.value,
+                    sync_mode=SyncMode.BATCH,
+                    batch_strategy="full_snapshot",
+                )
+            )
 
             service = ExternalDbSyncService(session)
             result = await service.run_async()
@@ -332,13 +359,28 @@ class TestExternalDbSyncService:
         session = _make_session()
         try:
             conn_repo = ConnectionRepository(session)
-            conn_repo.save(Connection(id="c-1", project_id="p-1", source_type="postgresql",
-                                      name="test", config_json={"password": "encrypted_value"}))
+            conn_repo.save(
+                Connection(
+                    id="c-1",
+                    project_id="p-1",
+                    source_type="postgresql",
+                    name="test",
+                    config_json={"password": "encrypted_value"},
+                )
+            )
 
             repo = DatasetRepository(session)
-            repo.save(Dataset(id="ds-1", project_id="p-1", connection_id="c-1", name="users",
-                              status=DatasetStatus.ACTIVE.value, sync_mode=SyncMode.BATCH,
-                              batch_strategy="full_snapshot"))
+            repo.save(
+                Dataset(
+                    id="ds-1",
+                    project_id="p-1",
+                    connection_id="c-1",
+                    name="users",
+                    status=DatasetStatus.ACTIVE.value,
+                    sync_mode=SyncMode.BATCH,
+                    batch_strategy="full_snapshot",
+                )
+            )
 
             # Mock the secret store to return a decrypted password
             mock_store_instance = AsyncMock()
@@ -349,8 +391,10 @@ class TestExternalDbSyncService:
             mock_adapter.fetch_table = MockCursorHelper.fetch_table_callback([])
             mock_get_adapter.return_value = mock_adapter
 
-            with patch("sync.external_sync_service.ExternalDbSyncService._write_rows_to_storage",
-                       return_value="/mock/path.jsonl"):
+            with patch(
+                "sync.external_sync_service.ExternalDbSyncService._write_rows_to_storage",
+                return_value="/mock/path.jsonl",
+            ):
                 service = ExternalDbSyncService(session)
                 result = await service.run_async()
 

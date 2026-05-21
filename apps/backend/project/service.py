@@ -24,4 +24,3 @@ class ProjectService:
 
     def list_projects(self) -> list[Project]:
         return self._repo.list_all()
-

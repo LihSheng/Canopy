@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import uuid
 from pathlib import Path
 
@@ -62,4 +61,3 @@ def process_upload(
         dataset_type=dataset_type,
     )
     return repo.save_upload(record)
-

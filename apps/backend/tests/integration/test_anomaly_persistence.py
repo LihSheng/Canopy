@@ -31,6 +31,7 @@ class TestAnomalyPersistence:
         )
 
         from anomalies.service import get_anomalies_list
+
         items = get_anomalies_list(db_session)
 
         assert len(items) > 0
@@ -52,6 +53,7 @@ class TestAnomalyPersistence:
         )
 
         from anomalies.service import get_anomalies_list, get_anomaly_detail
+
         items = get_anomalies_list(db_session)
         assert len(items) > 0
 
@@ -73,6 +75,7 @@ class TestAnomalyPersistence:
         )
 
         from anomalies.repository import AnomalyRepository
+
         repo = AnomalyRepository(db_session)
         assert repo.count_for_snapshot("test-snapshot-001") > 0
 

@@ -1,8 +1,8 @@
 import os
+from io import BytesIO
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
-from io import BytesIO
 
 from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
@@ -59,9 +59,7 @@ def export_history(
     current_user: SessionUser = Depends(get_current_user),
 ):
     jobs = get_export_history(limit=20)
-    return ExportHistoryResponse(
-        jobs=[_job_to_response(j) for j in jobs]
-    )
+    return ExportHistoryResponse(jobs=[_job_to_response(j) for j in jobs])
 
 
 @router.get("/jobs/{job_id}")
@@ -117,12 +115,8 @@ def export_executive_summary(
     try:
         excel_bytes = generate_export(
             db=db,
-            include_departments=(
-                True if body.include_departments is None else body.include_departments
-            ),
-            include_anomalies=(
-                True if body.include_anomalies is None else body.include_anomalies
-            ),
+            include_departments=(True if body.include_departments is None else body.include_departments),
+            include_anomalies=(True if body.include_anomalies is None else body.include_anomalies),
         )
     finally:
         db.close()
@@ -130,7 +124,5 @@ def export_executive_summary(
     return StreamingResponse(
         BytesIO(excel_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": "attachment; filename=executive-summary.xlsx"
-        },
+        headers={"Content-Disposition": "attachment; filename=executive-summary.xlsx"},
     )

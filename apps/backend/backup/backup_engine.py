@@ -1,18 +1,16 @@
 import os
 import threading
 import uuid
-
-from common.executor import background
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from common.database import make_session
 from backup.domain import BackupRun, BackupStatus, BackupType
-from backup.errors import LifecycleStateError
 from backup.lifecycle_validation import LifecycleValidator
 from backup.policy_manager import BackupPolicyManager
+from common.database import make_session
+from common.executor import background
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
 from control_plane.tenant_repository import TenantRepository
@@ -35,9 +33,7 @@ class BackupEngine:
         self._runs: dict[str, BackupRun] = {}
         self._lock = threading.Lock()
 
-    def create_backup(
-        self, tenant_id: str, backup_type: BackupType = BackupType.FULL
-    ) -> BackupRun:
+    def create_backup(self, tenant_id: str, backup_type: BackupType = BackupType.FULL) -> BackupRun:
         run = BackupRun(
             id=str(uuid.uuid4()),
             tenant_id=tenant_id,
@@ -61,7 +57,7 @@ class BackupEngine:
             return
 
         run.status = BackupStatus.RUNNING
-        run.started_at = datetime.now(timezone.utc)
+        run.started_at = datetime.now(UTC)
 
         session = make_session(self._db_session_factory)
         try:
@@ -79,7 +75,7 @@ class BackupEngine:
             run.snapshot_ref = f"pg_dump:{run.tenant_id}:{run.id}"
 
             run.status = BackupStatus.COMPLETED
-            run.finished_at = datetime.now(timezone.utc)
+            run.finished_at = datetime.now(UTC)
 
             audit_service = self._audit_service_cls(session)
             audit_service.record_event(
@@ -99,7 +95,7 @@ class BackupEngine:
 
     def _fail_run(self, run: BackupRun, message: str, session: Session) -> None:
         run.status = BackupStatus.FAILED
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(UTC)
         run.error_message = message
         try:
             audit_service = self._audit_service_cls(session)
@@ -134,7 +130,7 @@ class BackupEngine:
         with self._lock:
             tenant_backups = sorted(
                 [r for r in self._runs.values() if r.tenant_id == tenant_id],
-                key=lambda r: r.started_at or datetime.min.replace(tzinfo=timezone.utc),
+                key=lambda r: r.started_at or datetime.min.replace(tzinfo=UTC),
             )
             removed = 0
             if len(tenant_backups) > policy.max_backups:
@@ -145,7 +141,7 @@ class BackupEngine:
                     del self._runs[run.id]
                     removed += 1
 
-            cutoff = datetime.now(timezone.utc)
+            cutoff = datetime.now(UTC)
             for run in list(self._runs.values()):
                 if run.tenant_id != tenant_id:
                     continue
@@ -159,4 +155,3 @@ class BackupEngine:
                     removed += 1
 
             return removed
-

@@ -1,24 +1,17 @@
-from collections import defaultdict
-from datetime import UTC, datetime
-from typing import Sequence
-
 from sqlalchemy.orm import Session
 
 from analytics.domain import (
     ClaimDetailSummary,
-    DashboardSummaryCache,
     EmployeeContributionSummary,
     MonthlyClaimTypeSpend,
     MonthlyDepartmentSpend,
     MonthlyEmployeeSpend,
 )
 from analytics.schema import (
-    DashboardSummaryCacheModel,
     MonthlyClaimTypeSpendModel,
     MonthlyDepartmentSpendModel,
     MonthlyEmployeeSpendModel,
 )
-from common.clock import utcnow
 from ontology.schema import (
     DepartmentModel,
     EmployeeModel,
@@ -34,9 +27,7 @@ class SpendRepository:
 
     # ---- persistence ----
 
-    def save_department_spends(
-        self, spends: list[MonthlyDepartmentSpend]
-    ) -> list[MonthlyDepartmentSpendModel]:
+    def save_department_spends(self, spends: list[MonthlyDepartmentSpend]) -> list[MonthlyDepartmentSpendModel]:
         models = [
             MonthlyDepartmentSpendModel(
                 id=s.id,
@@ -54,9 +45,7 @@ class SpendRepository:
         self._db.commit()
         return models
 
-    def save_employee_spends(
-        self, spends: list[MonthlyEmployeeSpend]
-    ) -> list[MonthlyEmployeeSpendModel]:
+    def save_employee_spends(self, spends: list[MonthlyEmployeeSpend]) -> list[MonthlyEmployeeSpendModel]:
         models = [
             MonthlyEmployeeSpendModel(
                 id=s.id,
@@ -74,9 +63,7 @@ class SpendRepository:
         self._db.commit()
         return models
 
-    def save_claim_type_spends(
-        self, spends: list[MonthlyClaimTypeSpend]
-    ) -> list[MonthlyClaimTypeSpendModel]:
+    def save_claim_type_spends(self, spends: list[MonthlyClaimTypeSpend]) -> list[MonthlyClaimTypeSpendModel]:
         models = [
             MonthlyClaimTypeSpendModel(
                 id=s.id,
@@ -97,9 +84,7 @@ class SpendRepository:
         self._db.query(MonthlyDepartmentSpendModel).filter(
             MonthlyDepartmentSpendModel.snapshot_id == snapshot_id
         ).delete()
-        self._db.query(MonthlyEmployeeSpendModel).filter(
-            MonthlyEmployeeSpendModel.snapshot_id == snapshot_id
-        ).delete()
+        self._db.query(MonthlyEmployeeSpendModel).filter(MonthlyEmployeeSpendModel.snapshot_id == snapshot_id).delete()
         self._db.query(MonthlyClaimTypeSpendModel).filter(
             MonthlyClaimTypeSpendModel.snapshot_id == snapshot_id
         ).delete()
@@ -107,12 +92,8 @@ class SpendRepository:
 
     # ---- monthly department spends ----
 
-    def get_monthly_spends_for_month(
-        self, month: str, snapshot_id: str | None = None
-    ) -> list[MonthlyDepartmentSpend]:
-        q = self._db.query(MonthlyDepartmentSpendModel).filter(
-            MonthlyDepartmentSpendModel.month == month
-        )
+    def get_monthly_spends_for_month(self, month: str, snapshot_id: str | None = None) -> list[MonthlyDepartmentSpend]:
+        q = self._db.query(MonthlyDepartmentSpendModel).filter(MonthlyDepartmentSpendModel.month == month)
         if snapshot_id:
             q = q.filter(MonthlyDepartmentSpendModel.snapshot_id == snapshot_id)
         return [_model_to_domain(m) for m in q.order_by(MonthlyDepartmentSpendModel.total.desc()).all()]
@@ -125,21 +106,13 @@ class SpendRepository:
         )
         if snapshot_id:
             q = q.filter(MonthlyDepartmentSpendModel.snapshot_id == snapshot_id)
-        return [
-            _model_to_domain(m)
-            for m in q.order_by(MonthlyDepartmentSpendModel.month.asc()).all()
-        ]
+        return [_model_to_domain(m) for m in q.order_by(MonthlyDepartmentSpendModel.month.asc()).all()]
 
-    def get_all_monthly_spends(
-        self, snapshot_id: str | None = None
-    ) -> list[MonthlyDepartmentSpend]:
+    def get_all_monthly_spends(self, snapshot_id: str | None = None) -> list[MonthlyDepartmentSpend]:
         q = self._db.query(MonthlyDepartmentSpendModel)
         if snapshot_id:
             q = q.filter(MonthlyDepartmentSpendModel.snapshot_id == snapshot_id)
-        return [
-            _model_to_domain(m)
-            for m in q.order_by(MonthlyDepartmentSpendModel.month.asc()).all()
-        ]
+        return [_model_to_domain(m) for m in q.order_by(MonthlyDepartmentSpendModel.month.asc()).all()]
 
     def get_distinct_months(self, snapshot_id: str | None = None) -> list[str]:
         q = self._db.query(MonthlyDepartmentSpendModel.month).distinct()
@@ -163,9 +136,7 @@ class SpendRepository:
     def get_employee_spends_for_department(
         self, department_id: str, month: str | None = None, snapshot_id: str | None = None
     ) -> list[MonthlyEmployeeSpend]:
-        q = self._db.query(MonthlyEmployeeSpendModel).filter(
-            MonthlyEmployeeSpendModel.department_id == department_id
-        )
+        q = self._db.query(MonthlyEmployeeSpendModel).filter(MonthlyEmployeeSpendModel.department_id == department_id)
         if month:
             q = q.filter(MonthlyEmployeeSpendModel.month == month)
         if snapshot_id:
@@ -220,16 +191,17 @@ class SpendRepository:
         month: str | None = None,
         snapshot_id: str | None = None,
     ) -> list[EmployeeContributionSummary]:
-        q = self._db.query(
-            MonthlyEmployeeSpendModel, EmployeeModel.full_name, DepartmentModel.name
-        ).join(
-            EmployeeModel,
-            MonthlyEmployeeSpendModel.employee_id == EmployeeModel.id,
-        ).join(
-            DepartmentModel,
-            MonthlyEmployeeSpendModel.department_id == DepartmentModel.id,
-        ).filter(
-            MonthlyEmployeeSpendModel.department_id == department_id
+        q = (
+            self._db.query(MonthlyEmployeeSpendModel, EmployeeModel.full_name, DepartmentModel.name)
+            .join(
+                EmployeeModel,
+                MonthlyEmployeeSpendModel.employee_id == EmployeeModel.id,
+            )
+            .join(
+                DepartmentModel,
+                MonthlyEmployeeSpendModel.department_id == DepartmentModel.id,
+            )
+            .filter(MonthlyEmployeeSpendModel.department_id == department_id)
         )
 
         if month:
@@ -258,14 +230,16 @@ class SpendRepository:
         department_id: str | None = None,
         snapshot_id: str | None = None,
     ) -> list[ClaimDetailSummary]:
-        q = self._db.query(
-            ExpenseClaimModel, EmployeeModel.full_name, DepartmentModel.name
-        ).join(
-            EmployeeModel,
-            ExpenseClaimModel.employee_id == EmployeeModel.id,
-        ).join(
-            DepartmentModel,
-            ExpenseClaimModel.department_id == DepartmentModel.id,
+        q = (
+            self._db.query(ExpenseClaimModel, EmployeeModel.full_name, DepartmentModel.name)
+            .join(
+                EmployeeModel,
+                ExpenseClaimModel.employee_id == EmployeeModel.id,
+            )
+            .join(
+                DepartmentModel,
+                ExpenseClaimModel.department_id == DepartmentModel.id,
+            )
         )
 
         if department_id:
@@ -296,11 +270,7 @@ class SpendRepository:
         return {m.id: m.name for m in models}
 
     def get_department_count_for_snapshot(self, snapshot_id: str) -> int:
-        return (
-            self._db.query(DepartmentModel)
-            .filter(DepartmentModel.snapshot_id == snapshot_id)
-            .count()
-        )
+        return self._db.query(DepartmentModel).filter(DepartmentModel.snapshot_id == snapshot_id).count()
 
 
 def _model_to_domain(m: MonthlyDepartmentSpendModel) -> MonthlyDepartmentSpend:

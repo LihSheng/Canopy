@@ -1,6 +1,6 @@
-import pytest
+from unittest.mock import patch
 
-from unittest.mock import MagicMock, patch
+import pytest
 
 from insights.domain import FactBundle
 from insights.facts import extract_facts
@@ -10,9 +10,7 @@ pytestmark = pytest.mark.business_rule
 
 class TestFactExtraction:
     def test_returns_none_when_no_cache(self, db_session):
-        with patch(
-            "insights.facts.get_dashboard_summary"
-        ) as mock_get_summary:
+        with patch("insights.facts.get_dashboard_summary") as mock_get_summary:
             mock_get_summary.return_value = None
 
             result = extract_facts(db_session)

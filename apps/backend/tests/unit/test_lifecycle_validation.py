@@ -1,6 +1,4 @@
-from datetime import datetime, timedelta, timezone
-
-import pytest
+from datetime import UTC, datetime, timedelta
 
 from backup.lifecycle_validation import LifecycleValidator
 from control_plane.schemas.tenants import TenantModel
@@ -104,25 +102,18 @@ class TestCanClone:
 class TestArchiveRetention:
     def test_within_retention_window_ok(self):
         tenant = _make_tenant("archived")
-        archive_date = datetime.now(timezone.utc) - timedelta(days=10)
-        result = LifecycleValidator.is_restorable_from_archive(
-            tenant, archive_date, retention_days=30
-        )
+        archive_date = datetime.now(UTC) - timedelta(days=10)
+        result = LifecycleValidator.is_restorable_from_archive(tenant, archive_date, retention_days=30)
         assert result is True
 
     def test_past_retention_window_not_ok(self):
         tenant = _make_tenant("archived")
-        archive_date = datetime.now(timezone.utc) - timedelta(days=60)
-        result = LifecycleValidator.is_restorable_from_archive(
-            tenant, archive_date, retention_days=30
-        )
+        archive_date = datetime.now(UTC) - timedelta(days=60)
+        result = LifecycleValidator.is_restorable_from_archive(tenant, archive_date, retention_days=30)
         assert result is False
 
     def test_exactly_at_boundary_ok(self):
         tenant = _make_tenant("archived")
-        archive_date = datetime.now(timezone.utc) - timedelta(days=30)
-        result = LifecycleValidator.is_restorable_from_archive(
-            tenant, archive_date, retention_days=30
-        )
+        archive_date = datetime.now(UTC) - timedelta(days=30)
+        result = LifecycleValidator.is_restorable_from_archive(tenant, archive_date, retention_days=30)
         assert result is True
-

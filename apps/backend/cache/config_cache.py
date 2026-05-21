@@ -27,9 +27,7 @@ class ConfigCache:
         self.cache_tenant_config(tenant_id, key, value)
         return value
 
-    def cache_tenant_config(
-        self, tenant_id: str, key: str, value: str, ttl_seconds: int = 120
-    ) -> None:
+    def cache_tenant_config(self, tenant_id: str, key: str, value: str, ttl_seconds: int = 120) -> None:
         self._store.set(self._key(tenant_id, key), value, ttl_seconds)
 
     def invalidate_tenant(self, tenant_id: str) -> None:
@@ -41,4 +39,3 @@ class ConfigCache:
 
     def invalidate_all(self) -> None:
         self._store.delete_by_prefix(self._prefix)
-

@@ -64,8 +64,8 @@ def get_adapter(source_type: str) -> DatabaseAdapter:
 
     Raises ``ValueError`` if the source type is not supported.
     """
-    from connection.adapters.postgres_adapter import PostgresAdapter
     from connection.adapters.mysql_adapter import MysqlAdapter
+    from connection.adapters.postgres_adapter import PostgresAdapter
 
     registry: dict[str, DatabaseAdapter] = {
         "postgresql": PostgresAdapter(),

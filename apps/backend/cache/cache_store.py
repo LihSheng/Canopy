@@ -46,10 +46,7 @@ class CacheStore:
         now = time.monotonic()
         count = 0
         with self._lock:
-            expired_keys = [
-                k for k, (expires_at, _) in self._store.items()
-                if now > expires_at
-            ]
+            expired_keys = [k for k, (expires_at, _) in self._store.items() if now > expires_at]
             for k in expired_keys:
                 del self._store[k]
                 count += 1

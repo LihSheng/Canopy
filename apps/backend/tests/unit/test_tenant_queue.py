@@ -1,8 +1,4 @@
 import threading
-import time
-from unittest.mock import MagicMock
-
-import pytest
 
 from job_queue.job_registry import JobRegistry, JobStatus
 from job_queue.tenant_queue import TenantJobQueue
@@ -289,4 +285,3 @@ class TestTenantJobQueue:
                 items.append(item)
 
         assert len(items) > 0
-

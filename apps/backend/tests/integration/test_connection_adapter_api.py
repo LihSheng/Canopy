@@ -82,9 +82,7 @@ class TestConnectionTestEndpoint:
 
         with patch(_ADAPTER_PATCH) as mock_get:
             mock_adapter = mock_get.return_value
-            mock_adapter.test_connection = AsyncMock(
-                return_value={"success": False, "message": "Connection refused"}
-            )
+            mock_adapter.test_connection = AsyncMock(return_value={"success": False, "message": "Connection refused"})
 
             resp = client.post(f"/api/connections/{conn_id}/test", headers=auth_headers)
 

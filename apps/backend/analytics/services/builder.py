@@ -1,4 +1,3 @@
-from collections import defaultdict
 from datetime import datetime
 
 from sqlalchemy.orm import Session
@@ -8,19 +7,14 @@ from analytics.aggregators.claims import (
     aggregate_claims_by_employee,
     aggregate_claims_by_type,
 )
-from analytics.aggregators.deltas import (
-    attach_mom_deltas_to_rankings,
-    calculate_mom_deltas,
-    rank_departments,
-)
 from analytics.aggregators.merge import merge_department_spend, merge_employee_spend
 from analytics.aggregators.payroll import (
     aggregate_payroll_by_department,
     aggregate_payroll_by_employee,
 )
-from analytics.domain import DashboardSummaryCache, DepartmentRanking, MonthlyDepartmentSpend
-from analytics.repositories.spend import SpendRepository
+from analytics.domain import DashboardSummaryCache, MonthlyDepartmentSpend
 from analytics.repositories.dashboard_cache import DashboardCacheRepository
+from analytics.repositories.spend import SpendRepository
 from common.clock import utcnow
 from ontology.schema import ExpenseClaimModel, PayrollExpenseModel
 
@@ -99,7 +93,7 @@ def _read_payroll_rows(db: Session, snapshot_id: str) -> list[dict]:
         db.query(PayrollExpenseModel)
         .filter(
             PayrollExpenseModel.snapshot_id == snapshot_id,
-            PayrollExpenseModel.is_resolved == True,
+            PayrollExpenseModel.is_resolved,
         )
         .all()
     )
@@ -119,7 +113,7 @@ def _read_claim_rows(db: Session, snapshot_id: str) -> list[dict]:
         db.query(ExpenseClaimModel)
         .filter(
             ExpenseClaimModel.snapshot_id == snapshot_id,
-            ExpenseClaimModel.is_resolved == True,
+            ExpenseClaimModel.is_resolved,
         )
         .all()
     )

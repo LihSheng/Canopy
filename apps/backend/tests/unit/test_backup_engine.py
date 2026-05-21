@@ -1,10 +1,7 @@
 import time
-from unittest.mock import MagicMock
-
-import pytest
 
 from backup.backup_engine import BackupEngine
-from backup.domain import BackupRun, BackupStatus, BackupType
+from backup.domain import BackupStatus, BackupType
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
 from control_plane.schemas.tenants import TenantModel
@@ -36,7 +33,7 @@ def _make_backup_engine(db_session, backup_dir):
 
 class TestBackupCreation:
     def test_create_backup_returns_pending_run(self, db_session, tmp_path):
-        tenant = _seed_tenant(db_session, "t-active")
+        _seed_tenant(db_session, "t-active")
         engine = _make_backup_engine(db_session, str(tmp_path))
 
         run = engine.create_backup("t-active", BackupType.FULL)
@@ -45,7 +42,7 @@ class TestBackupCreation:
         assert run.status in (BackupStatus.PENDING, BackupStatus.RUNNING, BackupStatus.COMPLETED)
 
     def test_cannot_backup_deleted_tenant(self, db_session, tmp_path):
-        tenant = _seed_tenant(db_session, "t-deleted", lifecycle_state="deleted")
+        _seed_tenant(db_session, "t-deleted", lifecycle_state="deleted")
         engine = _make_backup_engine(db_session, str(tmp_path))
 
         run = engine.create_backup("t-deleted")
@@ -57,7 +54,7 @@ class TestBackupCreation:
         assert "deleted" in (run.error_message or "").lower()
 
     def test_cannot_backup_pending_tenant(self, db_session, tmp_path):
-        tenant = _seed_tenant(db_session, "t-pending", lifecycle_state="pending")
+        _seed_tenant(db_session, "t-pending", lifecycle_state="pending")
         engine = _make_backup_engine(db_session, str(tmp_path))
 
         run = engine.create_backup("t-pending")
@@ -81,7 +78,7 @@ class TestBackupCreation:
 
 class TestBackupRecordsAudit:
     def test_backup_records_audit_on_completion(self, db_session, tmp_path):
-        tenant = _seed_tenant(db_session, "t-audit-1")
+        _seed_tenant(db_session, "t-audit-1")
         engine = _make_backup_engine(db_session, str(tmp_path))
 
         run = engine.create_backup("t-audit-1")
@@ -91,35 +88,27 @@ class TestBackupRecordsAudit:
         if run and run.status == BackupStatus.COMPLETED:
             from control_plane.schemas.audit import AuditEventModel
 
-            events = (
-                db_session.query(AuditEventModel)
-                .filter(AuditEventModel.tenant_id == "t-audit-1")
-                .all()
-            )
+            events = db_session.query(AuditEventModel).filter(AuditEventModel.tenant_id == "t-audit-1").all()
             created_events = [e for e in events if e.event_type == "backup.created"]
             assert len(created_events) >= 1
 
     def test_backup_records_audit_on_failure(self, db_session, tmp_path):
-        tenant = _seed_tenant(db_session, "t-audit-2", lifecycle_state="deleted")
+        _seed_tenant(db_session, "t-audit-2", lifecycle_state="deleted")
         engine = _make_backup_engine(db_session, str(tmp_path))
 
-        run = engine.create_backup("t-audit-2")
+        engine.create_backup("t-audit-2")
         time.sleep(0.3)
 
         from control_plane.schemas.audit import AuditEventModel
 
-        events = (
-            db_session.query(AuditEventModel)
-            .filter(AuditEventModel.tenant_id == "t-audit-2")
-            .all()
-        )
+        events = db_session.query(AuditEventModel).filter(AuditEventModel.tenant_id == "t-audit-2").all()
         failed_events = [e for e in events if e.event_type == "backup.failed"]
         assert len(failed_events) >= 1
 
 
 class TestRetentionCleanup:
     def test_retention_cleanup_removes_expired_backups(self, db_session, tmp_path):
-        tenant = _seed_tenant(db_session, "t-retention")
+        _seed_tenant(db_session, "t-retention")
         engine = _make_backup_engine(db_session, str(tmp_path))
 
         run = engine.create_backup("t-retention")
@@ -130,8 +119,8 @@ class TestRetentionCleanup:
         assert run.status in (BackupStatus.COMPLETED, BackupStatus.FAILED)
 
     def test_list_backups_filters_by_tenant(self, db_session, tmp_path):
-        t1 = _seed_tenant(db_session, "t-list-1")
-        t2 = _seed_tenant(db_session, "t-list-2")
+        _seed_tenant(db_session, "t-list-1")
+        _seed_tenant(db_session, "t-list-2")
         engine = _make_backup_engine(db_session, str(tmp_path))
 
         engine.create_backup("t-list-1")
@@ -148,7 +137,7 @@ class TestRetentionCleanup:
 
 class TestPITRBackup:
     def test_pitr_backup_type(self, db_session, tmp_path):
-        tenant = _seed_tenant(db_session, "t-pitr")
+        _seed_tenant(db_session, "t-pitr")
         engine = _make_backup_engine(db_session, str(tmp_path))
 
         run = engine.create_backup("t-pitr", backup_type=BackupType.PITR)
@@ -158,4 +147,3 @@ class TestPITRBackup:
         run = engine.get_backup(run.id)
         assert run is not None
         assert run.backup_type == BackupType.PITR
-

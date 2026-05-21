@@ -48,4 +48,3 @@ class TenantRepository:
             return
         self._db.delete(tenant)
         self._db.commit()
-

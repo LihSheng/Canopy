@@ -2,6 +2,7 @@ import pytest
 
 pytestmark = pytest.mark.api_schema
 
+
 class TestErrorEnvelopeShape:
     def test_unauthorized_shape(self, client):
         response = client.get("/api/dashboard/summary")

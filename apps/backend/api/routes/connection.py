@@ -202,5 +202,3 @@ def permanently_delete_connection(
     user: SessionUser = Depends(get_current_user),
 ):
     return _lifecycle_service(db).permanently_delete_connection(id, user.id)
-
-

@@ -73,4 +73,3 @@ def activate_publish(
     if hasattr(repo, "save_publish_record"):
         return repo.save_publish_record(record)
     return record
-

@@ -27,16 +27,12 @@ class _SourceDatabaseManager:
 
     def source_session_factory(self) -> sessionmaker[Session]:
         if self._source_session_factory is None:
-            self._source_session_factory = sessionmaker(
-                autocommit=False, autoflush=False, bind=self.source_engine()
-            )
+            self._source_session_factory = sessionmaker(autocommit=False, autoflush=False, bind=self.source_engine())
         return self._source_session_factory
 
     def set_source_engine(self, eng: Engine) -> None:
         self._source_engine = eng
-        self._source_session_factory = sessionmaker(
-            autocommit=False, autoflush=False, bind=eng
-        )
+        self._source_session_factory = sessionmaker(autocommit=False, autoflush=False, bind=eng)
 
     def reset_source_engine(self) -> None:
         self._source_engine = None
@@ -48,6 +44,7 @@ _source_db_manager = _SourceDatabaseManager()
 
 
 # Public API delegates to the default instance.
+
 
 def source_engine() -> Engine:
     return _source_db_manager.source_engine()

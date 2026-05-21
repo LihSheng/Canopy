@@ -7,7 +7,6 @@ from object_storage.key_generator import (
     parse_tenant_from_key,
     validate_key_for_tenant,
 )
-from object_storage.errors import TenantPrefixError
 
 
 class TestGenerateTenantPrefix:
@@ -27,9 +26,7 @@ class TestGenerateTenantPrefix:
 
 class TestGenerateObjectKey:
     def test_includes_all_components(self):
-        key = generate_object_key(
-            "tenant-1", "raw", "data.csv", use_uuid_subdir=False
-        )
+        key = generate_object_key("tenant-1", "raw", "data.csv", use_uuid_subdir=False)
         assert key.startswith("tenants/tenant-1/raw/")
         assert key.endswith("/data.csv")
 
@@ -134,4 +131,3 @@ class TestValidateKeyForTenant:
         key = f"tenants/{tid}/raw/file.txt"
         assert validate_key_for_tenant(key, tid) is True
         assert validate_key_for_tenant(key, "11111111-2222-3333-4444-555555555555") is False
-

@@ -7,20 +7,16 @@ from ontology.domain import (
     CostCenter,
     Department,
     Employee,
-    ExpenseClaim,
     MappingContext,
     MappingResult,
     OntologyMapper,
-    PayrollExpense,
     UnresolvedRecord,
 )
 from sync.domain import (
     SourceBudgetCode,
-    SourceClaim,
     SourceCostCenter,
     SourceDepartment,
     SourceEmployee,
-    SourcePayroll,
 )
 
 

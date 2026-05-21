@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from refresh.domain import RefreshJob, DataSnapshot
+from refresh.domain import DataSnapshot, RefreshJob
 
 pytestmark = pytest.mark.unit
 
@@ -139,12 +139,14 @@ class TestRefreshOrchestratorEdgeCases:
 
     def test_resolve_months_from_db(self):
         """lines 154-174: _resolve_months queries PayrollExpenseModel."""
+
         from refresh.orchestration.service import RefreshOrchestrator
-        from unittest.mock import patch as mock_patch
 
         app_db = MagicMock()
         query_result = [("2026-05",), ("2026-04",)]
-        app_db.query.return_value.distinct.return_value.filter.return_value.order_by.return_value.all.return_value = query_result
+        app_db.query.return_value.distinct.return_value.filter.return_value.order_by.return_value.all.return_value = (
+            query_result
+        )
 
         orch = RefreshOrchestrator(app_db=app_db, source_db=MagicMock())
         orch._snapshot_id = "snap-1"

@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Callable
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
@@ -32,9 +32,7 @@ class StorageRouter:
                 .first()
             )
             if target is None:
-                raise ValueError(
-                    f"No active database target found for tenant {tenant_id}"
-                )
+                raise ValueError(f"No active database target found for tenant {tenant_id}")
 
             result = {
                 "database_kind": target.database_kind,
@@ -49,13 +47,8 @@ class StorageRouter:
     def get_tenant_session(self, tenant_id: str) -> Session:
         _target = self.resolve_target(tenant_id)
         if self._tenant_data_engine is None:
-            raise RuntimeError(
-                "Tenant data engine not configured. "
-                "Set tenant_data_engine on StorageRouter."
-            )
-        tenant_session_factory = sessionmaker(
-            autocommit=False, autoflush=False, bind=self._tenant_data_engine
-        )
+            raise RuntimeError("Tenant data engine not configured. Set tenant_data_engine on StorageRouter.")
+        tenant_session_factory = sessionmaker(autocommit=False, autoflush=False, bind=self._tenant_data_engine)
         return tenant_session_factory()
 
     def set_tenant_context(self, db_session: Session, tenant_id: str) -> None:
@@ -84,4 +77,3 @@ class StorageRouter:
             self._target_cache.pop(tenant_id, None)
         else:
             self._target_cache.clear()
-

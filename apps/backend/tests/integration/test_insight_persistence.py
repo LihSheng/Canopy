@@ -1,5 +1,3 @@
-from datetime import UTC, datetime
-
 import pytest
 
 from insights.domain import InsightSummary
@@ -40,14 +38,24 @@ class TestInsightPersistence:
 
     def test_find_by_snapshot(self, db_session):
         repo = InsightRepository(db_session)
-        repo.save(InsightSummary(
-            id="i-1", snapshot_id="snap-a", current_month="2026-05",
-            summary_text="A", generated_at="2026-05-15T10:00:00+00:00",
-        ))
-        repo.save(InsightSummary(
-            id="i-2", snapshot_id="snap-b", current_month="2026-05",
-            summary_text="B", generated_at="2026-05-15T11:00:00+00:00",
-        ))
+        repo.save(
+            InsightSummary(
+                id="i-1",
+                snapshot_id="snap-a",
+                current_month="2026-05",
+                summary_text="A",
+                generated_at="2026-05-15T10:00:00+00:00",
+            )
+        )
+        repo.save(
+            InsightSummary(
+                id="i-2",
+                snapshot_id="snap-b",
+                current_month="2026-05",
+                summary_text="B",
+                generated_at="2026-05-15T11:00:00+00:00",
+            )
+        )
 
         result = repo.find_by_snapshot("snap-a")
 
@@ -56,14 +64,24 @@ class TestInsightPersistence:
 
     def test_find_by_month(self, db_session):
         repo = InsightRepository(db_session)
-        repo.save(InsightSummary(
-            id="i-1", snapshot_id="snap-1", current_month="2026-04",
-            summary_text="A", generated_at="2026-04-15T10:00:00+00:00",
-        ))
-        repo.save(InsightSummary(
-            id="i-2", snapshot_id="snap-2", current_month="2026-05",
-            summary_text="B", generated_at="2026-05-15T10:00:00+00:00",
-        ))
+        repo.save(
+            InsightSummary(
+                id="i-1",
+                snapshot_id="snap-1",
+                current_month="2026-04",
+                summary_text="A",
+                generated_at="2026-04-15T10:00:00+00:00",
+            )
+        )
+        repo.save(
+            InsightSummary(
+                id="i-2",
+                snapshot_id="snap-2",
+                current_month="2026-05",
+                summary_text="B",
+                generated_at="2026-05-15T10:00:00+00:00",
+            )
+        )
 
         result = repo.find_by_month("2026-05")
 
@@ -72,10 +90,15 @@ class TestInsightPersistence:
 
     def test_clear_snapshot(self, db_session):
         repo = InsightRepository(db_session)
-        repo.save(InsightSummary(
-            id="i-1", snapshot_id="snap-x", current_month="2026-05",
-            summary_text="X", generated_at="2026-05-15T10:00:00+00:00",
-        ))
+        repo.save(
+            InsightSummary(
+                id="i-1",
+                snapshot_id="snap-x",
+                current_month="2026-05",
+                summary_text="X",
+                generated_at="2026-05-15T10:00:00+00:00",
+            )
+        )
 
         repo.clear_snapshot("snap-x")
         result = repo.find_latest()
@@ -90,11 +113,16 @@ class TestInsightPersistence:
 
     def test_fallback_flag_persisted(self, db_session):
         repo = InsightRepository(db_session)
-        repo.save(InsightSummary(
-            id="i-fb", snapshot_id="snap-1", current_month="2026-05",
-            summary_text="Fallback", is_fallback=True,
-            generated_at="2026-05-15T10:00:00+00:00",
-        ))
+        repo.save(
+            InsightSummary(
+                id="i-fb",
+                snapshot_id="snap-1",
+                current_month="2026-05",
+                summary_text="Fallback",
+                is_fallback=True,
+                generated_at="2026-05-15T10:00:00+00:00",
+            )
+        )
 
         result = repo.find_latest()
 
@@ -105,8 +133,11 @@ class TestInsightPersistence:
         """Verify insight is tied to the same snapshot used for generation."""
         repo = InsightRepository(db_session)
         summary = InsightSummary(
-            id="i-snap", snapshot_id="aligned-snap-001", current_month="2026-05",
-            summary_text="Aligned", generated_at="2026-05-15T10:00:00+00:00",
+            id="i-snap",
+            snapshot_id="aligned-snap-001",
+            current_month="2026-05",
+            summary_text="Aligned",
+            generated_at="2026-05-15T10:00:00+00:00",
         )
         repo.save(summary)
 

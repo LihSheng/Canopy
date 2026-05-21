@@ -1,10 +1,7 @@
 import uuid
 from datetime import datetime
 
-import pytest
-
-from ingestion.cleaning import validate_step_parameters, validate_step_type
-from ingestion.domain import CleaningResult, CleaningStep, MappingDecision
+from ingestion.domain import CleaningStep, MappingDecision
 from ingestion.engine import (
     _apply_cast,
     _apply_dedupe,
@@ -324,8 +321,12 @@ class TestNormalization:
     def test_normalizes_rows_with_mapping_decisions(self):
         rows = [{"name": "Alice", "amount": 100.5}]
         decisions = [
-            MappingDecision(source_column_name="name", target_field_name="employee_name", confirmed=True, overridden_by_user=False),
-            MappingDecision(source_column_name="amount", target_field_name="salary", confirmed=True, overridden_by_user=False),
+            MappingDecision(
+                source_column_name="name", target_field_name="employee_name", confirmed=True, overridden_by_user=False
+            ),
+            MappingDecision(
+                source_column_name="amount", target_field_name="salary", confirmed=True, overridden_by_user=False
+            ),
         ]
         output = normalize_cleaned_rows(rows, decisions)
         assert "employee_name" in output.rows[0]
@@ -336,7 +337,9 @@ class TestNormalization:
     def test_normalizes_number_as_decimal_string(self):
         rows = [{"amount": 100.5}]
         decisions = [
-            MappingDecision(source_column_name="amount", target_field_name="salary", confirmed=True, overridden_by_user=False),
+            MappingDecision(
+                source_column_name="amount", target_field_name="salary", confirmed=True, overridden_by_user=False
+            ),
         ]
         output = normalize_cleaned_rows(rows, decisions)
         assert isinstance(output.rows[0]["salary"], str)
@@ -345,7 +348,9 @@ class TestNormalization:
     def test_normalizes_date_as_iso_string(self):
         rows = [{"date": datetime(2024, 1, 15)}]
         decisions = [
-            MappingDecision(source_column_name="date", target_field_name="submitted_at", confirmed=True, overridden_by_user=False),
+            MappingDecision(
+                source_column_name="date", target_field_name="submitted_at", confirmed=True, overridden_by_user=False
+            ),
         ]
         output = normalize_cleaned_rows(rows, decisions)
         assert output.rows[0]["submitted_at"] == "2024-01-15T00:00:00"
@@ -353,7 +358,9 @@ class TestNormalization:
     def test_warns_on_unmapped_columns(self):
         rows = [{"name": "Alice", "extra_col": "x"}]
         decisions = [
-            MappingDecision(source_column_name="name", target_field_name="employee_name", confirmed=True, overridden_by_user=False),
+            MappingDecision(
+                source_column_name="name", target_field_name="employee_name", confirmed=True, overridden_by_user=False
+            ),
         ]
         output = normalize_cleaned_rows(rows, decisions)
         assert any("Unmapped" in w for w in output.warnings)
@@ -361,7 +368,12 @@ class TestNormalization:
     def test_renamed_columns_resolve_mapping(self):
         rows = [{"new_name": "Alice"}]
         decisions = [
-            MappingDecision(source_column_name="old_name", target_field_name="employee_name", confirmed=True, overridden_by_user=False),
+            MappingDecision(
+                source_column_name="old_name",
+                target_field_name="employee_name",
+                confirmed=True,
+                overridden_by_user=False,
+            ),
         ]
         rename_map = {"new_name": "old_name"}
         output = normalize_cleaned_rows(rows, decisions, rename_map)
@@ -371,7 +383,9 @@ class TestNormalization:
     def test_field_map_contains_correct_mapping(self):
         rows = [{"name": "Alice"}]
         decisions = [
-            MappingDecision(source_column_name="name", target_field_name="employee_name", confirmed=True, overridden_by_user=False),
+            MappingDecision(
+                source_column_name="name", target_field_name="employee_name", confirmed=True, overridden_by_user=False
+            ),
         ]
         output = normalize_cleaned_rows(rows, decisions)
         assert output.field_map == {"name": "employee_name"}
@@ -380,4 +394,3 @@ class TestNormalization:
         output = normalize_cleaned_rows([], [])
         assert output.rows == []
         assert output.field_map == {}
-

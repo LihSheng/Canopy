@@ -36,4 +36,3 @@ class ProjectRepository:
 
     def _to_domain(self, m: ProjectModel) -> Project:
         return Project(**{c.name: getattr(m, c.name) for c in m.__table__.columns})
-

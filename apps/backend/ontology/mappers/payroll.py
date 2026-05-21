@@ -51,9 +51,7 @@ class PayrollMapper(OntologyMapper[SourcePayroll, PayrollExpense]):
                 cost_center_source_key=None,
             )
 
-            cost_center_id = self._attribution.resolve_cost_center(
-                context, employee_source_key=src.employee_key
-            )
+            cost_center_id = self._attribution.resolve_cost_center(context, employee_source_key=src.employee_key)
 
             is_resolved = department_id is not None
 
@@ -62,7 +60,7 @@ class PayrollMapper(OntologyMapper[SourcePayroll, PayrollExpense]):
                     UnresolvedRecord(
                         source_key=src.source_key,
                         entity_type=self.entity_type,
-                        reason=f"unable to resolve department for payroll",
+                        reason="unable to resolve department for payroll",
                         source_data=asdict(src),
                     )
                 )

@@ -38,26 +38,16 @@ class AnomalyRepository:
         return [_model_to_domain(m) for m in models]
 
     def find_by_id(self, anomaly_id: str) -> AnomalyOutput | None:
-        model = (
-            self._db.query(DetectedAnomalyModel)
-            .filter(DetectedAnomalyModel.id == anomaly_id)
-            .first()
-        )
+        model = self._db.query(DetectedAnomalyModel).filter(DetectedAnomalyModel.id == anomaly_id).first()
         if model is None:
             return None
         return _model_to_domain(model)
 
     def count_for_snapshot(self, snapshot_id: str) -> int:
-        return (
-            self._db.query(DetectedAnomalyModel)
-            .filter(DetectedAnomalyModel.snapshot_id == snapshot_id)
-            .count()
-        )
+        return self._db.query(DetectedAnomalyModel).filter(DetectedAnomalyModel.snapshot_id == snapshot_id).count()
 
     def clear_snapshot(self, snapshot_id: str) -> None:
-        self._db.query(DetectedAnomalyModel).filter(
-            DetectedAnomalyModel.snapshot_id == snapshot_id
-        ).delete()
+        self._db.query(DetectedAnomalyModel).filter(DetectedAnomalyModel.snapshot_id == snapshot_id).delete()
         self._db.commit()
 
 

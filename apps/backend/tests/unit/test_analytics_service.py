@@ -4,17 +4,16 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from analytics.domain import (
+    MonthlyClaimTypeSpend,
+    MonthlyDepartmentSpend,
+)
 from analytics.service import (
     get_claim_type_breakdown,
     get_dashboard_summary,
     get_monthly_trends,
     get_summary_cache_for_snapshot,
     get_top_departments,
-)
-from analytics.domain import (
-    DashboardSummaryCache,
-    MonthlyClaimTypeSpend,
-    MonthlyDepartmentSpend,
 )
 
 pytestmark = pytest.mark.business_rule
@@ -109,12 +108,22 @@ class TestGetClaimTypeBreakdown:
             mock_repo.get_distinct_months.return_value = ["2026-05"]
             mock_repo.get_claim_type_spends.return_value = [
                 MonthlyClaimTypeSpend(
-                    id="t1", snapshot_id=SNAPSHOT_ID, department_id="d1",
-                    claim_type="Travel", month="2026-05", amount=500.0, claim_count=2,
+                    id="t1",
+                    snapshot_id=SNAPSHOT_ID,
+                    department_id="d1",
+                    claim_type="Travel",
+                    month="2026-05",
+                    amount=500.0,
+                    claim_count=2,
                 ),
                 MonthlyClaimTypeSpend(
-                    id="t2", snapshot_id=SNAPSHOT_ID, department_id="d2",
-                    claim_type="Meals", month="2026-05", amount=300.0, claim_count=1,
+                    id="t2",
+                    snapshot_id=SNAPSHOT_ID,
+                    department_id="d2",
+                    claim_type="Meals",
+                    month="2026-05",
+                    amount=300.0,
+                    claim_count=1,
                 ),
             ]
             mock_repo_cls.return_value = mock_repo

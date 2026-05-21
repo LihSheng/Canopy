@@ -27,18 +27,10 @@ class RefreshRepository:
         return model
 
     def get_job(self, job_id: str) -> RefreshJobModel | None:
-        return (
-            self._db.query(RefreshJobModel)
-            .filter(RefreshJobModel.id == job_id)
-            .first()
-        )
+        return self._db.query(RefreshJobModel).filter(RefreshJobModel.id == job_id).first()
 
     def update_job(self, job: RefreshJob) -> RefreshJobModel:
-        model = (
-            self._db.query(RefreshJobModel)
-            .filter(RefreshJobModel.id == job.id)
-            .first()
-        )
+        model = self._db.query(RefreshJobModel).filter(RefreshJobModel.id == job.id).first()
         if model is None:
             raise ValueError(f"Refresh job {job.id} not found")
         model.status = job.status
@@ -51,7 +43,8 @@ class RefreshRepository:
         return model
 
     def save_data_snapshot(self, snapshot: DataSnapshot) -> DataSnapshotModel:
-        from datetime import UTC, datetime
+        from datetime import datetime
+
         created_at = snapshot.created_at
         if isinstance(created_at, str):
             created_at = datetime.fromisoformat(created_at) if created_at else utcnow()
@@ -75,11 +68,7 @@ class RefreshRepository:
         )
 
     def mark_current_snapshot(self, job_id: str, snapshot_id: str) -> None:
-        existing = (
-            self._db.query(DataSnapshotModel)
-            .filter(DataSnapshotModel.status == "current")
-            .all()
-        )
+        existing = self._db.query(DataSnapshotModel).filter(DataSnapshotModel.status == "current").all()
         for snap in existing:
             snap.status = "archived"
         new_snap = DataSnapshotModel(
@@ -92,8 +81,4 @@ class RefreshRepository:
         self._db.commit()
 
     def get_latest_job(self) -> RefreshJobModel | None:
-        return (
-            self._db.query(RefreshJobModel)
-            .order_by(RefreshJobModel.started_at.desc())
-            .first()
-        )
+        return self._db.query(RefreshJobModel).order_by(RefreshJobModel.started_at.desc()).first()

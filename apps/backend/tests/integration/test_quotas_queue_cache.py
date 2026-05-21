@@ -2,19 +2,16 @@ import threading
 import time
 from unittest.mock import MagicMock
 
-import pytest
-
 from cache.cache_store import CacheStore
 from cache.config_cache import ConfigCache
 from cache.invalidation import CacheInvalidator
 from cache.routing_cache import RoutingCache
+from job_queue.tenant_queue import TenantJobQueue
 from quotas.domain import QuotaType
 from quotas.enforcer import QuotaEnforcer
 from quotas.evaluator import QuotaEvaluator
 from quotas.registry import get_quota_definition
 from quotas.usage_tracker import UsageTracker
-from job_queue.job_registry import JobRegistry, JobStatus
-from job_queue.tenant_queue import TenantJobQueue
 
 
 class TestFullQuotaEnforcementFlow:
@@ -48,13 +45,11 @@ class TestFullQuotaEnforcementFlow:
     def test_hard_limit_stops_at_exact_limit(self):
         tracker = UsageTracker()
         evaluator = QuotaEvaluator()
-        enforcer = QuotaEnforcer(evaluator, tracker)
+        QuotaEnforcer(evaluator, tracker)
 
         max_rows = get_quota_definition(QuotaType.ROWS_PER_BATCH).max_value
         tracker.increment("tenant-a", QuotaType.ROWS_PER_BATCH, max_rows)
-        result = evaluator.check_quota(
-            tracker, "tenant-a", QuotaType.ROWS_PER_BATCH, proposed_delta=1
-        )
+        result = evaluator.check_quota(tracker, "tenant-a", QuotaType.ROWS_PER_BATCH, proposed_delta=1)
         assert result.allowed is False
 
     def test_warning_threshold_triggers_before_hard_limit(self):
@@ -64,17 +59,13 @@ class TestFullQuotaEnforcementFlow:
         threshold = int(quota.max_value * quota.warning_threshold_pct)
 
         tracker.increment("tenant-a", QuotaType.UPLOAD_SIZE_BYTES, threshold)
-        result = evaluator.check_quota(
-            tracker, "tenant-a", QuotaType.UPLOAD_SIZE_BYTES, proposed_delta=1
-        )
+        result = evaluator.check_quota(tracker, "tenant-a", QuotaType.UPLOAD_SIZE_BYTES, proposed_delta=1)
         assert result.warning_triggered is True
         assert result.allowed is True
 
         remaining = quota.max_value - threshold
         tracker.increment("tenant-a", QuotaType.UPLOAD_SIZE_BYTES, remaining + 1)
-        result = evaluator.check_quota(
-            tracker, "tenant-a", QuotaType.UPLOAD_SIZE_BYTES, proposed_delta=1
-        )
+        result = evaluator.check_quota(tracker, "tenant-a", QuotaType.UPLOAD_SIZE_BYTES, proposed_delta=1)
         assert result.allowed is False
 
     def test_multiple_tenants_independent_quotas(self):
@@ -98,9 +89,11 @@ class TestQueueFairnessIntegration:
         job_queue = TenantJobQueue(max_concurrent_global=10)
 
         results = []
+
         def make_task(tenant_id, seq):
             def task():
                 results.append((tenant_id, seq))
+
             return task
 
         for i in range(5):
@@ -185,6 +178,7 @@ class TestQueueFairnessIntegration:
             def task():
                 time.sleep(0.02)
                 results.append(label)
+
             return task
 
         for i in range(3):
@@ -218,12 +212,15 @@ class TestCacheInvalidationIntegration:
         class MockSession:
             def close(self):
                 pass
+
             def query(self, model):
                 nonlocal call_count
                 call_count += 1
+
                 class MockQuery:
                     def filter(self, *args):
                         return self
+
                     def first(self):
                         return type(
                             "FakeTarget",
@@ -234,6 +231,7 @@ class TestCacheInvalidationIntegration:
                                 "tenant_id": "tenant-x",
                             },
                         )()
+
                 return MockQuery()
 
         db_factory = MagicMock(return_value=MockSession())
@@ -259,6 +257,7 @@ class TestCacheInvalidationIntegration:
         class MockRepo:
             def __init__(self):
                 self.values: dict[str, str] = {"feature_flag": '{"enabled":true}'}
+
             def get_config(self, tenant_id, key):
                 return FakeConfig(self.values.get(key, ""))
 
@@ -281,13 +280,16 @@ class TestCacheInvalidationIntegration:
         class MockSession:
             def close(self):
                 pass
+
             def query(self, model):
                 nonlocal call_count
                 call_count += 1
                 ref = "pg://rotated" if call_count > 1 else "pg://original"
+
                 class MockQuery:
                     def filter(self, *args):
                         return self
+
                     def first(self):
                         return type(
                             "FakeTarget",
@@ -298,6 +300,7 @@ class TestCacheInvalidationIntegration:
                                 "tenant_id": "tenant-x",
                             },
                         )()
+
                 return MockQuery()
 
         db_factory = MagicMock(return_value=MockSession())
@@ -319,10 +322,12 @@ class TestCacheInvalidationIntegration:
         class MockSession:
             def close(self):
                 pass
+
             def query(self, model):
                 class MockQuery:
                     def filter(self, *args):
                         return self
+
                     def first(self):
                         return type(
                             "FakeTarget",
@@ -333,6 +338,7 @@ class TestCacheInvalidationIntegration:
                                 "tenant_id": "new-tenant",
                             },
                         )()
+
                 return MockQuery()
 
         db_factory = MagicMock(return_value=MockSession())
@@ -393,4 +399,3 @@ class TestEndToEndQuotaQueueCache:
         assert routing.get_tenant_database_target("tenant-a") is not None
         assert config_cache.get_tenant_config("tenant-a", "flag") == "true"
         assert len(job_queue.registry.get_tenant_jobs("tenant-a")) == 1
-

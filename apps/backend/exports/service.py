@@ -68,16 +68,8 @@ def trigger_export(
         include_departments=include_departments,
         include_anomalies=include_anomalies,
     )
-    job.include_departments = (
-        include_departments
-        if include_departments is not None
-        else preset.include_departments
-    )
-    job.include_anomalies = (
-        include_anomalies
-        if include_anomalies is not None
-        else preset.include_anomalies
-    )
+    job.include_departments = include_departments if include_departments is not None else preset.include_departments
+    job.include_anomalies = include_anomalies if include_anomalies is not None else preset.include_anomalies
 
     db = session_factory()()
     try:
@@ -193,6 +185,3 @@ def _model_to_domain(model) -> ExportJob:
         finished_at=model.finished_at,
         error_message=model.error_message,
     )
-
-
-

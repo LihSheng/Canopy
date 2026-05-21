@@ -1,9 +1,9 @@
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from object_storage.adapter import StorageAccessScope, StorageObjectMeta
-from object_storage.errors import ObjectImmutableError, StorageAccessError
+from object_storage.adapter import StorageObjectMeta
+from object_storage.errors import StorageAccessError
 from object_storage.service import StorageService
 
 
@@ -43,9 +43,7 @@ class TestStorageServiceUpload:
     def test_upload_fails_with_wrong_tenant(self):
         mock_adapter = MagicMock()
         mock_guard = MagicMock()
-        mock_guard.check_write_access.side_effect = StorageAccessError(
-            "key", "wrong tenant"
-        )
+        mock_guard.check_write_access.side_effect = StorageAccessError("key", "wrong tenant")
 
         service = StorageService(adapter=mock_adapter, guard=mock_guard)
         with pytest.raises(StorageAccessError):
@@ -88,27 +86,19 @@ class TestStorageServiceDownload:
         mock_guard.check_read_access.return_value = True
 
         service = StorageService(adapter=mock_adapter, guard=mock_guard)
-        result = service.download_file(
-            tenant_id="tenant-A", key="tenants/tenant-A/raw/file.csv"
-        )
+        result = service.download_file(tenant_id="tenant-A", key="tenants/tenant-A/raw/file.csv")
 
         assert result == b"file content"
-        mock_adapter.get_object.assert_called_once_with(
-            key="tenants/tenant-A/raw/file.csv", tenant_id="tenant-A"
-        )
+        mock_adapter.get_object.assert_called_once_with(key="tenants/tenant-A/raw/file.csv", tenant_id="tenant-A")
 
     def test_download_denied_wrong_tenant(self):
         mock_adapter = MagicMock()
         mock_guard = MagicMock()
-        mock_guard.check_read_access.side_effect = StorageAccessError(
-            "key", "wrong tenant"
-        )
+        mock_guard.check_read_access.side_effect = StorageAccessError("key", "wrong tenant")
 
         service = StorageService(adapter=mock_adapter, guard=mock_guard)
         with pytest.raises(StorageAccessError):
-            service.download_file(
-                tenant_id="tenant-A", key="tenants/tenant-B/raw/file.csv"
-            )
+            service.download_file(tenant_id="tenant-A", key="tenants/tenant-B/raw/file.csv")
 
 
 class TestStorageServiceDelete:
@@ -118,39 +108,37 @@ class TestStorageServiceDelete:
         mock_guard.check_delete_access.return_value = True
 
         service = StorageService(adapter=mock_adapter, guard=mock_guard)
-        service.delete_file(
-            tenant_id="tenant-A", key="tenants/tenant-A/raw/file.csv"
-        )
+        service.delete_file(tenant_id="tenant-A", key="tenants/tenant-A/raw/file.csv")
 
         mock_guard.check_delete_access.assert_called_once()
-        mock_adapter.delete_object.assert_called_once_with(
-            key="tenants/tenant-A/raw/file.csv", tenant_id="tenant-A"
-        )
+        mock_adapter.delete_object.assert_called_once_with(key="tenants/tenant-A/raw/file.csv", tenant_id="tenant-A")
 
     def test_delete_denied_wrong_tenant(self):
         mock_adapter = MagicMock()
         mock_guard = MagicMock()
-        mock_guard.check_delete_access.side_effect = StorageAccessError(
-            "key", "wrong tenant"
-        )
+        mock_guard.check_delete_access.side_effect = StorageAccessError("key", "wrong tenant")
 
         service = StorageService(adapter=mock_adapter, guard=mock_guard)
         with pytest.raises(StorageAccessError):
-            service.delete_file(
-                tenant_id="tenant-A", key="tenants/tenant-B/raw/file.csv"
-            )
+            service.delete_file(tenant_id="tenant-A", key="tenants/tenant-B/raw/file.csv")
 
 
 class TestStorageServiceList:
     def test_list_filters_by_tenant_prefix(self):
         mock_adapter = MagicMock()
         meta_a = StorageObjectMeta(
-            tenant_id="tenant-A", storage_key="tenants/tenant-A/raw/a.csv",
-            checksum="a", mime_type=None, size_bytes=1,
+            tenant_id="tenant-A",
+            storage_key="tenants/tenant-A/raw/a.csv",
+            checksum="a",
+            mime_type=None,
+            size_bytes=1,
         )
         meta_b = StorageObjectMeta(
-            tenant_id="tenant-A", storage_key="tenants/tenant-A/clean/b.csv",
-            checksum="b", mime_type=None, size_bytes=1,
+            tenant_id="tenant-A",
+            storage_key="tenants/tenant-A/clean/b.csv",
+            checksum="b",
+            mime_type=None,
+            size_bytes=1,
         )
         mock_adapter.list_objects.return_value = [meta_a, meta_b]
         mock_guard = MagicMock()
@@ -196,9 +184,7 @@ class TestStorageServiceLifecycle:
         mock_guard.check_write_access.return_value = True
 
         service = StorageService(adapter=mock_adapter, guard=mock_guard)
-        service.archive_object(
-            tenant_id="tenant-A", key="tenants/tenant-A/raw/file.csv"
-        )
+        service.archive_object(tenant_id="tenant-A", key="tenants/tenant-A/raw/file.csv")
 
         mock_adapter.set_lifecycle_state.assert_called_once_with(
             "tenants/tenant-A/raw/file.csv", "archived", tenant_id="tenant-A"
@@ -210,9 +196,7 @@ class TestStorageServiceLifecycle:
         mock_guard.check_write_access.return_value = True
 
         service = StorageService(adapter=mock_adapter, guard=mock_guard)
-        service.expire_object(
-            tenant_id="tenant-A", key="tenants/tenant-A/raw/file.csv"
-        )
+        service.expire_object(tenant_id="tenant-A", key="tenants/tenant-A/raw/file.csv")
 
         mock_adapter.set_lifecycle_state.assert_called_once_with(
             "tenants/tenant-A/raw/file.csv", "expired", tenant_id="tenant-A"
@@ -250,9 +234,7 @@ class TestStorageServiceCleanup:
         count = service.cleanup_expired(tenant_id="tenant-A")
 
         assert count == 1
-        mock_adapter.delete_object.assert_called_once_with(
-            key="tenants/tenant-A/raw/expired.csv", tenant_id="tenant-A"
-        )
+        mock_adapter.delete_object.assert_called_once_with(key="tenants/tenant-A/raw/expired.csv", tenant_id="tenant-A")
 
     def test_cleanup_empty_returns_zero(self):
         mock_adapter = MagicMock()
@@ -314,4 +296,3 @@ class TestStorageServiceCleanup:
         count = service.cleanup_expired(tenant_id="tenant-A")
         assert count == 0
         mock_adapter.delete_object.assert_not_called()
-

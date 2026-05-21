@@ -42,7 +42,10 @@ class TestSmoke:
         status = client.get("/api/refresh/current", headers=auth_headers)
         assert status.status_code == 200
         assert status.json()["status"] in (
-            "idle", "running", "completed", "failed",
+            "idle",
+            "running",
+            "completed",
+            "failed",
         )
 
     def test_export_request(self, client, auth_headers):
@@ -52,7 +55,5 @@ class TestSmoke:
             json={"include_departments": True, "include_anomalies": True},
         )
         assert response.status_code == 200
-        assert response.headers["content-type"] == (
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        assert response.headers["content-type"] == ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         assert response.content[:2] == b"PK"

@@ -1,9 +1,9 @@
 import uuid
 
+from cache.hooks import after_tenant_provisioned
 from common.clock import utcnow
 from common.database import session_factory
 from common.executor import background
-from cache.hooks import after_tenant_provisioned
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
 from control_plane.schemas.database_targets import TenantDatabaseTargetModel
@@ -106,19 +106,10 @@ class ProvisioningService:
         return job
 
     def get_provisioning_status(self, job_id: str) -> ProvisioningJobModel | None:
-        return (
-            self._db.query(ProvisioningJobModel)
-            .filter(ProvisioningJobModel.id == job_id)
-            .first()
-        )
+        return self._db.query(ProvisioningJobModel).filter(ProvisioningJobModel.id == job_id).first()
 
-    def list_provisioning_jobs(
-        self, tenant_id: str | None = None
-    ) -> list[ProvisioningJobModel]:
-        q = self._db.query(ProvisioningJobModel).order_by(
-            ProvisioningJobModel.created_at.desc()
-        )
+    def list_provisioning_jobs(self, tenant_id: str | None = None) -> list[ProvisioningJobModel]:
+        q = self._db.query(ProvisioningJobModel).order_by(ProvisioningJobModel.created_at.desc())
         if tenant_id is not None:
             q = q.filter(ProvisioningJobModel.tenant_id == tenant_id)
         return q.all()
-

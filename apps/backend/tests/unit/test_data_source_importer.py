@@ -76,4 +76,3 @@ def test_materialize_dataset_version_writes_jsonl(monkeypatch, tmp_path):
     rows = version_path.read_text(encoding="utf-8").splitlines()
     assert rows[0] == '{"name": "Alice", "amount": 100}'
     assert rows[1] == '{"name": "Bob", "amount": 200}'
-

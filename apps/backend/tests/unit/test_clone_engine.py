@@ -45,11 +45,7 @@ class TestCloneCreatesNewTenant:
             assert run.target_tenant_id is not None
             assert run.target_tenant_id != run.source_tenant_id
 
-            cloned = (
-                db_session.query(TenantModel)
-                .filter(TenantModel.id == run.target_tenant_id)
-                .first()
-            )
+            cloned = db_session.query(TenantModel).filter(TenantModel.id == run.target_tenant_id).first()
             assert cloned is not None
             assert cloned.id != source.id
 
@@ -83,11 +79,7 @@ class TestClonePreservesSource:
         engine.create_clone("t-source-preserve", "Cloned Preserved")
         time.sleep(0.5)
 
-        source_after = (
-            db_session.query(TenantModel)
-            .filter(TenantModel.id == "t-source-preserve")
-            .first()
-        )
+        source_after = db_session.query(TenantModel).filter(TenantModel.id == "t-source-preserve").first()
         assert source_after is not None
         assert source_after.lifecycle_state == "active"
         assert source_after.name == "Tenant t-source-preserve"
@@ -135,11 +127,7 @@ class TestCloneRecordsAudit:
         if run and run.status == BackupStatus.COMPLETED:
             from control_plane.schemas.audit import AuditEventModel
 
-            events = (
-                db_session.query(AuditEventModel)
-                .filter(AuditEventModel.tenant_id == run.target_tenant_id)
-                .all()
-            )
+            events = db_session.query(AuditEventModel).filter(AuditEventModel.tenant_id == run.target_tenant_id).all()
             cloned_events = [e for e in events if e.event_type == "tenant.cloned"]
             assert len(cloned_events) >= 1
             assert "source_tenant_id" in (cloned_events[0].event_payload_json or "")
@@ -170,4 +158,3 @@ class TestCloneResult:
     def test_get_clone_returns_none_for_missing(self, db_session):
         engine = _make_clone_engine(db_session)
         assert engine.get_clone("nonexistent") is None
-

@@ -1,7 +1,6 @@
 import uuid
 
 from api.schemas.refresh import RefreshJobResponse, RefreshRequestResponse, RefreshStatusResponse
-from common.clock import iso_now, utcnow
 from common.database import session_factory
 from common.executor import background
 from refresh.domain import RefreshJob

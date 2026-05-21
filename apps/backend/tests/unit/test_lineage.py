@@ -1,6 +1,3 @@
-import uuid
-from unittest.mock import MagicMock
-
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -31,12 +28,13 @@ def _setup_db():
 
 def _make_lineage_sqlite_session():
     engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
-    import dataset.schema  # noqa: F401
     import connection.schema  # noqa: F401
+    import dataset.schema  # noqa: F401
     import run.schema  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(bind=engine)
-    return SessionLocal()
+    session_local = sessionmaker(bind=engine)
+    return session_local()
 
 
 _UPLOAD_ID = "test-upload-1"
@@ -239,8 +237,7 @@ class TestBuildLineageGraph:
             normalized_fields={},
         )
         sheet_file_edges = [
-            e for e in graph.edges
-            if e.from_node_id.startswith("sheet:") and e.to_node_id.startswith("file:")
+            e for e in graph.edges if e.from_node_id.startswith("sheet:") and e.to_node_id.startswith("file:")
         ]
         assert len(sheet_file_edges) == 1
 
@@ -255,8 +252,7 @@ class TestBuildLineageGraph:
             normalized_fields={"name": "employee_name"},
         )
         raw_cleaned_edges = [
-            e for e in graph.edges
-            if e.from_node_id.startswith("raw:") and e.to_node_id.startswith("cleaned:")
+            e for e in graph.edges if e.from_node_id.startswith("raw:") and e.to_node_id.startswith("cleaned:")
         ]
         assert len(raw_cleaned_edges) >= 1
 
@@ -271,8 +267,7 @@ class TestBuildLineageGraph:
             normalized_fields={"name": "employee_name"},
         )
         norm_edges = [
-            e for e in graph.edges
-            if e.from_node_id.startswith("cleaned:") and e.to_node_id.startswith("onto:")
+            e for e in graph.edges if e.from_node_id.startswith("cleaned:") and e.to_node_id.startswith("onto:")
         ]
         assert len(norm_edges) == 1
 
@@ -288,8 +283,7 @@ class TestBuildLineageGraph:
             rename_map={"new_col": "old_col"},
         )
         rename_edges = [
-            e for e in graph.edges
-            if e.from_node_id.startswith("raw:") and e.to_node_id.startswith("cleaned:")
+            e for e in graph.edges if e.from_node_id.startswith("raw:") and e.to_node_id.startswith("cleaned:")
         ]
         assert len(rename_edges) == 1
         assert rename_edges[0].metadata.get("renamed") is True
@@ -334,7 +328,9 @@ class TestDatasetLineageHandler:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
 
-            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="sheet1")
+            dataset = Dataset(
+                id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="sheet1"
+            )
             DatasetRepository(session).save(dataset)
 
             result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
@@ -352,7 +348,9 @@ class TestDatasetLineageHandler:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
 
-            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="sheet1")
+            dataset = Dataset(
+                id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="sheet1"
+            )
             DatasetRepository(session).save(dataset)
 
             result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
@@ -368,7 +366,9 @@ class TestDatasetLineageHandler:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
 
-            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="")
+            dataset = Dataset(
+                id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name=""
+            )
             DatasetRepository(session).save(dataset)
 
             result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
@@ -384,7 +384,9 @@ class TestDatasetLineageHandler:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
 
-            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="tbl")
+            dataset = Dataset(
+                id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="tbl"
+            )
             DatasetRepository(session).save(dataset)
 
             version_repo = DatasetVersionRepository(session)
@@ -408,12 +410,16 @@ class TestDatasetLineageHandler:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
 
-            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="tbl")
+            dataset = Dataset(
+                id="ds-1", project_id="proj-1", connection_id="conn-1", name="MyDs", source_object_name="tbl"
+            )
             DatasetRepository(session).save(dataset)
 
             result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
-            so_to_conn = [e for e in result["edges"] if e["from"].startswith("source_") and e["to"].startswith("connection_")]
+            so_to_conn = [
+                e for e in result["edges"] if e["from"].startswith("source_") and e["to"].startswith("connection_")
+            ]
             assert len(so_to_conn) == 1
             assert so_to_conn[0]["type"] == "feeds"
         finally:
@@ -430,7 +436,9 @@ class TestDatasetLineageHandler:
 
             result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
-            conn_to_ds = [e for e in result["edges"] if e["from"].startswith("connection_") and e["to"].startswith("dataset_")]
+            conn_to_ds = [
+                e for e in result["edges"] if e["from"].startswith("connection_") and e["to"].startswith("dataset_")
+            ]
             assert len(conn_to_ds) == 1
             assert conn_to_ds[0]["type"] == "provides"
         finally:
@@ -451,7 +459,9 @@ class TestDatasetLineageHandler:
 
             result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
 
-            ver_to_ds = [e for e in result["edges"] if e["from"].startswith("version_") and e["to"].startswith("dataset_")]
+            ver_to_ds = [
+                e for e in result["edges"] if e["from"].startswith("version_") and e["to"].startswith("dataset_")
+            ]
             assert len(ver_to_ds) == 2
             for edge in ver_to_ds:
                 assert edge["type"] == "belongs_to"
@@ -468,20 +478,24 @@ class TestDatasetLineageHandler:
             DatasetRepository(session).save(dataset)
 
             run_repo = RunRepository(session)
-            run_repo.save(Run(
-                id="run-1",
-                project_id="proj-1",
-                connection_id="conn-1",
-                dataset_id="ds-1",
-                status="completed",
-            ))
-            run_repo.save(Run(
-                id="run-2",
-                project_id="proj-1",
-                connection_id="conn-1",
-                dataset_id="ds-1",
-                status="failed",
-            ))
+            run_repo.save(
+                Run(
+                    id="run-1",
+                    project_id="proj-1",
+                    connection_id="conn-1",
+                    dataset_id="ds-1",
+                    status="completed",
+                )
+            )
+            run_repo.save(
+                Run(
+                    id="run-2",
+                    project_id="proj-1",
+                    connection_id="conn-1",
+                    dataset_id="ds-1",
+                    status="failed",
+                )
+            )
 
             result = DatasetService(
                 DatasetRepository(session),
@@ -519,6 +533,7 @@ class TestDatasetLineageHandler:
         session = _make_lineage_sqlite_session()
         try:
             from common.errors import NotFoundError
+
             with pytest.raises(NotFoundError, match="Dataset not found"):
                 DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("no-such-ds")
         finally:
@@ -527,7 +542,9 @@ class TestDatasetLineageHandler:
     def test_no_connection_edges_when_connection_missing(self):
         session = _make_lineage_sqlite_session()
         try:
-            dataset = Dataset(id="ds-1", project_id="proj-1", connection_id="bad-conn", name="MyDs", source_object_name="tbl")
+            dataset = Dataset(
+                id="ds-1", project_id="proj-1", connection_id="bad-conn", name="MyDs", source_object_name="tbl"
+            )
             DatasetRepository(session).save(dataset)
 
             result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
@@ -541,4 +558,3 @@ class TestDatasetLineageHandler:
             assert len(provides_edges) == 0
         finally:
             session.close()
-

@@ -14,9 +14,7 @@ from analytics.departments import (
 )
 from analytics.domain import (
     ClaimDetailSummary,
-    MonthlyClaimTypeSpend,
     MonthlyDepartmentSpend,
-    MonthlyEmployeeSpend,
 )
 
 pytestmark = pytest.mark.business_rule

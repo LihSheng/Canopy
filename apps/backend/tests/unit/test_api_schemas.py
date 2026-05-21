@@ -68,8 +68,12 @@ class TestDashboardSchemas:
 
     def test_top_department_valid(self):
         dept = TopDepartmentItem(
-            id="d1", name="Engineering", total_spend=1000.0,
-            payroll_spend=800.0, claims_spend=200.0, change_pct=5.5,
+            id="d1",
+            name="Engineering",
+            total_spend=1000.0,
+            payroll_spend=800.0,
+            claims_spend=200.0,
+            change_pct=5.5,
         )
         assert dept.id == "d1"
 
@@ -85,30 +89,46 @@ class TestDashboardSchemas:
 class TestDepartmentSchemas:
     def test_department_item_valid(self):
         d = DepartmentItem(
-            id="d1", name="Eng", total_spend=1000.0,
-            payroll_spend=800.0, claims_spend=200.0, change_pct=1.0,
+            id="d1",
+            name="Eng",
+            total_spend=1000.0,
+            payroll_spend=800.0,
+            claims_spend=200.0,
+            change_pct=1.0,
         )
         assert d.id == "d1"
 
     def test_department_detail_valid(self):
         d = DepartmentDetailResponse(
-            id="d1", name="Eng", payroll_spend=800.0,
-            claims_spend=200.0, total_spend=1000.0,
-            change_pct=1.0, employee_count=42,
+            id="d1",
+            name="Eng",
+            payroll_spend=800.0,
+            claims_spend=200.0,
+            total_spend=1000.0,
+            change_pct=1.0,
+            employee_count=42,
         )
         assert d.employee_count == 42
 
     def test_employee_contribution_valid(self):
         e = EmployeeContributionItem(
-            id="e1", name="Alice", department="Eng",
-            payroll=5000.0, claims=200.0, total=5200.0,
+            id="e1",
+            name="Alice",
+            department="Eng",
+            payroll=5000.0,
+            claims=200.0,
+            total=5200.0,
         )
         assert e.name == "Alice"
 
     def test_claim_detail_valid(self):
         c = ClaimDetailItem(
-            id="c1", employee_name="Alice", department="Eng",
-            type="Travel", amount=200.0, date="2026-05-01",
+            id="c1",
+            employee_name="Alice",
+            department="Eng",
+            type="Travel",
+            amount=200.0,
+            date="2026-05-01",
         )
         assert c.date == "2026-05-01"
 
@@ -116,18 +136,30 @@ class TestDepartmentSchemas:
 class TestAnomalySchemas:
     def test_anomaly_item_valid(self):
         a = AnomalyItem(
-            id="a1", department_id="d1", department_name="Eng",
-            period="2026-05", description="Spike", severity="high",
+            id="a1",
+            department_id="d1",
+            department_name="Eng",
+            period="2026-05",
+            description="Spike",
+            severity="high",
             change_pct=15.0,
         )
         assert a.severity == "high"
 
     def test_anomaly_detail_valid(self):
         a = AnomalyDetailResponse(
-            id="a1", department_id="d1", department_name="Eng", period="2026-05",
-            description="Spike", severity="high", change_pct=15.0,
-            baseline_value=1000.0, observed_value=1150.0, delta_value=150.0,
-            delta_percent=15.0, driver_details=["Hiring"],
+            id="a1",
+            department_id="d1",
+            department_name="Eng",
+            period="2026-05",
+            description="Spike",
+            severity="high",
+            change_pct=15.0,
+            baseline_value=1000.0,
+            observed_value=1150.0,
+            delta_value=150.0,
+            delta_percent=15.0,
+            driver_details=["Hiring"],
         )
         assert a.delta_value == 150.0
 
@@ -184,20 +216,31 @@ class TestExportSchemas:
 class TestNewV2Schemas:
     def test_command_view_response(self):
         summary = DashboardSummaryResponse(
-            total_payroll=1000.0, total_claims=500.0,
+            total_payroll=1000.0,
+            total_claims=500.0,
             period=PeriodInfo(year=2026, month=5),
-            department_count=6, anomaly_count=3,
+            department_count=6,
+            anomaly_count=3,
             last_updated="2026-05-16T10:00:00Z",
         )
         dept = TopDepartmentItem(
-            id="d1", name="Engineering", total_spend=1000.0,
-            payroll_spend=800.0, claims_spend=200.0, change_pct=5.5,
+            id="d1",
+            name="Engineering",
+            total_spend=1000.0,
+            payroll_spend=800.0,
+            claims_spend=200.0,
+            change_pct=5.5,
         )
         trend = MonthlyTrendItem(month="2026-05", payroll=1000.0, claims=200.0, total=1200.0)
         ct = ClaimTypeBreakdownItem(type="Travel", amount=500.0, count=10)
         a = AnomalyItem(
-            id="a1", department_id="d1", department_name="Engineering",
-            period="2026-05", description="Spike", severity="high", change_pct=15.0,
+            id="a1",
+            department_id="d1",
+            department_name="Engineering",
+            period="2026-05",
+            description="Spike",
+            severity="high",
+            change_pct=15.0,
         )
         view = DashboardCommandViewResponse(
             summary=summary,
@@ -219,16 +262,25 @@ class TestNewV2Schemas:
 
     def test_dashboard_top_departments_response(self):
         dept = TopDepartmentItem(
-            id="d1", name="Engineering", total_spend=1000.0,
-            payroll_spend=800.0, claims_spend=200.0, change_pct=5.5,
+            id="d1",
+            name="Engineering",
+            total_spend=1000.0,
+            payroll_spend=800.0,
+            claims_spend=200.0,
+            change_pct=5.5,
         )
         r = DashboardTopDepartmentsResponse(departments=[dept])
         assert len(r.departments) == 1
 
     def test_anomaly_list_response(self):
         a = AnomalyItem(
-            id="a1", department_id="d1", department_name="Engineering",
-            period="2026-05", description="Spike", severity="high", change_pct=15.0,
+            id="a1",
+            department_id="d1",
+            department_name="Engineering",
+            period="2026-05",
+            description="Spike",
+            severity="high",
+            change_pct=15.0,
         )
         r = AnomalyListResponse(anomalies=[a], total=1)
         assert r.total == 1
@@ -236,8 +288,12 @@ class TestNewV2Schemas:
 
     def test_department_list_response(self):
         d = DepartmentItem(
-            id="d1", name="Engineering", total_spend=1000.0,
-            payroll_spend=800.0, claims_spend=200.0, change_pct=5.5,
+            id="d1",
+            name="Engineering",
+            total_spend=1000.0,
+            payroll_spend=800.0,
+            claims_spend=200.0,
+            change_pct=5.5,
         )
         r = DepartmentListResponse(departments=[d], total=1)
         assert r.total == 1
@@ -245,9 +301,13 @@ class TestNewV2Schemas:
 
     def test_department_detail_with_new_fields(self):
         d = DepartmentDetailResponse(
-            id="d1", name="Engineering",
-            payroll_spend=800.0, claims_spend=200.0, total_spend=1000.0,
-            change_pct=5.5, employee_count=42,
+            id="d1",
+            name="Engineering",
+            payroll_spend=800.0,
+            claims_spend=200.0,
+            total_spend=1000.0,
+            change_pct=5.5,
+            employee_count=42,
         )
         assert d.attention_state is None
         assert d.ai_summary is None
@@ -255,9 +315,13 @@ class TestNewV2Schemas:
     def test_department_detail_with_ai_summary(self):
         ai = AiSummary(summary_text="Stable spend", key_findings=["No anomalies"])
         d = DepartmentDetailResponse(
-            id="d1", name="Engineering",
-            payroll_spend=800.0, claims_spend=200.0, total_spend=1000.0,
-            change_pct=5.5, employee_count=42,
+            id="d1",
+            name="Engineering",
+            payroll_spend=800.0,
+            claims_spend=200.0,
+            total_spend=1000.0,
+            change_pct=5.5,
+            employee_count=42,
             attention_state="attention",
             ai_summary=ai,
         )

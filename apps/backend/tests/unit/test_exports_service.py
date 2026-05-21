@@ -1,10 +1,5 @@
 import pytest
 
-from exports.builders.workbook import build_workbook
-from exports.domain import (
-    DepartmentExportRow,
-    ExportPayload,
-)
 from exports.payload import _collect_departments, _collect_trends, build_payload
 
 
@@ -77,7 +72,8 @@ class TestExportServiceFallback:
     """Cover _get_snapshot_context when summary is None (payload.py line 54)."""
 
     def test_get_snapshot_context_returns_none(self):
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import MagicMock, patch
+
         from exports.payload import _get_snapshot_context
 
         with patch("exports.payload.get_dashboard_summary") as mock_summary:
@@ -87,7 +83,8 @@ class TestExportServiceFallback:
 
     def test_build_payload_without_snapshot_context(self):
         """lines 185-194: snapshot_context is None builds fallback."""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import MagicMock, patch
+
         from exports.payload import build_payload
 
         with (
@@ -154,8 +151,9 @@ class TestExportRepository:
 
     def test_update_job_not_found_raises(self):
         from unittest.mock import MagicMock
-        from exports.repository import ExportRepository
+
         from exports.domain import ExportJob
+        from exports.repository import ExportRepository
 
         mock_db = MagicMock()
         mock_db.query.return_value.filter.return_value.first.return_value = None
@@ -170,7 +168,8 @@ class TestGetExportJob:
     """Cover get_export_job returning None (service.py line 104)."""
 
     def test_get_export_job_not_found(self):
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import MagicMock, patch
+
         from exports.service import get_export_job
 
         with patch("exports.service.session_factory") as mock_factory:
@@ -186,7 +185,8 @@ class TestRerunExport:
     """Cover rerun_export with missing job (service.py line 123)."""
 
     def test_rerun_nonexistent_export(self):
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
+
         from exports.service import rerun_export
 
         with patch("exports.service.get_export_job") as mock_get:

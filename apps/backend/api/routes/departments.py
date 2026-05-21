@@ -13,6 +13,7 @@ from analytics.departments import (
 )
 from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
+from api.schemas.dashboard import MonthlyTrendItem
 from api.schemas.departments import (
     ClaimDetailItem,
     DepartmentClaimTypeItem,
@@ -20,7 +21,6 @@ from api.schemas.departments import (
     DepartmentItem,
     EmployeeContributionItem,
 )
-from api.schemas.dashboard import MonthlyTrendItem
 from common.database import get_db
 from common.errors import NotFoundError
 

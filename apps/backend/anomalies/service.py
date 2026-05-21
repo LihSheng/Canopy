@@ -18,20 +18,12 @@ def detect_anomalies(
     anomaly_repo = AnomalyRepository(db)
     anomaly_repo.clear_snapshot(snapshot_id)
 
-    current_spends = get_monthly_spends_for_month(
-        db, current_month, snapshot_id=snapshot_id
-    )
-    previous_spends = get_monthly_spends_for_month(
-        db, previous_month, snapshot_id=snapshot_id
-    )
+    current_spends = get_monthly_spends_for_month(db, current_month, snapshot_id=snapshot_id)
+    previous_spends = get_monthly_spends_for_month(db, previous_month, snapshot_id=snapshot_id)
 
     outputs: list[AnomalyOutput] = []
-    outputs.extend(
-        department_total_spike_rule(snapshot_id, current_spends, previous_spends)
-    )
-    outputs.extend(
-        department_claim_spike_rule(snapshot_id, current_spends, previous_spends)
-    )
+    outputs.extend(department_total_spike_rule(snapshot_id, current_spends, previous_spends))
+    outputs.extend(department_claim_spike_rule(snapshot_id, current_spends, previous_spends))
 
     anomaly_repo.save_anomalies(outputs)
     return outputs
@@ -47,9 +39,7 @@ def get_anomalies_list(
     if department_id:
         outputs = [o for o in outputs if o.target_entity_id == department_id]
     dept_map = get_department_map(db, snapshot_id=snapshot_id)
-    return [
-        _to_item(o, dept_map) for o in outputs
-    ]
+    return [_to_item(o, dept_map) for o in outputs]
 
 
 def get_anomaly_detail(db: Session, anomaly_id: str) -> dict | None:

@@ -56,10 +56,7 @@ def extract_facts(db: Session) -> FactBundle | None:
     ]
 
     breakdown = get_claim_type_breakdown(db)
-    claim_type_facts = [
-        ClaimTypeFact(type=c.type, amount=c.amount, count=c.count)
-        for c in breakdown
-    ]
+    claim_type_facts = [ClaimTypeFact(type=c.type, amount=c.amount, count=c.count) for c in breakdown]
 
     department_spends = get_monthly_spends_for_month(db, current_month, snapshot_id=snapshot_id)
     rankings = sorted(department_spends, key=lambda s: s.total, reverse=True)

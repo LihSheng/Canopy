@@ -1,16 +1,16 @@
-import uuid
 import shutil
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
 from common.errors import NotFoundError, ValidationError
-from dataset.cleaning import clean_source_file
-from dataset.domain import Dataset, DatasetVersion, DatasetStatus, DatasetVersionStatus
-from dataset.repository import DatasetRepository, DatasetVersionRepository
 from connection._shared import storage_root
-from connection.preview import build_sheet_profiles
 from connection.materialization import materialize_dataset_version
+from connection.preview import build_sheet_profiles
 from connection.repository import ConnectionRepository
+from dataset.cleaning import clean_source_file
+from dataset.domain import Dataset, DatasetStatus, DatasetVersion, DatasetVersionStatus
+from dataset.repository import DatasetRepository, DatasetVersionRepository
 from run.repository import RunRepository
 
 
@@ -95,11 +95,7 @@ class DatasetService:
             "version_count": version_count,
             "active_run_count": active_run_count,
             "can_delete": active_run_count == 0,
-            "blocking_reason": (
-                None
-                if active_run_count == 0
-                else f"Dataset has {active_run_count} active run(s)"
-            ),
+            "blocking_reason": (None if active_run_count == 0 else f"Dataset has {active_run_count} active run(s)"),
         }
 
     def delete_dataset(self, dataset_id: str) -> dict:
@@ -110,9 +106,7 @@ class DatasetService:
         run_repo = RunRepository(self._repo._db)
         active_run_count = run_repo.count_active_by_dataset(dataset_id)
         if active_run_count > 0:
-            raise ValidationError(
-                f"Dataset has {active_run_count} active run(s)"
-            )
+            raise ValidationError(f"Dataset has {active_run_count} active run(s)")
 
         self._version_repo.delete_by_dataset(dataset_id)
         deleted = self._repo.delete(dataset_id)
@@ -131,6 +125,7 @@ class DatasetService:
             return {}
 
         from run.repository import RunRepository
+
         run_repo = RunRepository(self._repo._db)
 
         active_version = None
@@ -162,7 +157,7 @@ class DatasetService:
         cursor_column: str | None = None,
         frequency_minutes: int | None = None,
     ) -> Dataset:
-        from dataset.domain import SyncMode, BatchStrategy, RealTimeStrategy
+        from dataset.domain import BatchStrategy, RealTimeStrategy, SyncMode
 
         dataset = self._repo.get(dataset_id)
         if dataset is None:
@@ -247,7 +242,14 @@ class DatasetService:
 
         version = self._version_repo.get_active_version(id, dataset.active_version_id)
         if version is None or not version.storage_path:
-            return {"columns": [], "rows": [], "total_row_count": 0, "filtered_row_count": 0, "page": page, "page_size": page_size}
+            return {
+                "columns": [],
+                "rows": [],
+                "total_row_count": 0,
+                "filtered_row_count": 0,
+                "page": page,
+                "page_size": page_size,
+            }
 
         from dataset.preview_service import read_dataset_preview
 
@@ -437,5 +439,3 @@ class DatasetVersionService:
         version.failure_reason = reason
         self._repo.update(version)
         return version
-
-

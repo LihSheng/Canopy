@@ -1,5 +1,3 @@
-import pytest
-
 from tenant_data.migration_pipeline import (
     MigrationPipeline,
     is_rollback_supported,
@@ -38,9 +36,7 @@ class TestMigrationPipelineVersionTracking:
         assert pipeline.verify_rollout() is True
 
     def test_verify_rollout_with_engine_getter(self):
-        pipeline = MigrationPipeline(
-            tenant_engine_getter=lambda: []
-        )
+        pipeline = MigrationPipeline(tenant_engine_getter=lambda: [])
         assert pipeline.verify_rollout() is True
 
 
@@ -51,6 +47,7 @@ class TestMigrationPipelineRun:
 
     def test_run_migration_calls_alembic(self):
         calls = []
+
         def fake_upgrade(target):
             calls.append(target)
 
@@ -60,6 +57,7 @@ class TestMigrationPipelineRun:
 
     def test_run_migration_with_none_target(self):
         calls = []
+
         def fake_upgrade(target):
             calls.append(target)
 
@@ -88,4 +86,3 @@ class TestMigrationPipelineExpandContract:
     def test_contract_phase_is_noop(self):
         pipeline = MigrationPipeline()
         pipeline.contract_phase()
-

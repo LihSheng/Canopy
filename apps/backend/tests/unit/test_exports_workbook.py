@@ -32,7 +32,9 @@ def _make_payload(include_deps=True, include_anomalies=True, include_trends=True
                 claims_spend=3000.00,
                 change_pct=1.80,
             ),
-        ] if include_deps else [],
+        ]
+        if include_deps
+        else [],
         anomalies=[
             AnomalyExportRow(
                 department_name="Engineering",
@@ -41,7 +43,9 @@ def _make_payload(include_deps=True, include_anomalies=True, include_trends=True
                 severity="high",
                 change_pct=15.2,
             ),
-        ] if include_anomalies else [],
+        ]
+        if include_anomalies
+        else [],
         summary_payroll=1500000.00,
         summary_claims=45000.00,
         department_count=6,
@@ -50,7 +54,9 @@ def _make_payload(include_deps=True, include_anomalies=True, include_trends=True
         trends=[
             MonthlyTrendExportRow(month="2025-11", payroll=1424500.0, claims=32800.0, total=1457300.0),
             MonthlyTrendExportRow(month="2025-12", payroll=1430000.0, claims=33100.0, total=1463100.0),
-        ] if include_trends else [],
+        ]
+        if include_trends
+        else [],
     )
 
 
@@ -143,7 +149,7 @@ class TestWorkbookBuilder:
         ws = wb["Departments"]
 
         cell = ws.cell(row=2, column=3)
-        assert cell.number_format == '#,##0.00'
+        assert cell.number_format == "#,##0.00"
 
     def test_pct_format_applied_to_change_cells(self):
         payload = _make_payload()

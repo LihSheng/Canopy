@@ -3,10 +3,10 @@ import time
 from collections import defaultdict, deque
 
 from common.executor import background
+from job_queue.job_registry import JobRegistry, JobStatus
 from quotas.domain import QuotaType
 from quotas.registry import DEFAULT_QUOTAS
 from quotas.usage_tracker import UsageTracker
-from job_queue.job_registry import JobRegistry, JobStatus
 
 
 class TenantJobQueue:
@@ -30,9 +30,7 @@ class TenantJobQueue:
     def tracker(self) -> UsageTracker:
         return self._tracker
 
-    def enqueue(
-        self, tenant_id: str, job_callable, *args, **kwargs
-    ) -> str:
+    def enqueue(self, tenant_id: str, job_callable, *args, **kwargs) -> str:
         job_id = self._registry.register_job(tenant_id, "generic")
         with self._lock:
             if tenant_id not in self._tenant_order:
@@ -47,7 +45,6 @@ class TenantJobQueue:
             if not self._tenant_order:
                 return None
 
-            start_index = self._next_tenant_index
             for _ in range(len(self._tenant_order)):
                 idx = self._next_tenant_index % len(self._tenant_order)
                 self._next_tenant_index = (idx + 1) % len(self._tenant_order)
@@ -57,9 +54,7 @@ class TenantJobQueue:
                     continue
 
                 active_for_tenant = self._active_jobs.get(tenant_id, 0)
-                external_active = self._tracker.get_current(
-                    tenant_id, QuotaType.CONCURRENT_JOBS
-                )
+                external_active = self._tracker.get_current(tenant_id, QuotaType.CONCURRENT_JOBS)
                 total_active = max(active_for_tenant, external_active)
                 if total_active >= self._get_concurrency_cap(tenant_id):
                     continue
@@ -100,9 +95,7 @@ class TenantJobQueue:
                 name=f"tenant-job-{job_id}",
             )
 
-    def _execute_job(
-        self, job_id: str, job_callable, args: tuple, kwargs: dict
-    ) -> None:
+    def _execute_job(self, job_id: str, job_callable, args: tuple, kwargs: dict) -> None:
         tenant_id = None
         try:
             job = self._registry.get_job(job_id)
@@ -111,19 +104,14 @@ class TenantJobQueue:
             job_callable(*args, **kwargs)
             self._registry.update_status(job_id, JobStatus.COMPLETED.value)
         except Exception as e:
-            self._registry.update_status(
-                job_id, JobStatus.FAILED.value, error=str(e)
-            )
+            self._registry.update_status(job_id, JobStatus.FAILED.value, error=str(e))
         finally:
             if tenant_id:
                 with self._lock:
-                    self._active_jobs[tenant_id] = max(
-                        0, self._active_jobs.get(tenant_id, 1) - 1
-                    )
+                    self._active_jobs[tenant_id] = max(0, self._active_jobs.get(tenant_id, 1) - 1)
                     self._total_active = max(0, self._total_active - 1)
                 self._tracker.decrement(tenant_id, QuotaType.CONCURRENT_JOBS, 1)
 
     def _get_concurrency_cap(self, tenant_id: str) -> int:
         default = DEFAULT_QUOTAS.get(QuotaType.CONCURRENT_JOBS)
         return default.max_value if default else 5
-

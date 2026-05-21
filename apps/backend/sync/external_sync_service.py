@@ -88,11 +88,7 @@ class ExternalDbSyncService:
             table_name = ds.source_object_name or ds.name
 
             supports_cdc = conn.config_json.get("supports_cdc", False)
-            is_cdc = (
-                ds.sync_mode == "real_time"
-                and ds.real_time_strategy == "cdc"
-                and supports_cdc
-            )
+            is_cdc = ds.sync_mode == "real_time" and ds.real_time_strategy == "cdc" and supports_cdc
             row_count = 0
             column_count = 0
 
@@ -126,18 +122,12 @@ class ExternalDbSyncService:
                 completed_at = utcnow()
             else:
                 # Determine cursor filter for incremental sync
-                cursor_column = (
-                    ds.cursor_column
-                    if ds.batch_strategy == "incremental_cursor"
-                    else None
-                )
+                cursor_column = ds.cursor_column if ds.batch_strategy == "incremental_cursor" else None
                 cursor_value = ds.last_cursor_value if cursor_column else None
 
                 # Stream all rows via the dedicated batch method
                 all_rows: list[dict] = []
-                async for batch in adapter.fetch_table(
-                    config, table_name, cursor_column, cursor_value
-                ):
+                async for batch in adapter.fetch_table(config, table_name, cursor_column, cursor_value):
                     all_rows.extend(batch)
 
                 completed_at = utcnow()

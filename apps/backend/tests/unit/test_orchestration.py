@@ -7,7 +7,6 @@ from ingestion.domain import (
     MappingDecision,
     UploadRecord,
     UploadStatus,
-    WorkflowState,
 )
 from ingestion.orchestration import IngestionOrchestrator
 from ingestion.repository import IngestionRepository
@@ -310,4 +309,3 @@ def _seed_mappings(repo: IngestionRepository, upload_id: str) -> None:
         ),
     ]
     repo.save_mapping_decisions(upload_id, decisions)
-

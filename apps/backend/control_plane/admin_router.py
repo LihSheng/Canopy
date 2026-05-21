@@ -306,4 +306,3 @@ def get_tenant_config(
         }
         for c in configs
     ]
-

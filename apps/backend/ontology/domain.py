@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Ontology domain types — snapshot-scoped business objects
@@ -132,6 +130,4 @@ class OntologyMapper[TIn, TOut](ABC):
     entity_type: str
 
     @abstractmethod
-    def map(
-        self, source_rows: list[TIn], context: MappingContext
-    ) -> MappingResult[TOut]: ...
+    def map(self, source_rows: list[TIn], context: MappingContext) -> MappingResult[TOut]: ...

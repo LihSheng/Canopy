@@ -1,5 +1,4 @@
-from datetime import timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.orm import Session
@@ -106,9 +105,7 @@ class TestMembershipValidator:
         mock_tenant.id = "tenant-2"
         mock_tenant.lifecycle_state = "suspended"
 
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            mock_tenant
-        )
+        mock_db.query.return_value.filter.return_value.first.return_value = mock_tenant
 
         validator = MembershipValidator()
         with pytest.raises(AuthError, match="Tenant is suspended"):
@@ -127,9 +124,7 @@ class TestMembershipValidator:
         ]
 
         validator = MembershipValidator()
-        with pytest.raises(
-            AuthError, match="User is not a member of this tenant"
-        ):
+        with pytest.raises(AuthError, match="User is not a member of this tenant"):
             validator.validate_membership("user-1", "tenant-3", mock_db)
 
     def test_inactive_membership_raises(self):
@@ -159,11 +154,8 @@ class TestMembershipValidator:
         mock_tenant.id = "tenant-5"
         mock_tenant.lifecycle_state = "archived"
 
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            mock_tenant
-        )
+        mock_db.query.return_value.filter.return_value.first.return_value = mock_tenant
 
         validator = MembershipValidator()
         with pytest.raises(AuthError, match="Tenant is not active"):
             validator.validate_membership("user-1", "tenant-5", mock_db)
-

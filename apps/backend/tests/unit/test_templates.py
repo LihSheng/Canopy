@@ -175,4 +175,3 @@ class TestTemplateVersionDomain:
     def test_draft_version_no_published_at(self):
         version = _version()
         assert version.published_at is None
-

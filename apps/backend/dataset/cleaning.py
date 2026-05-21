@@ -60,15 +60,14 @@ def _read_xlsx_rows(source_file_path: Path, sheet_name: str) -> list[dict]:
 
 
 def _read_csv_rows(source_file_path: Path) -> list[dict]:
-    with open(source_file_path, "r", newline="", encoding="utf-8-sig") as handle:
+    with open(source_file_path, newline="", encoding="utf-8-sig") as handle:
         reader = csv.reader(handle)
         rows = [row for row in reader if not is_empty_row(row)]
     if not rows:
         return []
     headers = normalize_header(rows[0], len(rows[0]))
     return [
-        {header: row[index] if index < len(row) else None for index, header in enumerate(headers)}
-        for row in rows[1:]
+        {header: row[index] if index < len(row) else None for index, header in enumerate(headers)} for row in rows[1:]
     ]
 
 
@@ -136,11 +135,13 @@ def _remove_empty_rows(rows: list[dict], issues: list[dict]) -> list[dict]:
     output: list[dict] = []
     for row_index, row in enumerate(rows):
         if _is_fully_empty(row):
-            issues.append({
-                "row_index": row_index,
-                "type": "empty_row",
-                "message": "Row is fully empty and was removed",
-            })
+            issues.append(
+                {
+                    "row_index": row_index,
+                    "type": "empty_row",
+                    "message": "Row is fully empty and was removed",
+                }
+            )
             continue
         output.append(row)
     return output
@@ -244,34 +245,40 @@ def _flag_invalid_cells(rows: list[dict], column_types: dict[str, str]) -> tuple
             if col_type == "number" and isinstance(value, str):
                 stripped = value.strip()
                 if not _looks_like_integer(stripped) and not _looks_like_float(stripped):
-                    issues.append({
-                        "row_index": row_index,
-                        "column": key,
-                        "value": value,
-                        "expected_type": col_type,
-                        "type": "invalid_cell",
-                        "message": f"Value '{value}' is not a valid {col_type}",
-                    })
+                    issues.append(
+                        {
+                            "row_index": row_index,
+                            "column": key,
+                            "value": value,
+                            "expected_type": col_type,
+                            "type": "invalid_cell",
+                            "message": f"Value '{value}' is not a valid {col_type}",
+                        }
+                    )
             elif col_type == "date" and isinstance(value, str):
                 stripped = value.strip()
                 if not _looks_like_date(stripped):
-                    issues.append({
-                        "row_index": row_index,
-                        "column": key,
-                        "value": value,
-                        "expected_type": col_type,
-                        "type": "invalid_cell",
-                        "message": f"Value '{value}' is not a valid date",
-                    })
+                    issues.append(
+                        {
+                            "row_index": row_index,
+                            "column": key,
+                            "value": value,
+                            "expected_type": col_type,
+                            "type": "invalid_cell",
+                            "message": f"Value '{value}' is not a valid date",
+                        }
+                    )
             elif col_type == "boolean" and isinstance(value, str):
                 stripped = value.strip()
                 if not _looks_like_boolean(stripped):
-                    issues.append({
-                        "row_index": row_index,
-                        "column": key,
-                        "value": value,
-                        "expected_type": col_type,
-                        "type": "invalid_cell",
-                        "message": f"Value '{value}' is not a valid boolean",
-                    })
+                    issues.append(
+                        {
+                            "row_index": row_index,
+                            "column": key,
+                            "value": value,
+                            "expected_type": col_type,
+                            "type": "invalid_cell",
+                            "message": f"Value '{value}' is not a valid boolean",
+                        }
+                    )
     return rows, issues

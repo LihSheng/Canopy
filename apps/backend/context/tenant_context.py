@@ -12,9 +12,7 @@ class TenantContext:
     active_token_id: str | None = None
 
 
-_current_tenant_ctx: ContextVar[TenantContext | None] = ContextVar(
-    "current_tenant_ctx", default=None
-)
+_current_tenant_ctx: ContextVar[TenantContext | None] = ContextVar("current_tenant_ctx", default=None)
 
 
 def set_current_tenant_context(ctx: TenantContext) -> None:

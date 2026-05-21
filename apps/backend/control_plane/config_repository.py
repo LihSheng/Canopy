@@ -10,9 +10,7 @@ class ConfigRepository:
     def __init__(self, db: Session):
         self._db = db
 
-    def set_config(
-        self, tenant_id: str, key: str, value_json: str
-    ) -> TenantConfigModel:
+    def set_config(self, tenant_id: str, key: str, value_json: str) -> TenantConfigModel:
         existing = (
             self._db.query(TenantConfigModel)
             .filter(
@@ -68,4 +66,3 @@ class ConfigRepository:
             .order_by(TenantConfigModel.version_number.desc())
             .all()
         )
-

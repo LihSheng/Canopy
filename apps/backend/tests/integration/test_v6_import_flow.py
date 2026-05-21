@@ -94,9 +94,7 @@ def test_v6_full_import_flow(client: TestClient, auth_headers, monkeypatch, tmp_
     assert versions[0]["row_count"] == 2
     assert isinstance(versions[0].get("cleaning_issues"), list)
 
-    preview_dataset_resp = client.get(
-        f"/api/datasets/{dataset['id']}/preview", headers=auth_headers
-    )
+    preview_dataset_resp = client.get(f"/api/datasets/{dataset['id']}/preview", headers=auth_headers)
     assert preview_dataset_resp.status_code == 200
     preview_dataset = preview_dataset_resp.json()
     assert preview_dataset["columns"] == ["name", "amount"]

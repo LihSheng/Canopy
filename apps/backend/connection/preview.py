@@ -98,7 +98,7 @@ def build_sheet_profiles(storage_path: Path) -> list[dict]:
 
 
 def _build_csv_profile(storage_path: Path) -> dict:
-    with open(storage_path, "r", newline="", encoding="utf-8-sig") as handle:
+    with open(storage_path, newline="", encoding="utf-8-sig") as handle:
         reader = csv.reader(handle)
         rows = [row for row in reader if not is_empty_row(row)]
 
@@ -127,4 +127,3 @@ def _build_csv_profile(storage_path: Path) -> dict:
         "preview_columns": headers,
         "preview_rows": [normalize_preview_row(row, len(headers)) for row in rows[1:11]],
     }
-

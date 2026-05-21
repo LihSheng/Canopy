@@ -112,12 +112,9 @@ class ConnectionRepository:
     def _to_model(self, d: Connection) -> ConnectionModel:
         # Only persist columns that exist in the current control-plane schema.
         payload = {
-            key: getattr(d, key)
-            for key in ConnectionModel.__table__.columns.keys()
-            if getattr(d, key) is not None
+            key: getattr(d, key) for key in ConnectionModel.__table__.columns.keys() if getattr(d, key) is not None
         }
         return ConnectionModel(**payload)
 
     def _to_domain(self, m: ConnectionModel) -> Connection:
         return Connection(**{c.name: getattr(m, c.name) for c in m.__table__.columns})
-

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ingestion.domain import CleaningStep, CleaningStepType, PipelineStatus
+from ingestion.domain import CleaningStep, PipelineStatus
 
 _STEP_TYPE_PARAMS: dict[str, dict[str, type]] = {
     "trim": {"columns": list},
@@ -74,4 +74,3 @@ def validate_pipeline(steps: list[CleaningStep], status: str) -> list[str]:
         warnings.extend(validate_step_parameters(step.step_type, step.parameters))
     warnings.extend(validate_step_order(steps))
     return warnings
-

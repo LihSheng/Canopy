@@ -1,7 +1,6 @@
 from common.clock import utcnow
-from refresh.domain import DataSnapshot, RefreshJob
+from refresh.domain import RefreshJob
 from refresh.repository import RefreshRepository
-
 
 _SNAPSHOT_ID = "test-snapshot-001"
 
@@ -57,6 +56,7 @@ class TestRefreshRepository:
 
     def test_update_job_raises_on_missing(self, db_session):
         import pytest
+
         repo = RefreshRepository(db_session)
         job = RefreshJob(id="missing", status="pending")
         with pytest.raises(ValueError, match="not found"):
@@ -96,6 +96,7 @@ class TestRefreshRepository:
     def test_get_latest_job_returns_most_recent(self, db_session):
         repo = RefreshRepository(db_session)
         from datetime import UTC, datetime
+
         job1 = RefreshJob(id="job-old", status="completed", started_at=datetime(2026, 1, 1, tzinfo=UTC))
         job2 = RefreshJob(id="job-new", status="running", started_at=datetime(2026, 5, 1, tzinfo=UTC))
         repo.save_job(job1)

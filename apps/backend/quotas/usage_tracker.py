@@ -1,9 +1,7 @@
-import json
 import threading
 import time
 
 from quotas.domain import QuotaType
-from quotas.registry import DEFAULT_QUOTAS
 
 
 class UsageTracker:
@@ -22,9 +20,7 @@ class UsageTracker:
         if k not in self._rolling_windows:
             self._rolling_windows[k] = []
 
-    def increment(
-        self, tenant_id: str, quota_type: QuotaType, amount: int = 1
-    ) -> int:
+    def increment(self, tenant_id: str, quota_type: QuotaType, amount: int = 1) -> int:
         with self._lock:
             self._init_tenant(tenant_id, quota_type)
             k = self._key(tenant_id, quota_type)
@@ -37,9 +33,7 @@ class UsageTracker:
                     window.append(now)
             return self._counters[k]
 
-    def decrement(
-        self, tenant_id: str, quota_type: QuotaType, amount: int = 1
-    ) -> int:
+    def decrement(self, tenant_id: str, quota_type: QuotaType, amount: int = 1) -> int:
         with self._lock:
             self._init_tenant(tenant_id, quota_type)
             k = self._key(tenant_id, quota_type)
@@ -56,9 +50,7 @@ class UsageTracker:
                 return len(window)
             return self._counters.get(k, 0)
 
-    def reset(
-        self, tenant_id: str, quota_type: QuotaType | None = None
-    ) -> None:
+    def reset(self, tenant_id: str, quota_type: QuotaType | None = None) -> None:
         with self._lock:
             if quota_type is not None:
                 k = self._key(tenant_id, quota_type)
@@ -86,4 +78,3 @@ class UsageTracker:
             return
         while window and window[0] < cutoff:
             window.pop(0)
-

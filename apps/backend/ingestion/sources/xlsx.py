@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -154,4 +153,3 @@ def get_sheet_preview(storage_path: Path, sheet_name: str, max_rows: int = 10):
         if sheet["sheet_name"] == sheet_name:
             return [list(row) for row in sheet["rows"][:max_rows]]
     return []
-

@@ -2,8 +2,6 @@ import pytest
 
 from control_plane.schemas.audit import AuditEventModel, ImpersonationSessionModel
 from control_plane.schemas.config import TenantConfigModel
-from control_plane.schemas.database_targets import TenantDatabaseTargetModel
-from control_plane.schemas.jobs import ProvisioningJobModel
 from control_plane.schemas.memberships import TenantMembershipModel
 from control_plane.schemas.tenants import TenantModel
 
@@ -313,4 +311,3 @@ class TestAuditEvent:
         assert session.status == "active"
         assert session.reason == "Support request #1234"
         assert session.platform_admin_user_id == "admin-1"
-

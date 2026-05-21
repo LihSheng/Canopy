@@ -82,9 +82,7 @@ class SyncOrchestrator:
                 error_message=str(exc),
             )
 
-    def _persist_snapshots(
-        self, snapshot_id: str, snapshots: list[EntitySnapshot]
-    ) -> None:
+    def _persist_snapshots(self, snapshot_id: str, snapshots: list[EntitySnapshot]) -> None:
         from sync.repositories.snapshot import SnapshotRepository
 
         repo = SnapshotRepository(self._app_db)

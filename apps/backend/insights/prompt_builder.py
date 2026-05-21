@@ -2,27 +2,30 @@ from insights.domain import FactBundle
 
 
 def build_prompt(facts: FactBundle) -> str:
-    top_deps_str = "\n".join(
-        f"  - {d.name}: MYR {d.total_spend:,.2f} total "
-        f"(payroll: MYR {d.payroll_spend:,.2f}, claims: MYR {d.claims_spend:,.2f}) "
-        f"[{d.change_pct:+.1f}% MoM]"
-        for d in facts.top_departments
-    ) or "  None"
+    top_deps_str = (
+        "\n".join(
+            f"  - {d.name}: MYR {d.total_spend:,.2f} total "
+            f"(payroll: MYR {d.payroll_spend:,.2f}, claims: MYR {d.claims_spend:,.2f}) "
+            f"[{d.change_pct:+.1f}% MoM]"
+            for d in facts.top_departments
+        )
+        or "  None"
+    )
 
-    anomalies_str = "\n".join(
-        f"  - [{a.severity.upper()}] {a.department_name}: {a.description}"
-        for a in facts.anomalies
-    ) or "  None"
+    anomalies_str = (
+        "\n".join(f"  - [{a.severity.upper()}] {a.department_name}: {a.description}" for a in facts.anomalies)
+        or "  None"
+    )
 
-    claim_types_str = "\n".join(
-        f"  - {c.type}: MYR {c.amount:,.2f} ({c.count} claims)"
-        for c in facts.claim_type_breakdown
-    ) or "  None"
+    claim_types_str = (
+        "\n".join(f"  - {c.type}: MYR {c.amount:,.2f} ({c.count} claims)" for c in facts.claim_type_breakdown)
+        or "  None"
+    )
 
-    rankings_str = "\n".join(
-        f"  {i+1}. {r.name}: MYR {r.total_spend:,.2f}"
-        for i, r in enumerate(facts.department_rankings)
-    ) or "  None"
+    rankings_str = (
+        "\n".join(f"  {i + 1}. {r.name}: MYR {r.total_spend:,.2f}" for i, r in enumerate(facts.department_rankings))
+        or "  None"
+    )
 
     previous_str = facts.previous_month if facts.previous_month else "N/A"
 

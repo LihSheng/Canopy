@@ -97,11 +97,7 @@ class TestSnapshotPersistence:
         app_session.commit()
 
         rows = (
-            app_session.execute(
-                select(SourceSnapshotRowModel).where(
-                    SourceSnapshotRowModel.snapshot_id == snap_id
-                )
-            )
+            app_session.execute(select(SourceSnapshotRowModel).where(SourceSnapshotRowModel.snapshot_id == snap_id))
             .scalars()
             .all()
         )
@@ -134,8 +130,10 @@ class TestSnapshotRepositoryExtractors:
 
     def test_extract_source_key_from_object(self):
         """line 40-41: object with source_key attribute."""
+
         class Obj:
             source_key = "KEY001"
+
         result = SnapshotRepository._extract_source_key(Obj())
         assert result == "KEY001"
 
@@ -152,10 +150,12 @@ class TestSnapshotRepositoryExtractors:
     def test_row_to_dict_from_dataclass(self):
         """line 48-51: dataclass input."""
         from dataclasses import dataclass
+
         @dataclass
         class FakeRow:
             source_key: str
             name: str
+
         result = SnapshotRepository._row_to_dict(FakeRow("K1", "Eng"))
         assert result == {"source_key": "K1", "name": "Eng"}
 

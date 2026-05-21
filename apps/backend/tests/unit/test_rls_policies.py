@@ -1,4 +1,3 @@
-import pytest
 from sqlalchemy.orm import sessionmaker
 
 from tenant_data.base import TenantDataBase
@@ -9,8 +8,6 @@ from tenant_data.rls import (
     generate_rls_rollback,
     is_rls_supported,
 )
-from tenant_data.schemas.raw import RawArtifactModel, UploadBatchModel
-from tenant_data.schemas.staging import NormalizedRowModel
 from tenant_data.schemas.clean import CleanedRecordModel, DerivedReadModel
 from tenant_data.schemas.metadata import (
     JobRunModel,
@@ -19,6 +16,8 @@ from tenant_data.schemas.metadata import (
     PublishStateModel,
     StorageObjectModel,
 )
+from tenant_data.schemas.raw import RawArtifactModel, UploadBatchModel
+from tenant_data.schemas.staging import NormalizedRowModel
 
 
 class TestRlsPolicyGeneration:
@@ -127,4 +126,3 @@ class TestRlsEdgeCases:
         assert sql.count("CREATE POLICY tenant_isolation") == 2
         assert sql.count("ENABLE ROW LEVEL SECURITY") == 2
         assert sql.count("FORCE ROW LEVEL SECURITY") == 2
-

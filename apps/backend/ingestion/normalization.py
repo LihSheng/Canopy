@@ -39,4 +39,3 @@ def normalize_cleaned_rows(
         output_rows.append(normalized)
 
     return NormalizedOutput(rows=output_rows, field_map=source_to_target, warnings=warnings)
-

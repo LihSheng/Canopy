@@ -22,8 +22,7 @@ class PostgresAdapter(DatabaseAdapter):
             password = config.get("password", "")
 
             conninfo = (
-                f"host={host} port={port} dbname={database} user={username} "
-                f"password={password} connect_timeout=5"
+                f"host={host} port={port} dbname={database} user={username} password={password} connect_timeout=5"
             )
 
             async with await psycopg.AsyncConnection.connect(conninfo) as conn:
@@ -31,9 +30,7 @@ class PostgresAdapter(DatabaseAdapter):
                     await cur.execute("SHOW wal_level;")
                     row = await cur.fetchone()
                     wal_level = row[0] if row else "unknown"
-                    await cur.execute(
-                        "SELECT rolreplication FROM pg_roles WHERE rolname = current_user;"
-                    )
+                    await cur.execute("SELECT rolreplication FROM pg_roles WHERE rolname = current_user;")
                     role_row = await cur.fetchone()
                     has_replication = bool(role_row[0]) if role_row else False
                     supports_cdc = wal_level == "logical" and has_replication
@@ -65,8 +62,7 @@ class PostgresAdapter(DatabaseAdapter):
             username = config.get("username") or config.get("user", "")
             password = config.get("password", "")
             conninfo = (
-                f"host={host} port={port} dbname={database} user={username} "
-                f"password={password} connect_timeout=5"
+                f"host={host} port={port} dbname={database} user={username} password={password} connect_timeout=5"
             )
 
             tables = []

@@ -33,9 +33,7 @@ class TestTenantDataIsolation:
         td_session.add(batch)
         td_session.commit()
 
-        result = td_session.query(UploadBatchModel).filter(
-            UploadBatchModel.tenant_id == "tenant-a"
-        ).first()
+        result = td_session.query(UploadBatchModel).filter(UploadBatchModel.tenant_id == "tenant-a").first()
         assert result is not None
         assert result.tenant_id == "tenant-a"
 
@@ -53,15 +51,11 @@ class TestTenantDataIsolation:
         td_session.add_all([batch_a, batch_b])
         td_session.commit()
 
-        results_a = tenant_scoped_query(
-            td_session, UploadBatchModel, "tenant-a"
-        ).all()
+        results_a = tenant_scoped_query(td_session, UploadBatchModel, "tenant-a").all()
         assert len(results_a) == 1
         assert all(r.tenant_id == "tenant-a" for r in results_a)
 
-        results_b = tenant_scoped_query(
-            td_session, UploadBatchModel, "tenant-b"
-        ).all()
+        results_b = tenant_scoped_query(td_session, UploadBatchModel, "tenant-b").all()
         assert len(results_b) == 1
         assert all(r.tenant_id == "tenant-b" for r in results_b)
 
@@ -74,9 +68,7 @@ class TestTenantDataIsolation:
         td_session.add(batch_a)
         td_session.commit()
 
-        results = tenant_scoped_query(
-            td_session, UploadBatchModel, "tenant-b"
-        ).all()
+        results = tenant_scoped_query(td_session, UploadBatchModel, "tenant-b").all()
         assert len(results) == 0
 
     def test_direct_query_without_tenant_filter_returns_all(self, td_session):
@@ -109,9 +101,7 @@ class TestTenantDataIsolation:
         except ValueError:
             td_session.rollback()
 
-        results = td_session.query(UploadBatchModel).filter(
-            UploadBatchModel.tenant_id == "tenant-rollback"
-        ).all()
+        results = td_session.query(UploadBatchModel).filter(UploadBatchModel.tenant_id == "tenant-rollback").all()
         assert len(results) == 0
 
     def test_tenant_context_isolated_per_transaction(self, td_session):
@@ -147,9 +137,6 @@ class TestTenantDataIsolation:
         td_session.commit()
 
         for i in range(5):
-            results = tenant_scoped_query(
-                td_session, UploadBatchModel, f"tenant-{i}"
-            ).all()
+            results = tenant_scoped_query(td_session, UploadBatchModel, f"tenant-{i}").all()
             assert len(results) == 1
             assert results[0].tenant_id == f"tenant-{i}"
-

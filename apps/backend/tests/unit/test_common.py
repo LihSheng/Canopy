@@ -1,7 +1,5 @@
 """Unit tests for common modules — config, database, logging edge cases."""
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 
 pytestmark = pytest.mark.unit
@@ -88,6 +86,7 @@ class TestDatabaseManager:
     def test_set_engine_rebuilds_factories(self):
         """Lines 76-84: set_engine replaces engines and factories."""
         from sqlalchemy import create_engine
+
         from common.database import _DatabaseManager
 
         mgr = _DatabaseManager()
@@ -108,24 +107,27 @@ class TestDatabaseManager:
 
     def test_engine_function(self):
         """Line 99-100: engine() public function."""
-        from common.database import engine
         from sqlalchemy import Engine
+
+        from common.database import engine
 
         e = engine()
         assert isinstance(e, Engine)
 
     def test_control_plane_engine_function(self):
         """Line 103-104."""
-        from common.database import control_plane_engine
         from sqlalchemy import Engine
+
+        from common.database import control_plane_engine
 
         e = control_plane_engine()
         assert isinstance(e, Engine)
 
     def test_tenant_data_engine_function(self):
         """Line 107-108."""
-        from common.database import tenant_data_engine
         from sqlalchemy import Engine
+
+        from common.database import tenant_data_engine
 
         e = tenant_data_engine()
         assert isinstance(e, Engine)
@@ -154,6 +156,7 @@ class TestDatabaseManager:
     def test_set_engine_function(self):
         """Line 138-139."""
         from sqlalchemy import create_engine
+
         from common.database import set_engine
 
         eng = create_engine("sqlite://", pool_pre_ping=True)
@@ -162,6 +165,7 @@ class TestDatabaseManager:
     def test_reset_engine_function(self):
         """Line 142-143."""
         from common.database import reset_engine
+
         reset_engine()
 
 
@@ -172,6 +176,7 @@ class TestMakeSession:
         """line 124-128: sessionmaker input returns a Session."""
         from sqlalchemy import create_engine
         from sqlalchemy.orm import Session, sessionmaker
+
         from common.database import make_session
 
         engine = create_engine("sqlite://")
@@ -184,6 +189,7 @@ class TestMakeSession:
         """line 130: direct Session instance."""
         from sqlalchemy import create_engine
         from sqlalchemy.orm import Session
+
         from common.database import make_session
 
         engine = create_engine("sqlite://")
@@ -202,6 +208,7 @@ class TestMakeSession:
     def test_make_session_runtime_error_no_bind(self):
         """line 133-134: RuntimeError when session has no engine bind."""
         from sqlalchemy.orm import sessionmaker
+
         from common.database import make_session
 
         factory = sessionmaker()
@@ -215,6 +222,7 @@ class TestLogging:
     def test_setup_logging_stdout(self):
         """lines 7-12: setup_logging configures root logger."""
         import logging
+
         from common.logging import setup_logging
 
         # Should not raise
@@ -225,6 +233,7 @@ class TestLogging:
     def test_setup_logging_custom_level(self):
         """Verify level from settings is respected."""
         import logging
+
         from common.logging import setup_logging
 
         setup_logging()

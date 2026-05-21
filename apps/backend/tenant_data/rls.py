@@ -1,5 +1,5 @@
-from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -15,12 +15,10 @@ def is_rls_supported(db_session: Session) -> bool:
 
 def _rls_ddl_for_table(table_name: str) -> tuple[str, str]:
     enable = (
-        f"ALTER TABLE {table_name} ENABLE ROW LEVEL SECURITY;\n"
-        f"ALTER TABLE {table_name} FORCE ROW LEVEL SECURITY;\n"
+        f"ALTER TABLE {table_name} ENABLE ROW LEVEL SECURITY;\nALTER TABLE {table_name} FORCE ROW LEVEL SECURITY;\n"
     )
     policy = (
-        f"CREATE POLICY tenant_isolation ON {table_name} "
-        "USING (tenant_id = current_setting('app.current_tenant_id'));"
+        f"CREATE POLICY tenant_isolation ON {table_name} USING (tenant_id = current_setting('app.current_tenant_id'));"
     )
     return enable, policy
 

@@ -3,7 +3,6 @@ import json
 from backup.domain import BackupPolicy, BackupType
 from control_plane.config_repository import ConfigRepository
 
-
 _BACKUP_POLICY_CONFIG_KEY = "backup_policy"
 
 
@@ -38,9 +37,7 @@ class BackupPolicyManager:
             "pitr_enabled": policy.pitr_enabled,
             "enabled": policy.enabled,
         }
-        self._config_repo.set_config(
-            tenant_id, _BACKUP_POLICY_CONFIG_KEY, json.dumps(data)
-        )
+        self._config_repo.set_config(tenant_id, _BACKUP_POLICY_CONFIG_KEY, json.dumps(data))
 
     def get_default_policy(self, tenant_id: str) -> BackupPolicy:
         return BackupPolicy(
@@ -56,4 +53,3 @@ class BackupPolicyManager:
     def is_backup_enabled(self, tenant_id: str) -> bool:
         policy = self.get_policy(tenant_id)
         return policy.enabled
-

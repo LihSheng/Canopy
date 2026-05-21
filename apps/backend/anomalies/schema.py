@@ -10,30 +10,18 @@ from common.database import Base
 class DetectedAnomalyModel(Base):
     __tablename__ = "detected_anomalies"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     snapshot_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     anomaly_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     target_entity_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    target_entity_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
-    )
+    target_entity_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     month_key: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
-    baseline_value: Mapped[float] = mapped_column(
-        Numeric(12, 2, asdecimal=False), nullable=False, default=0.0
-    )
-    observed_value: Mapped[float] = mapped_column(
-        Numeric(12, 2, asdecimal=False), nullable=False, default=0.0
-    )
+    baseline_value: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False, default=0.0)
+    observed_value: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False, default=0.0)
     delta_value: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False, default=0.0)
-    delta_percent: Mapped[float] = mapped_column(
-        Numeric(8, 2, asdecimal=False), nullable=False, default=0.0
-    )
+    delta_percent: Mapped[float] = mapped_column(Numeric(8, 2, asdecimal=False), nullable=False, default=0.0)
     severity: Mapped[str] = mapped_column(String(16), nullable=False, default="low")
-    driver_payload_json: Mapped[str] = mapped_column(
-        Text, nullable=False, default="[]"
-    )
+    driver_payload_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
 
     __table_args__ = (
         Index(

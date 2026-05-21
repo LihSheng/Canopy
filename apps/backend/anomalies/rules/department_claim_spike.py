@@ -68,13 +68,9 @@ def department_claim_spike_rule(
     return results
 
 
-def _build_drivers(
-    spend: MonthlyDepartmentSpend, prev_claims: float
-) -> list[str]:
+def _build_drivers(spend: MonthlyDepartmentSpend, prev_claims: float) -> list[str]:
     drivers: list[str] = []
-    drivers.append(
-        f"Current claims: {spend.claims_total:.0f} MYR ({spend.claim_count} claims)"
-    )
+    drivers.append(f"Current claims: {spend.claims_total:.0f} MYR ({spend.claim_count} claims)")
     drivers.append(f"Previous month claims: {prev_claims:.0f} MYR")
     if spend.payroll_total > 0 and spend.total > 0:
         claims_share = round((spend.claims_total / spend.total) * 100, 1)

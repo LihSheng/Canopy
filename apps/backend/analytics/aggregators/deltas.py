@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from analytics.domain import DepartmentMoMDelta, DepartmentRanking, MonthlyDepartmentSpend
 
@@ -62,9 +62,7 @@ def rank_departments(
             "claims_spend": s.claims_total,
         }
 
-    sorted_depts = sorted(
-        dept_totals.items(), key=lambda x: x[1]["total_spend"], reverse=True
-    )
+    sorted_depts = sorted(dept_totals.items(), key=lambda x: x[1]["total_spend"], reverse=True)
 
     names = department_names or {}
     rankings: list[DepartmentRanking] = []

@@ -24,7 +24,7 @@ class SourceTypeRepository:
         return self._to_domain(model) if model else None
 
     def get_enabled(self) -> list[SourceType]:
-        models = self._db.query(SourceTypeModel).filter(SourceTypeModel.enabled == True).all()
+        models = self._db.query(SourceTypeModel).filter(SourceTypeModel.enabled).all()
         return [self._to_domain(m) for m in models]
 
     def _to_model(self, d: SourceType) -> SourceTypeModel:
@@ -32,4 +32,3 @@ class SourceTypeRepository:
 
     def _to_domain(self, m: SourceTypeModel) -> SourceType:
         return SourceType(**{c.name: getattr(m, c.name) for c in m.__table__.columns})
-

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from common.errors import ValidationError
 from cache.hooks import after_tenant_restored, after_tenant_suspended
+from common.errors import ValidationError
 from control_plane.audit_service import AuditService
 from control_plane.tenant_repository import TenantRepository
 
@@ -17,9 +17,7 @@ class LifecycleService:
         if tenant is None:
             raise ValidationError("Tenant not found")
         if tenant.lifecycle_state not in ("active",):
-            raise ValidationError(
-                f"Cannot suspend tenant in '{tenant.lifecycle_state}' state"
-            )
+            raise ValidationError(f"Cannot suspend tenant in '{tenant.lifecycle_state}' state")
         tenant.lifecycle_state = "suspended"
         self._db.commit()
         self._audit.record_event(
@@ -36,9 +34,7 @@ class LifecycleService:
         if tenant is None:
             raise ValidationError("Tenant not found")
         if tenant.lifecycle_state not in ("suspended", "archived"):
-            raise ValidationError(
-                f"Cannot restore tenant in '{tenant.lifecycle_state}' state"
-            )
+            raise ValidationError(f"Cannot restore tenant in '{tenant.lifecycle_state}' state")
         tenant.lifecycle_state = "active"
         self._db.commit()
         self._audit.record_event(
@@ -55,9 +51,7 @@ class LifecycleService:
         if tenant is None:
             raise ValidationError("Tenant not found")
         if tenant.lifecycle_state not in ("active", "suspended"):
-            raise ValidationError(
-                f"Cannot archive tenant in '{tenant.lifecycle_state}' state"
-            )
+            raise ValidationError(f"Cannot archive tenant in '{tenant.lifecycle_state}' state")
         tenant.lifecycle_state = "archived"
         self._db.commit()
         self._audit.record_event(
@@ -67,4 +61,3 @@ class LifecycleService:
             payload={"tenant_id": tenant_id, "tenant_name": tenant.name},
         )
         return tenant
-

@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -34,9 +34,7 @@ class DashboardCacheRepository:
 
     def get_latest_summary_cache(self) -> DashboardSummaryCache | None:
         model = (
-            self._db.query(DashboardSummaryCacheModel)
-            .order_by(DashboardSummaryCacheModel.created_at.desc())
-            .first()
+            self._db.query(DashboardSummaryCacheModel).order_by(DashboardSummaryCacheModel.created_at.desc()).first()
         )
         if model is None:
             return None
@@ -51,9 +49,7 @@ class DashboardCacheRepository:
             created_at=model.created_at.isoformat() if model.created_at is not None else "",
         )
 
-    def get_summary_cache_for_period(
-        self, year: int, month: int
-    ) -> DashboardSummaryCache | None:
+    def get_summary_cache_for_period(self, year: int, month: int) -> DashboardSummaryCache | None:
         model = (
             self._db.query(DashboardSummaryCacheModel)
             .filter(
@@ -76,9 +72,7 @@ class DashboardCacheRepository:
             created_at=model.created_at.isoformat() if model.created_at is not None else "",
         )
 
-    def get_summary_cache_for_snapshot(
-        self, snapshot_id: str
-    ) -> DashboardSummaryCache | None:
+    def get_summary_cache_for_snapshot(self, snapshot_id: str) -> DashboardSummaryCache | None:
         model = (
             self._db.query(DashboardSummaryCacheModel)
             .filter(DashboardSummaryCacheModel.snapshot_id == snapshot_id)

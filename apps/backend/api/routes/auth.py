@@ -14,7 +14,7 @@ from api.schemas.auth import (
     TenantContextResponse,
     TenantInfo,
 )
-from auth.domain import LoginInput, TenantInfo as DomainTenantInfo
+from auth.domain import LoginInput
 from auth.service import AuthService
 from common.database import get_db
 from context.tenant_context import (
@@ -27,9 +27,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(
-    body: LoginRequest, response: Response, db: Session = Depends(get_db)
-) -> dict:
+def login(body: LoginRequest, response: Response, db: Session = Depends(get_db)) -> dict:
     service = AuthService(db)
     result = service.login(LoginInput(email=body.email, password=body.password))
     response.set_cookie(
@@ -44,10 +42,7 @@ def login(
         "user": asdict(result.user),
         "token": result.token,
         "expires_at": result.expires_at,
-        "tenants": [
-            {"tenant_id": t.tenant_id, "name": t.tenant_name, "role": t.role}
-            for t in result.tenants
-        ],
+        "tenants": [{"tenant_id": t.tenant_id, "name": t.tenant_name, "role": t.role} for t in result.tenants],
     }
 
 
@@ -66,20 +61,11 @@ def session(
     session_data = getattr(request.state, "tenant_session", None)
     tenants: list[TenantInfo] = []
     if session_data is not None:
-        tenants = [
-            TenantInfo(
-                tenant_id=t.tenant_id, name=t.tenant_name, role=t.role
-            )
-            for t in session_data.tenants
-        ]
+        tenants = [TenantInfo(tenant_id=t.tenant_id, name=t.tenant_name, role=t.role) for t in session_data.tenants]
     return SessionResponse(
         authenticated=True,
         user=current_user,
-        tenant=TenantContextResponse(
-            tenant_id=ctx.tenant_id, role=ctx.tenant_role
-        )
-        if ctx
-        else None,
+        tenant=TenantContextResponse(tenant_id=ctx.tenant_id, role=ctx.tenant_role) if ctx else None,
         tenants=tenants,
     )
 
@@ -128,10 +114,6 @@ def switch_tenant(
         }
         if session_result.tenant_id
         else None,
-        "tenants": [
-            {"tenant_id": t.tenant_id, "name": t.tenant_name, "role": t.role}
-            for t in session_result.tenants
-        ],
+        "tenants": [{"tenant_id": t.tenant_id, "name": t.tenant_name, "role": t.role} for t in session_result.tenants],
         "token": new_token,
     }
-

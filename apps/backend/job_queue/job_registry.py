@@ -30,9 +30,7 @@ class JobRegistry:
             }
         return job_id
 
-    def update_status(
-        self, job_id: str, status: str, error: str | None = None
-    ) -> None:
+    def update_status(self, job_id: str, status: str, error: str | None = None) -> None:
         with self._lock:
             job = self._jobs.get(job_id)
             if job is None:
@@ -57,9 +55,7 @@ class JobRegistry:
                     count += 1
             return count
 
-    def get_tenant_jobs(
-        self, tenant_id: str, status: str | None = None
-    ) -> list[dict]:
+    def get_tenant_jobs(self, tenant_id: str, status: str | None = None) -> list[dict]:
         with self._lock:
             result = []
             for job in self._jobs.values():

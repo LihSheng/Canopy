@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from analytics.domain import DashboardSummaryCache
-from analytics.repositories.spend import SpendRepository
 from analytics.repositories.dashboard_cache import DashboardCacheRepository
+from analytics.repositories.spend import SpendRepository
 from analytics.services.builder import run_aggregation_pipeline
 
 

@@ -16,7 +16,9 @@ class IngestionOrchestrator:
         upload = self._repo.get_upload(upload_id)
         if upload is None:
             raise ValidationError("Upload not found")
-        state = self._repo.get_state(upload_id) or WorkflowState(upload_id=upload_id, status=IngestionWorkflowStatus.started)
+        state = self._repo.get_state(upload_id) or WorkflowState(
+            upload_id=upload_id, status=IngestionWorkflowStatus.started
+        )
         state.status = IngestionWorkflowStatus.started
         state.current_step = "upload"
         state.error_message = None
@@ -87,5 +89,3 @@ class IngestionOrchestrator:
         if state is None:
             raise ValidationError("Upload not found")
         return state
-
-

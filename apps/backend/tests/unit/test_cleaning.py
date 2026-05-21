@@ -190,4 +190,3 @@ class TestValidatePipeline:
         steps = [_step("trim", 0)]
         warnings = validate_pipeline(steps, PipelineStatus.published.value)
         assert any("columns" in w for w in warnings)
-

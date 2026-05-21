@@ -11,9 +11,7 @@ from common.database import Base
 class GeneratedInsightModel(Base):
     __tablename__ = "generated_insights"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     snapshot_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     current_month: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     summary_text: Mapped[str] = mapped_column(Text, nullable=False, default="")

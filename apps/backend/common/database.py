@@ -1,6 +1,5 @@
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from common.config import settings
 
@@ -23,21 +22,15 @@ class _DatabaseManager:
 
     def _resolve_control_plane_engine(self) -> Engine:
         if self._control_plane_engine is None:
-            self._control_plane_engine = self._build_engine(
-                settings.resolved_control_plane_database_url
-            )
+            self._control_plane_engine = self._build_engine(settings.resolved_control_plane_database_url)
         return self._control_plane_engine
 
     def _resolve_tenant_data_engine(self) -> Engine:
         if self._tenant_data_engine is None:
-            self._tenant_data_engine = self._build_engine(
-                settings.resolved_tenant_data_database_url
-            )
+            self._tenant_data_engine = self._build_engine(settings.resolved_tenant_data_database_url)
         return self._tenant_data_engine
 
-    def _resolve_session_factory(
-        self, *, tenant_data: bool = False
-    ) -> sessionmaker[Session]:
+    def _resolve_session_factory(self, *, tenant_data: bool = False) -> sessionmaker[Session]:
         if tenant_data:
             if self._tenant_data_session_factory is None:
                 self._tenant_data_session_factory = sessionmaker(
@@ -95,6 +88,7 @@ _db_manager = _DatabaseManager()
 
 
 # Public API delegates to the default instance so callers do not touch globals directly.
+
 
 def engine() -> Engine:
     return _db_manager.engine()
@@ -156,26 +150,26 @@ def get_db():
 
 
 def init_db(engine_override: Engine | None = None):
-    import ingestion.schema  # noqa: F401  ensure ingestion models are registered
-    import auth.schema  # noqa: F401  ensure UserModel is registered
-    import sync.schema  # noqa: F401  ensure SourceSnapshotModel is registered
-    import ontology.schema  # noqa: F401  ensure ontology models are registered
     import analytics.schema  # noqa: F401  ensure analytics models are registered
     import anomalies.schema  # noqa: F401  ensure anomaly models are registered
-    import insights.schema  # noqa: F401  ensure insight models are registered
-    import refresh.schema  # noqa: F401  ensure refresh models are registered
-    import exports.schema  # noqa: F401  ensure export models are registered
-    import project.schema  # noqa: F401  ensure project models are registered
-    import source_type.schema  # noqa: F401  ensure source type models are registered
+    import auth.schema  # noqa: F401  ensure UserModel is registered
     import connection.schema  # noqa: F401  ensure connection models are registered
-    import dataset.schema  # noqa: F401  ensure dataset models are registered
-    import run.schema  # noqa: F401  ensure run models are registered
     import control_plane.schemas.audit  # noqa: F401
     import control_plane.schemas.config  # noqa: F401
     import control_plane.schemas.database_targets  # noqa: F401
     import control_plane.schemas.jobs  # noqa: F401
     import control_plane.schemas.memberships  # noqa: F401
     import control_plane.schemas.tenants  # noqa: F401
+    import dataset.schema  # noqa: F401  ensure dataset models are registered
+    import exports.schema  # noqa: F401  ensure export models are registered
+    import ingestion.schema  # noqa: F401  ensure ingestion models are registered
+    import insights.schema  # noqa: F401  ensure insight models are registered
+    import ontology.schema  # noqa: F401  ensure ontology models are registered
+    import project.schema  # noqa: F401  ensure project models are registered
+    import refresh.schema  # noqa: F401  ensure refresh models are registered
+    import run.schema  # noqa: F401  ensure run models are registered
+    import source_type.schema  # noqa: F401  ensure source type models are registered
+    import sync.schema  # noqa: F401  ensure SourceSnapshotModel is registered
     import tenant_data.schemas.clean  # noqa: F401
     import tenant_data.schemas.metadata  # noqa: F401
     import tenant_data.schemas.raw  # noqa: F401

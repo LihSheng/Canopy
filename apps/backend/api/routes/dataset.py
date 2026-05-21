@@ -42,7 +42,6 @@ class SyncPolicyUpdateRequest(BaseModel):
     frequency_minutes: int | None = None
 
 
-
 class DatasetDeleteSummaryResponse(BaseModel):
     dataset_id: str
     version_count: int
@@ -61,7 +60,9 @@ class DatasetVersionDeleteSummaryResponse(BaseModel):
 
 
 @router.get("/")
-def list_datasets(project_id: str = Query(""), db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+def list_datasets(
+    project_id: str = Query(""), db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)
+):
     version_repo = DatasetVersionRepository(db)
     service = DatasetService(DatasetRepository(db), version_repo)
     if project_id:
@@ -70,7 +71,9 @@ def list_datasets(project_id: str = Query(""), db: Session = Depends(get_db), us
 
 
 @router.post("/", status_code=201)
-def create_dataset(body: CreateDatasetRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+def create_dataset(
+    body: CreateDatasetRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)
+):
     service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
     return service.create_dataset(
         project_id=body.project_id,
@@ -120,7 +123,9 @@ def get_version_delete_summary(
 
 
 @router.post("/{id}/versions", status_code=201)
-def create_version(id: str, body: CreateVersionRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+def create_version(
+    id: str, body: CreateVersionRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)
+):
     repo = DatasetVersionRepository(db)
     dataset_repo = DatasetRepository(db)
     service = DatasetVersionService(repo, dataset_repo)
@@ -143,7 +148,6 @@ def reimport_dataset_version(
         columns=body.columns,
         sheet_name=body.sheet_name,
     )
-
 
 
 @router.delete("/{id}")
@@ -208,4 +212,3 @@ def update_sync_policy(
         cursor_column=body.cursor_column,
         frequency_minutes=body.frequency_minutes,
     )
-

@@ -6,6 +6,7 @@ from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import sessionmaker
 from starlette.testclient import TestClient
 
+from analytics.services.monthly_aggregation_service import MonthlyAggregationService
 from auth.hashing import hash_password
 from auth.schema import UserModel
 from common.database import Base, init_db, reset_engine, set_engine
@@ -15,7 +16,6 @@ from ontology.schema import (
     ExpenseClaimModel,
     PayrollExpenseModel,
 )
-from analytics.services.monthly_aggregation_service import MonthlyAggregationService
 from tenant_data.base import TenantDataBase
 
 _TEST_SERVER_URL = os.environ.get(
@@ -305,4 +305,3 @@ def seed_analytics_data(db_session):
     )
 
     return db_session
-

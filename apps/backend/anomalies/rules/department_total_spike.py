@@ -66,22 +66,13 @@ def _dominant_category(spend: MonthlyDepartmentSpend) -> str:
     return "payroll" if spend.payroll_total >= spend.claims_total else "claims"
 
 
-def _build_drivers(
-    spend: MonthlyDepartmentSpend, prev_total: float
-) -> list[str]:
+def _build_drivers(spend: MonthlyDepartmentSpend, prev_total: float) -> list[str]:
     drivers: list[str] = []
     if spend.payroll_total > 0:
         payroll_share = round((spend.payroll_total / spend.total) * 100, 1) if spend.total else 0
-        drivers.append(
-            f"Payroll: {spend.payroll_total:.0f} MYR ({payroll_share}% of total)"
-        )
+        drivers.append(f"Payroll: {spend.payroll_total:.0f} MYR ({payroll_share}% of total)")
     if spend.claims_total > 0:
         claims_share = round((spend.claims_total / spend.total) * 100, 1) if spend.total else 0
-        drivers.append(
-            f"Claims: {spend.claims_total:.0f} MYR "
-            f"({claims_share}% of total, {spend.claim_count} claims)"
-        )
-    drivers.append(
-        f"Previous month total: {prev_total:.0f} MYR"
-    )
+        drivers.append(f"Claims: {spend.claims_total:.0f} MYR ({claims_share}% of total, {spend.claim_count} claims)")
+    drivers.append(f"Previous month total: {prev_total:.0f} MYR")
     return drivers

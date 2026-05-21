@@ -40,8 +40,17 @@ class TestDepartments:
         response = client.get("/api/departments/dept-1", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
-        for field in ["id", "name", "total_spend", "payroll_spend", "claims_spend",
-                       "change_pct", "employee_count", "attention_state", "ai_summary"]:
+        for field in [
+            "id",
+            "name",
+            "total_spend",
+            "payroll_spend",
+            "claims_spend",
+            "change_pct",
+            "employee_count",
+            "attention_state",
+            "ai_summary",
+        ]:
             assert field in data, f"Missing field: {field}"
 
     def test_department_not_found(self, client, auth_headers):

@@ -1,6 +1,6 @@
-import pytest
+from unittest.mock import patch
 
-from unittest.mock import MagicMock, patch
+import pytest
 
 from analytics.domain import MonthlyDepartmentSpend
 from anomalies.service import detect_anomalies

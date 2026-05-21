@@ -5,9 +5,8 @@ from anomalies.service import detect_anomalies
 from common.clock import utcnow
 from insights.service import generate_insight
 from ontology.orchestration.service import OntologyOrchestrator
-from refresh.domain import RefreshJob, RefreshStage, STAGE_ORDER
+from refresh.domain import STAGE_ORDER, RefreshJob, RefreshStage
 from refresh.repository import RefreshRepository
-from refresh.schema import DataSnapshotModel
 from sync.orchestration.service import SyncOrchestrator
 from sync.readers import (
     BudgetCodeReader,
@@ -86,9 +85,7 @@ class RefreshOrchestrator:
         self._sync_result = result
 
         if result.status == "failed":
-            raise RuntimeError(
-                result.error_message or "All source readers failed"
-            )
+            raise RuntimeError(result.error_message or "All source readers failed")
 
         self._snapshot_id = result.snapshot_id
         job.snapshot_id = result.snapshot_id
@@ -152,6 +149,7 @@ class RefreshOrchestrator:
 
     def _resolve_months(self) -> tuple[str, str]:
         from datetime import datetime
+
         from ontology.schema import PayrollExpenseModel
 
         months = (
@@ -159,7 +157,7 @@ class RefreshOrchestrator:
             .distinct()
             .filter(
                 PayrollExpenseModel.snapshot_id == self._snapshot_id,
-                PayrollExpenseModel.is_resolved == True,
+                PayrollExpenseModel.is_resolved,
             )
             .order_by(PayrollExpenseModel.payroll_month.desc())
             .all()

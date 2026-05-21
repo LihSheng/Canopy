@@ -41,7 +41,7 @@ def materialize_dataset_version(storage_path: Path, sheet_name: str, dataset_id:
 
 
 def _materialize_csv_version(storage_path: Path, dataset_id: str) -> tuple[Path, int, int]:
-    with open(storage_path, "r", newline="", encoding="utf-8-sig") as handle:
+    with open(storage_path, newline="", encoding="utf-8-sig") as handle:
         reader = csv.reader(handle)
         rows = [row for row in reader if not is_empty_row(row)]
 
@@ -54,4 +54,3 @@ def _materialize_csv_version(storage_path: Path, dataset_id: str) -> tuple[Path,
         output_rows.append({header: row[index] if index < len(row) else None for index, header in enumerate(headers)})
 
     return write_jsonl_version(output_rows, dataset_id, storage_path.stem), len(output_rows), len(headers)
-

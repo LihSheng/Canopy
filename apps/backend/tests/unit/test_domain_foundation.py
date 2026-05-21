@@ -1,4 +1,5 @@
 """Tests for domain foundation: SyncMode, BatchStrategy, Dataset sync fields."""
+
 from datetime import UTC, datetime
 
 import pytest
@@ -6,7 +7,6 @@ import pytest
 from dataset.domain import (
     BatchStrategy,
     Dataset,
-    DatasetStatus,
     SyncMode,
 )
 
@@ -78,8 +78,12 @@ class TestConnectionTestFields:
         from connection.domain import Connection
 
         conn = Connection(
-            id="c-1", project_id="p-1", source_type="postgresql", name="test",
-            test_status="success", last_tested_at=datetime.now(UTC),
+            id="c-1",
+            project_id="p-1",
+            source_type="postgresql",
+            name="test",
+            test_status="success",
+            last_tested_at=datetime.now(UTC),
         )
         assert conn.test_status == "success"
 
@@ -88,8 +92,9 @@ class TestDatasetRepositorySyncFields:
     def test_save_and_retrieve_sync_fields(self):
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
-        from common.database import Base
+
         import dataset.schema  # noqa: F401
+        from common.database import Base
         from dataset.repository import DatasetRepository
 
         engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
@@ -124,10 +129,11 @@ class TestConnectionRepositoryTestFields:
     def test_save_and_retrieve_test_status(self):
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
-        from common.database import Base
+
         import connection.schema  # noqa: F401
-        from connection.repository import ConnectionRepository
+        from common.database import Base
         from connection.domain import Connection
+        from connection.repository import ConnectionRepository
 
         engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
         Base.metadata.create_all(bind=engine)
@@ -135,8 +141,12 @@ class TestConnectionRepositoryTestFields:
         repo = ConnectionRepository(session)
 
         conn = Connection(
-            id="c-1", project_id="p-1", source_type="postgresql", name="test",
-            test_status="success", last_tested_at=datetime.now(UTC),
+            id="c-1",
+            project_id="p-1",
+            source_type="postgresql",
+            name="test",
+            test_status="success",
+            last_tested_at=datetime.now(UTC),
         )
         saved = repo.save(conn)
         assert saved.test_status == "success"

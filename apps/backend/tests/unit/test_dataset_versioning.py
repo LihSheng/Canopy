@@ -1,6 +1,4 @@
 import uuid
-from datetime import UTC, datetime
-from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import create_engine
@@ -21,9 +19,10 @@ def _setup_db():
 def _make_sqlite_session():
     engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
     import dataset.schema  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(bind=engine)
-    return SessionLocal()
+    session_local = sessionmaker(bind=engine)
+    return session_local()
 
 
 class TestDatasetVersionService:

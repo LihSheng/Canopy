@@ -1,7 +1,6 @@
 import pytest
 
 from common.errors import ValidationError
-from control_plane.audit_service import AuditService
 from control_plane.lifecycle_service import LifecycleService
 from control_plane.schemas.audit import AuditEventModel
 from control_plane.schemas.tenants import TenantModel
@@ -34,11 +33,7 @@ class TestSuspendTenant:
 
     def test_suspend_creates_audit_event(self, db_session, seed_tenant_for_lifecycle, lifecycle_service):
         lifecycle_service.suspend_tenant("t-lifecycle-1", "user-admin-1")
-        events = (
-            db_session.query(AuditEventModel)
-            .filter(AuditEventModel.tenant_id == "t-lifecycle-1")
-            .all()
-        )
+        events = db_session.query(AuditEventModel).filter(AuditEventModel.tenant_id == "t-lifecycle-1").all()
         suspended_events = [e for e in events if e.event_type == "tenant.suspended"]
         assert len(suspended_events) == 1
         assert suspended_events[0].actor_user_id == "user-admin-1"
@@ -87,11 +82,7 @@ class TestRestoreTenant:
         db_session.commit()
 
         lifecycle_service.restore_tenant("t-archived-2", "user-admin-1")
-        events = (
-            db_session.query(AuditEventModel)
-            .filter(AuditEventModel.tenant_id == "t-archived-2")
-            .all()
-        )
+        events = db_session.query(AuditEventModel).filter(AuditEventModel.tenant_id == "t-archived-2").all()
         restored_events = [e for e in events if e.event_type == "tenant.restored"]
         assert len(restored_events) == 1
 
@@ -112,11 +103,7 @@ class TestArchiveTenant:
 
     def test_archive_creates_audit_event(self, db_session, seed_tenant_for_lifecycle, lifecycle_service):
         lifecycle_service.archive_tenant("t-lifecycle-1", "user-admin-1")
-        events = (
-            db_session.query(AuditEventModel)
-            .filter(AuditEventModel.tenant_id == "t-lifecycle-1")
-            .all()
-        )
+        events = db_session.query(AuditEventModel).filter(AuditEventModel.tenant_id == "t-lifecycle-1").all()
         archived_events = [e for e in events if e.event_type == "tenant.archived"]
         assert len(archived_events) == 1
 
@@ -124,4 +111,3 @@ class TestArchiveTenant:
         lifecycle_service.archive_tenant("t-lifecycle-1", "user-admin-1")
         with pytest.raises(ValidationError, match="Cannot archive"):
             lifecycle_service.archive_tenant("t-lifecycle-1", "user-admin-1")
-

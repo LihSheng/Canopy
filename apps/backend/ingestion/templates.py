@@ -4,7 +4,7 @@ import copy
 import uuid
 from datetime import UTC, datetime
 
-from ingestion.domain import TemplateFamily, TemplateVersion, TemplateVersionState
+from ingestion.domain import TemplateVersion, TemplateVersionState
 
 
 def next_version_number(existing_versions: list[TemplateVersion]) -> int:
@@ -13,7 +13,9 @@ def next_version_number(existing_versions: list[TemplateVersion]) -> int:
     return max(version.version_number for version in existing_versions) + 1
 
 
-def create_draft_version(template_id: str, spec_json: dict, existing_versions: list[TemplateVersion]) -> TemplateVersion:
+def create_draft_version(
+    template_id: str, spec_json: dict, existing_versions: list[TemplateVersion]
+) -> TemplateVersion:
     return TemplateVersion(
         id=str(uuid.uuid4()),
         template_id=template_id,
@@ -42,4 +44,3 @@ def validate_bind(version: TemplateVersion | None) -> None:
         raise ValueError("Template version not found")
     if version.state != TemplateVersionState.published.value:
         raise ValueError("Only published template versions can be bound")
-

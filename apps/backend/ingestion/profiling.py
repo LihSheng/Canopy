@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from ingestion.domain import ColumnProfile, SheetProfile, UploadStatus, WorkbookProfile
+from ingestion.domain import ColumnProfile, SheetProfile, WorkbookProfile
 
 
 def _infer_value_type(value) -> str:
@@ -104,4 +104,3 @@ def generate_profile(upload_id: str, storage_path, repo=None) -> WorkbookProfile
     if repo is not None and hasattr(repo, "save_upload_profile"):
         repo.save_upload_profile(upload_id, profile)
     return profile
-

@@ -41,11 +41,7 @@ class InsightRepository:
         return model
 
     def find_latest(self) -> InsightSummary | None:
-        model = (
-            self._db.query(GeneratedInsightModel)
-            .order_by(GeneratedInsightModel.generated_at.desc())
-            .first()
-        )
+        model = self._db.query(GeneratedInsightModel).order_by(GeneratedInsightModel.generated_at.desc()).first()
         if model is None:
             return None
         return _model_to_domain(model)
@@ -73,9 +69,7 @@ class InsightRepository:
         return _model_to_domain(model)
 
     def clear_snapshot(self, snapshot_id: str) -> None:
-        self._db.query(GeneratedInsightModel).filter(
-            GeneratedInsightModel.snapshot_id == snapshot_id
-        ).delete()
+        self._db.query(GeneratedInsightModel).filter(GeneratedInsightModel.snapshot_id == snapshot_id).delete()
         self._db.commit()
 
 

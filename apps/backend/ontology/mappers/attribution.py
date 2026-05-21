@@ -1,6 +1,4 @@
-from dataclasses import asdict
-
-from ontology.domain import MappingContext, UnresolvedRecord
+from ontology.domain import MappingContext
 
 
 class AttributionResolver:

@@ -1,5 +1,6 @@
-import pytest
 from io import BytesIO
+
+import pytest
 
 pytestmark = pytest.mark.api_schema
 
@@ -17,9 +18,7 @@ class TestExportsIntegration:
             headers=auth_headers,
         )
         assert response.status_code == 200
-        assert response.headers["content-type"] == (
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        assert response.headers["content-type"] == ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         assert "attachment" in response.headers["content-disposition"]
         assert response.content[:2] == b"PK"
 

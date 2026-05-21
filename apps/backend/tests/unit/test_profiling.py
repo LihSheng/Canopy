@@ -1,7 +1,6 @@
 from datetime import datetime
 
-from ingestion.domain import SheetProfile, ColumnProfile
-from ingestion.profiling import _score_sheet, _infer_type_from_values, _infer_value_type
+from ingestion.profiling import _infer_type_from_values, _infer_value_type, _score_sheet
 
 
 class TestSheetScoring:
@@ -69,4 +68,3 @@ class TestTypeInference:
     def test_boolean_detected(self):
         values = [True, False, True]
         assert _infer_type_from_values(values) == "boolean"
-

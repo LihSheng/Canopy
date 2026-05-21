@@ -42,9 +42,7 @@ class RoutingCache:
         finally:
             session.close()
 
-    def cache_tenant_database_target(
-        self, tenant_id: str, target: dict, ttl_seconds: int = 60
-    ) -> None:
+    def cache_tenant_database_target(self, tenant_id: str, target: dict, ttl_seconds: int = 60) -> None:
         self._store.set(self._key(tenant_id), target, ttl_seconds)
 
     def invalidate_tenant(self, tenant_id: str) -> None:
@@ -52,4 +50,3 @@ class RoutingCache:
 
     def invalidate_all(self) -> None:
         self._store.delete_by_prefix(self._prefix)
-

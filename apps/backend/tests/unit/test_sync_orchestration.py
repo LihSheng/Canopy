@@ -1,6 +1,6 @@
-import pytest
-
 from unittest.mock import MagicMock
+
+import pytest
 
 from common.errors import SyncError
 from sync.orchestration.service import SyncOrchestrator

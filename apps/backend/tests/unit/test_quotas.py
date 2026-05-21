@@ -101,7 +101,7 @@ class TestUsageTracker:
 
         threads = []
         for i in range(10):
-            t = threading.Thread(target=increment_many, args=(f"t-{i%3}", 100))
+            t = threading.Thread(target=increment_many, args=(f"t-{i % 3}", 100))
             threads.append(t)
             t.start()
 
@@ -109,10 +109,7 @@ class TestUsageTracker:
             t.join()
 
         assert len(errors) == 0
-        total = sum(
-            tracker.get_current(f"t-{i}", QuotaType.CONCURRENT_JOBS)
-            for i in range(3)
-        )
+        total = sum(tracker.get_current(f"t-{i}", QuotaType.CONCURRENT_JOBS) for i in range(3))
         assert total == 1000
 
     def test_rolling_window_prunes_old_entries(self):
@@ -125,9 +122,7 @@ class TestQuotaEvaluator:
     def test_check_quota_within_limit_allows(self):
         evaluator = QuotaEvaluator()
         tracker = UsageTracker()
-        result = evaluator.check_quota(
-            tracker, "tenant-a", QuotaType.CONCURRENT_JOBS, proposed_delta=1
-        )
+        result = evaluator.check_quota(tracker, "tenant-a", QuotaType.CONCURRENT_JOBS, proposed_delta=1)
         assert result.allowed is True
         assert result.warning_triggered is False
 
@@ -136,9 +131,7 @@ class TestQuotaEvaluator:
         tracker = UsageTracker()
         quota = get_quota_definition(QuotaType.CONCURRENT_JOBS)
         tracker.increment("tenant-a", QuotaType.CONCURRENT_JOBS, quota.max_value)
-        result = evaluator.check_quota(
-            tracker, "tenant-a", QuotaType.CONCURRENT_JOBS, proposed_delta=1
-        )
+        result = evaluator.check_quota(tracker, "tenant-a", QuotaType.CONCURRENT_JOBS, proposed_delta=1)
         assert result.allowed is False
         assert result.limit_type == LimitType.HARD
         assert result.warning_triggered is True
@@ -148,9 +141,7 @@ class TestQuotaEvaluator:
         tracker = UsageTracker()
         quota = get_quota_definition(QuotaType.JOBS_PER_HOUR)
         tracker.increment("tenant-a", QuotaType.JOBS_PER_HOUR, quota.max_value)
-        result = evaluator.check_quota(
-            tracker, "tenant-a", QuotaType.JOBS_PER_HOUR, proposed_delta=1
-        )
+        result = evaluator.check_quota(tracker, "tenant-a", QuotaType.JOBS_PER_HOUR, proposed_delta=1)
         assert result.allowed is True
         assert result.limit_type == LimitType.SOFT
         assert result.warning_triggered is True
@@ -161,9 +152,7 @@ class TestQuotaEvaluator:
         quota = get_quota_definition(QuotaType.CONCURRENT_JOBS)
         threshold = int(quota.max_value * quota.warning_threshold_pct)
         tracker.increment("tenant-a", QuotaType.CONCURRENT_JOBS, threshold)
-        result = evaluator.check_quota(
-            tracker, "tenant-a", QuotaType.CONCURRENT_JOBS
-        )
+        result = evaluator.check_quota(tracker, "tenant-a", QuotaType.CONCURRENT_JOBS)
         assert result.allowed is True
         assert result.warning_triggered is True
 
@@ -173,9 +162,7 @@ class TestQuotaEvaluator:
         quota = get_quota_definition(QuotaType.CONCURRENT_JOBS)
         threshold = int(quota.max_value * quota.warning_threshold_pct) - 1
         tracker.increment("tenant-a", QuotaType.CONCURRENT_JOBS, max(threshold, 1))
-        result = evaluator.check_quota(
-            tracker, "tenant-a", QuotaType.CONCURRENT_JOBS
-        )
+        result = evaluator.check_quota(tracker, "tenant-a", QuotaType.CONCURRENT_JOBS)
         assert result.warning_triggered is False
 
     def test_get_tenant_quota_returns_custom_config(self):
@@ -183,6 +170,7 @@ class TestQuotaEvaluator:
             def get_config(self, tenant_id, key):
                 if key == "concurrent_jobs":
                     import json
+
                     fake = type(
                         "FakeConfig",
                         (),
@@ -306,4 +294,3 @@ class TestQuotaEnforcer:
         tracker.increment("tenant-a", QuotaType.CONCURRENT_JOBS, quota.max_value + 1)
         with pytest.raises(QuotaExceededError):
             enforcer.enforce_with_warning("tenant-a", QuotaType.CONCURRENT_JOBS)
-

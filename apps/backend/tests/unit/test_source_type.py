@@ -20,6 +20,7 @@ def _setup_db():
 def _make_sqlite_session():
     engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
     import source_type.schema  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
     session_local = sessionmaker(bind=engine)
     return session_local()

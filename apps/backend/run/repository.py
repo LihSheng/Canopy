@@ -24,15 +24,30 @@ class RunRepository:
         return [self._to_domain(m) for m in models]
 
     def list_by_dataset(self, dataset_id: str) -> list[Run]:
-        models = self._db.query(RunModel).filter(RunModel.dataset_id == dataset_id).order_by(RunModel.created_at.desc()).all()
+        models = (
+            self._db.query(RunModel)
+            .filter(RunModel.dataset_id == dataset_id)
+            .order_by(RunModel.created_at.desc())
+            .all()
+        )
         return [self._to_domain(m) for m in models]
 
     def list_by_project(self, project_id: str) -> list[Run]:
-        models = self._db.query(RunModel).filter(RunModel.project_id == project_id).order_by(RunModel.created_at.desc()).all()
+        models = (
+            self._db.query(RunModel)
+            .filter(RunModel.project_id == project_id)
+            .order_by(RunModel.created_at.desc())
+            .all()
+        )
         return [self._to_domain(m) for m in models]
 
     def get_latest_by_dataset(self, dataset_id: str) -> Run | None:
-        model = self._db.query(RunModel).filter(RunModel.dataset_id == dataset_id).order_by(RunModel.created_at.desc()).first()
+        model = (
+            self._db.query(RunModel)
+            .filter(RunModel.dataset_id == dataset_id)
+            .order_by(RunModel.created_at.desc())
+            .first()
+        )
         return self._to_domain(model) if model else None
 
     def count_active_by_dataset(self, dataset_id: str) -> int:
@@ -48,4 +63,3 @@ class RunRepository:
 
     def _to_domain(self, m: RunModel) -> Run:
         return Run(**{c.name: getattr(m, c.name) for c in m.__table__.columns})
-

@@ -46,9 +46,7 @@ class ConnectionService:
         name: str,
         allowed_extensions: list[str] | None = None,
     ) -> Connection:
-        config = {
-            "allowed_extensions": allowed_extensions or [".csv", ".xlsx", ".json", ".parquet"]
-        }
+        config = {"allowed_extensions": allowed_extensions or [".csv", ".xlsx", ".json", ".parquet"]}
         return self.create_connection(project_id, "static_file", name, config)
 
     def pause_connection(self, id: str, actor_user_id: str) -> Connection:
@@ -137,9 +135,7 @@ class ConnectionService:
     ) -> Connection:
         connection = self._require_connection(id)
         if connection.status not in allowed_statuses:
-            raise ValidationError(
-                f"Cannot move connection from '{connection.status}' to '{target_status}'"
-            )
+            raise ValidationError(f"Cannot move connection from '{connection.status}' to '{target_status}'")
 
         updated = self._repo.update_status(id, target_status)
         if updated is None:
@@ -195,8 +191,8 @@ class ConnectionService:
         connection = self._require_connection(id)
         config = self._decrypt_config(connection)
 
-        from connection.database_adapter import get_adapter
         from connection.cursor_detection import detect_cursor_column
+        from connection.database_adapter import get_adapter
 
         adapter = get_adapter(connection.source_type)
         tables = await adapter.discover_tables(config)
@@ -210,8 +206,8 @@ class ConnectionService:
         connection = self._require_connection(id)
         config = self._decrypt_config(connection)
 
-        from connection.database_adapter import get_adapter
         from connection.cursor_detection import detect_cursor_column
+        from connection.database_adapter import get_adapter
 
         adapter = get_adapter(connection.source_type)
         preview = await adapter.preview_table(config, table)
@@ -235,4 +231,3 @@ class ConnectionService:
                 "status": connection.status,
             },
         )
-

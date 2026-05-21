@@ -255,8 +255,6 @@ class TestTenantConfigs:
 
 class TestNonAdminAccessDenied:
     def test_non_admin_cannot_access_admin_routes(self, client, seed_tenant_pending):
-        from auth.schema import UserModel
-        from auth.hashing import hash_password
 
         response = client.post(
             "/api/auth/login",
@@ -270,4 +268,3 @@ class TestNonAdminAccessDenied:
 
         resp = client.get("/api/admin/tenants", headers=headers)
         assert resp.status_code == 401
-

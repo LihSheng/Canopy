@@ -92,4 +92,3 @@ def test_read_jsonl_missing_file():
     assert result["filtered_row_count"] == 0
     assert result["page"] == 1
     assert result["page_size"] == 100
-

@@ -39,14 +39,20 @@ def _make_facts(
         anomalies=anomalies,
         top_departments=[
             TopDepartmentFact(
-                id="dept-1", name="Engineering",
-                total_spend=400000.0, payroll_spend=380000.0,
-                claims_spend=20000.0, change_pct=15.0,
+                id="dept-1",
+                name="Engineering",
+                total_spend=400000.0,
+                payroll_spend=380000.0,
+                claims_spend=20000.0,
+                change_pct=15.0,
             ),
             TopDepartmentFact(
-                id="dept-2", name="Sales",
-                total_spend=300000.0, payroll_spend=280000.0,
-                claims_spend=20000.0, change_pct=5.0,
+                id="dept-2",
+                name="Sales",
+                total_spend=300000.0,
+                payroll_spend=280000.0,
+                claims_spend=20000.0,
+                change_pct=5.0,
             ),
         ],
         claim_type_breakdown=[

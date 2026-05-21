@@ -1,20 +1,14 @@
 from sqlalchemy.orm import Session
 
 from common.errors import AuthError
+from context.tenant_context import TenantContext
 from control_plane.schemas.memberships import TenantMembershipModel
 from control_plane.schemas.tenants import TenantModel
-from context.tenant_context import TenantContext
 
 
 class MembershipValidator:
-    def validate_membership(
-        self, user_id: str, tenant_id: str, db_session: Session
-    ) -> TenantContext:
-        tenant = (
-            db_session.query(TenantModel)
-            .filter(TenantModel.id == tenant_id)
-            .first()
-        )
+    def validate_membership(self, user_id: str, tenant_id: str, db_session: Session) -> TenantContext:
+        tenant = db_session.query(TenantModel).filter(TenantModel.id == tenant_id).first()
         if tenant is None:
             raise AuthError("Tenant not found")
         if tenant.lifecycle_state == "suspended":
@@ -43,4 +37,3 @@ class MembershipValidator:
             database_target_ref=None,
             active_token_id=None,
         )
-

@@ -34,9 +34,7 @@ class S3StorageAdapter(StorageAdapter):
         """Delete object from S3 including any versioned copies."""
         raise NotImplementedError("S3 adapter is not yet implemented")
 
-    def list_objects(
-        self, prefix: str, tenant_id: str | None = None
-    ) -> list[StorageObjectMeta]:
+    def list_objects(self, prefix: str, tenant_id: str | None = None) -> list[StorageObjectMeta]:
         """List S3 objects matching a prefix, returning metadata for each."""
         raise NotImplementedError("S3 adapter is not yet implemented")
 
@@ -44,21 +42,14 @@ class S3StorageAdapter(StorageAdapter):
         """Check if an S3 object exists."""
         raise NotImplementedError("S3 adapter is not yet implemented")
 
-    def get_object_meta(
-        self, key: str, tenant_id: str | None = None
-    ) -> StorageObjectMeta:
+    def get_object_meta(self, key: str, tenant_id: str | None = None) -> StorageObjectMeta:
         """Retrieve S3 object metadata without downloading body."""
         raise NotImplementedError("S3 adapter is not yet implemented")
 
-    def set_lifecycle_state(
-        self, key: str, state: str, tenant_id: str | None = None
-    ) -> None:
+    def set_lifecycle_state(self, key: str, state: str, tenant_id: str | None = None) -> None:
         """Update lifecycle state via S3 object tags or metadata."""
         raise NotImplementedError("S3 adapter is not yet implemented")
 
-    def set_retention_state(
-        self, key: str, state: str, tenant_id: str | None = None
-    ) -> None:
+    def set_retention_state(self, key: str, state: str, tenant_id: str | None = None) -> None:
         """Update retention state via S3 object tags or metadata."""
         raise NotImplementedError("S3 adapter is not yet implemented")
-

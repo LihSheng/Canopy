@@ -1,6 +1,5 @@
 import json
-from dataclasses import asdict
-from typing import Any, Sequence
+from collections.abc import Sequence
 
 from sqlalchemy.orm import Session
 
@@ -28,9 +27,7 @@ class OntologyRepository:
     def __init__(self, db: Session):
         self._db = db
 
-    def save_departments(
-        self, departments: Sequence[Department]
-    ) -> list[DepartmentModel]:
+    def save_departments(self, departments: Sequence[Department]) -> list[DepartmentModel]:
         models = [
             DepartmentModel(
                 id=d.id,
@@ -47,9 +44,7 @@ class OntologyRepository:
         self._db.commit()
         return models
 
-    def save_employees(
-        self, employees: Sequence[Employee]
-    ) -> list[EmployeeModel]:
+    def save_employees(self, employees: Sequence[Employee]) -> list[EmployeeModel]:
         models = [
             EmployeeModel(
                 id=e.id,
@@ -68,9 +63,7 @@ class OntologyRepository:
         self._db.commit()
         return models
 
-    def save_cost_centers(
-        self, cost_centers: Sequence[CostCenter]
-    ) -> list[CostCenterModel]:
+    def save_cost_centers(self, cost_centers: Sequence[CostCenter]) -> list[CostCenterModel]:
         models = [
             CostCenterModel(
                 id=c.id,
@@ -86,9 +79,7 @@ class OntologyRepository:
         self._db.commit()
         return models
 
-    def save_budget_codes(
-        self, budget_codes: Sequence[BudgetCode]
-    ) -> list[BudgetCodeModel]:
+    def save_budget_codes(self, budget_codes: Sequence[BudgetCode]) -> list[BudgetCodeModel]:
         models = [
             BudgetCodeModel(
                 id=b.id,
@@ -105,9 +96,7 @@ class OntologyRepository:
         self._db.commit()
         return models
 
-    def save_expense_claims(
-        self, claims: Sequence[ExpenseClaim]
-    ) -> list[ExpenseClaimModel]:
+    def save_expense_claims(self, claims: Sequence[ExpenseClaim]) -> list[ExpenseClaimModel]:
         models = [
             ExpenseClaimModel(
                 id=c.id,
@@ -130,9 +119,7 @@ class OntologyRepository:
         self._db.commit()
         return models
 
-    def save_payroll_expenses(
-        self, payroll: Sequence[PayrollExpense]
-    ) -> list[PayrollExpenseModel]:
+    def save_payroll_expenses(self, payroll: Sequence[PayrollExpense]) -> list[PayrollExpenseModel]:
         models = [
             PayrollExpenseModel(
                 id=p.id,
@@ -176,32 +163,16 @@ class OntologyRepository:
         return models
 
     def department_count_for_snapshot(self, snapshot_id: str) -> int:
-        return (
-            self._db.query(DepartmentModel)
-            .filter(DepartmentModel.snapshot_id == snapshot_id)
-            .count()
-        )
+        return self._db.query(DepartmentModel).filter(DepartmentModel.snapshot_id == snapshot_id).count()
 
     def employee_count_for_snapshot(self, snapshot_id: str) -> int:
-        return (
-            self._db.query(EmployeeModel)
-            .filter(EmployeeModel.snapshot_id == snapshot_id)
-            .count()
-        )
+        return self._db.query(EmployeeModel).filter(EmployeeModel.snapshot_id == snapshot_id).count()
 
     def expense_claim_count_for_snapshot(self, snapshot_id: str) -> int:
-        return (
-            self._db.query(ExpenseClaimModel)
-            .filter(ExpenseClaimModel.snapshot_id == snapshot_id)
-            .count()
-        )
+        return self._db.query(ExpenseClaimModel).filter(ExpenseClaimModel.snapshot_id == snapshot_id).count()
 
     def payroll_expense_count_for_snapshot(self, snapshot_id: str) -> int:
-        return (
-            self._db.query(PayrollExpenseModel)
-            .filter(PayrollExpenseModel.snapshot_id == snapshot_id)
-            .count()
-        )
+        return self._db.query(PayrollExpenseModel).filter(PayrollExpenseModel.snapshot_id == snapshot_id).count()
 
     def unresolved_issue_count_for_snapshot(self, snapshot_id: str) -> int:
         return (

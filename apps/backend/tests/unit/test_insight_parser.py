@@ -8,11 +8,11 @@ pytestmark = pytest.mark.business_rule
 class TestResponseParser:
     def test_parses_valid_json(self):
         raw = (
-            '{\n'
+            "{\n"
             '  "summary": "Spend was stable this month.",\n'
             '  "recommendations": ["Review claims.", "Monitor payroll."],\n'
             '  "key_findings": ["Payroll dominates spend.", "No anomalies detected."]\n'
-            '}'
+            "}"
         )
         result = parse_llm_response(raw)
 
@@ -39,23 +39,13 @@ class TestResponseParser:
         assert result.key_findings == []
 
     def test_strips_markdown_code_block(self):
-        raw = (
-            '```json\n'
-            '{"summary": "Stable.", "recommendations": ["R1"], '
-            '"key_findings": ["F1"]}\n'
-            '```'
-        )
+        raw = '```json\n{"summary": "Stable.", "recommendations": ["R1"], "key_findings": ["F1"]}\n```'
         result = parse_llm_response(raw)
 
         assert result.summary == "Stable."
 
     def test_strips_markdown_without_language_tag(self):
-        raw = (
-            '```\n'
-            '{"summary": "Stable.", "recommendations": ["R1"], '
-            '"key_findings": ["F1"]}\n'
-            '```'
-        )
+        raw = '```\n{"summary": "Stable.", "recommendations": ["R1"], "key_findings": ["F1"]}\n```'
         result = parse_llm_response(raw)
 
         assert result.summary == "Stable."
@@ -69,22 +59,14 @@ class TestResponseParser:
         assert result.key_findings == []
 
     def test_filters_empty_strings_from_lists(self):
-        raw = (
-            '{"summary": "Text.", '
-            '"recommendations": ["", "Valid", ""], '
-            '"key_findings": ["", ""]}'
-        )
+        raw = '{"summary": "Text.", "recommendations": ["", "Valid", ""], "key_findings": ["", ""]}'
         result = parse_llm_response(raw)
 
         assert result.recommendations == ["Valid"]
         assert result.key_findings == []
 
     def test_handles_non_string_list_items(self):
-        raw = (
-            '{"summary": "Text.", '
-            '"recommendations": [123, true], '
-            '"key_findings": [null, "F1"]}'
-        )
+        raw = '{"summary": "Text.", "recommendations": [123, true], "key_findings": [null, "F1"]}'
         result = parse_llm_response(raw)
 
         assert "123" in result.recommendations

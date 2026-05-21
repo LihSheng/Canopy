@@ -171,4 +171,3 @@ class TestStorageRouterRouteTransaction:
             assert value == "tenant-x"
 
         td_session.close()
-

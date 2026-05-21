@@ -11,7 +11,6 @@ from sqlalchemy import text
 from dataset.domain import Dataset
 from dataset.repository import DatasetRepository
 
-
 pytestmark = pytest.mark.api_schema
 
 
@@ -43,7 +42,13 @@ def test_static_file_preview_and_dataset_creation(client: TestClient, auth_heade
 
     preview_resp = client.post(
         "/api/connections/preview",
-        files={"file": ("payroll.xlsx", _make_xlsx_bytes(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        files={
+            "file": (
+                "payroll.xlsx",
+                _make_xlsx_bytes(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
         headers=auth_headers,
     )
     assert preview_resp.status_code == 200
@@ -108,7 +113,9 @@ def test_static_file_preview_and_dataset_creation(client: TestClient, auth_heade
     assert delete_preview_resp.json()["deleted"] is True
 
 
-def test_preview_backfills_legacy_dataset_without_active_version(client: TestClient, auth_headers, monkeypatch, tmp_path, db_session):
+def test_preview_backfills_legacy_dataset_without_active_version(
+    client: TestClient, auth_headers, monkeypatch, tmp_path, db_session
+):
     from common.config import settings
 
     monkeypatch.setattr(settings, "export_storage_dir", str(tmp_path), raising=False)
@@ -123,7 +130,13 @@ def test_preview_backfills_legacy_dataset_without_active_version(client: TestCli
 
     preview_resp = client.post(
         "/api/connections/preview",
-        files={"file": ("payroll.xlsx", _make_xlsx_bytes(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        files={
+            "file": (
+                "payroll.xlsx",
+                _make_xlsx_bytes(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
         headers=auth_headers,
     )
     assert preview_resp.status_code == 200
@@ -171,7 +184,9 @@ def test_preview_backfills_legacy_dataset_without_active_version(client: TestCli
     assert len(versions) == 1
 
 
-def test_preview_backfills_upload_id_connection_without_active_version(client: TestClient, auth_headers, monkeypatch, tmp_path, db_session):
+def test_preview_backfills_upload_id_connection_without_active_version(
+    client: TestClient, auth_headers, monkeypatch, tmp_path, db_session
+):
     from common.config import settings
 
     monkeypatch.setattr(settings, "export_storage_dir", str(tmp_path), raising=False)
@@ -186,7 +201,13 @@ def test_preview_backfills_upload_id_connection_without_active_version(client: T
 
     preview_resp = client.post(
         "/api/connections/preview",
-        files={"file": ("payroll.xlsx", _make_xlsx_bytes(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        files={
+            "file": (
+                "payroll.xlsx",
+                _make_xlsx_bytes(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
         headers=auth_headers,
     )
     assert preview_resp.status_code == 200
@@ -243,7 +264,17 @@ def test_preview_backfills_upload_id_connection_without_active_version(client: T
     assert preview_dataset["rows"][0] == ["Alice", 100]
 
 
-def _create_dataset_via_api(client, auth_headers, monkeypatch, tmp_path, xlsx_buffer, project_name, connection_name, dataset_name, sheet_name="Payroll"):
+def _create_dataset_via_api(
+    client,
+    auth_headers,
+    monkeypatch,
+    tmp_path,
+    xlsx_buffer,
+    project_name,
+    connection_name,
+    dataset_name,
+    sheet_name="Payroll",
+):
     from common.config import settings
 
     monkeypatch.setattr(settings, "export_storage_dir", str(tmp_path), raising=False)
@@ -311,9 +342,14 @@ def _make_two_row_xlsx_bytes() -> io.BytesIO:
 
 def test_dataset_preview_pagination_first_page(client: TestClient, auth_headers, monkeypatch, tmp_path):
     dataset_id = _create_dataset_via_api(
-        client, auth_headers, monkeypatch, tmp_path,
+        client,
+        auth_headers,
+        monkeypatch,
+        tmp_path,
         _make_two_row_xlsx_bytes(),
-        "Pagination Project", "Pagination Conn", "Paginated Dataset",
+        "Pagination Project",
+        "Pagination Conn",
+        "Paginated Dataset",
     )
 
     resp = client.get(
@@ -333,9 +369,14 @@ def test_dataset_preview_pagination_first_page(client: TestClient, auth_headers,
 
 def test_dataset_preview_pagination_second_page(client: TestClient, auth_headers, monkeypatch, tmp_path):
     dataset_id = _create_dataset_via_api(
-        client, auth_headers, monkeypatch, tmp_path,
+        client,
+        auth_headers,
+        monkeypatch,
+        tmp_path,
         _make_two_row_xlsx_bytes(),
-        "Pagination2 Project", "Pagination2 Conn", "Paginated2 Dataset",
+        "Pagination2 Project",
+        "Pagination2 Conn",
+        "Paginated2 Dataset",
     )
 
     resp = client.get(
@@ -370,9 +411,14 @@ def _make_large_xlsx_bytes(num_rows: int = 60) -> io.BytesIO:
 
 def test_dataset_preview_search_finds_match(client: TestClient, auth_headers, monkeypatch, tmp_path):
     dataset_id = _create_dataset_via_api(
-        client, auth_headers, monkeypatch, tmp_path,
+        client,
+        auth_headers,
+        monkeypatch,
+        tmp_path,
         _make_large_xlsx_bytes(60),
-        "Search Project", "Search Conn", "Search Dataset",
+        "Search Project",
+        "Search Conn",
+        "Search Dataset",
     )
 
     resp = client.get(
@@ -390,9 +436,14 @@ def test_dataset_preview_search_finds_match(client: TestClient, auth_headers, mo
 
 def test_dataset_preview_search_no_match(client: TestClient, auth_headers, monkeypatch, tmp_path):
     dataset_id = _create_dataset_via_api(
-        client, auth_headers, monkeypatch, tmp_path,
+        client,
+        auth_headers,
+        monkeypatch,
+        tmp_path,
         _make_large_xlsx_bytes(60),
-        "SearchNoMatch Project", "SearchNoMatch Conn", "SearchNoMatch Dataset",
+        "SearchNoMatch Project",
+        "SearchNoMatch Conn",
+        "SearchNoMatch Dataset",
     )
 
     resp = client.get(
@@ -409,9 +460,14 @@ def test_dataset_preview_search_no_match(client: TestClient, auth_headers, monke
 
 def test_dataset_preview_invalid_page(client: TestClient, auth_headers, monkeypatch, tmp_path):
     dataset_id = _create_dataset_via_api(
-        client, auth_headers, monkeypatch, tmp_path,
+        client,
+        auth_headers,
+        monkeypatch,
+        tmp_path,
         _make_two_row_xlsx_bytes(),
-        "InvalidPage Project", "InvalidPage Conn", "InvalidPage Dataset",
+        "InvalidPage Project",
+        "InvalidPage Conn",
+        "InvalidPage Dataset",
     )
 
     resp = client.get(
@@ -735,4 +791,3 @@ def test_connection_soft_delete_hides_restore_and_permanent_delete(
 
     get_resp = client.get(f"/api/connections/{connection_id}", headers=auth_headers)
     assert get_resp.status_code == 404
-

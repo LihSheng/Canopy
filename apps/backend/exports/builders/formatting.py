@@ -9,7 +9,7 @@ _TITLE_FONT = Font(name="Calibri", size=14, bold=True, color="1F3864")
 _SUBTITLE_FONT = Font(name="Calibri", size=11, bold=True, color="2F5496")
 
 _DATA_FONT = Font(name="Calibri", size=11)
-_MONEY_FORMAT = '#,##0.00'
+_MONEY_FORMAT = "#,##0.00"
 _PCT_FORMAT = '0.00"%"'
 
 _THIN_BORDER = Border(

@@ -65,4 +65,3 @@ async def require_tenant_context(
     if ctx is None:
         raise AuthError("No tenant selected")
     return ctx
-

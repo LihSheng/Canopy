@@ -8,9 +8,7 @@ pytestmark = pytest.mark.api_schema
 class TestSyncPolicyEndpoint:
     def test_update_sync_policy(self, client, auth_headers):
         # Create a project
-        proj_resp = client.post(
-            "/api/projects/", json={"name": "Test", "description": ""}, headers=auth_headers
-        )
+        proj_resp = client.post("/api/projects/", json={"name": "Test", "description": ""}, headers=auth_headers)
         assert proj_resp.status_code == 201
         project_id = proj_resp.json()["id"]
 
@@ -63,9 +61,7 @@ class TestSyncPolicyEndpoint:
         assert data["cursor_column"] == "updated_at"
 
     def test_cursor_column_change_resets_cursor_value(self, client, auth_headers):
-        proj_resp = client.post(
-            "/api/projects/", json={"name": "Test2", "description": ""}, headers=auth_headers
-        )
+        proj_resp = client.post("/api/projects/", json={"name": "Test2", "description": ""}, headers=auth_headers)
         assert proj_resp.status_code == 201
         project_id = proj_resp.json()["id"]
 
@@ -103,9 +99,7 @@ class TestSyncPolicyEndpoint:
         assert patch_resp.json()["last_cursor_value"] is None
 
     def test_invalid_sync_mode_returns_400(self, client, auth_headers):
-        proj_resp = client.post(
-            "/api/projects/", json={"name": "T", "description": ""}, headers=auth_headers
-        )
+        proj_resp = client.post("/api/projects/", json={"name": "T", "description": ""}, headers=auth_headers)
         assert proj_resp.status_code == 201
         project_id = proj_resp.json()["id"]
 
@@ -133,9 +127,7 @@ class TestSyncPolicyEndpoint:
         assert resp.status_code == 400
 
     def test_create_dataset_persists_real_time_strategy(self, client, auth_headers):
-        proj_resp = client.post(
-            "/api/projects/", json={"name": "CDC", "description": ""}, headers=auth_headers
-        )
+        proj_resp = client.post("/api/projects/", json={"name": "CDC", "description": ""}, headers=auth_headers)
         assert proj_resp.status_code == 201
         project_id = proj_resp.json()["id"]
 

@@ -1,8 +1,6 @@
 import pytest
 from starlette.testclient import TestClient
 
-from auth.hashing import hash_password
-from auth.schema import UserModel
 from control_plane.schemas.memberships import TenantMembershipModel
 from control_plane.schemas.tenants import TenantModel
 
@@ -64,9 +62,7 @@ def seed_memberships(db_session, seed_user, seed_tenants):
 
 
 class TestLoginReturnsTenantList:
-    def test_login_includes_tenants(
-        self, client: TestClient, seed_user, seed_tenants, seed_memberships
-    ):
+    def test_login_includes_tenants(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         response = client.post(
             "/api/auth/login",
             json={"email": "admin@herd.example", "password": "admin123"},
@@ -89,8 +85,8 @@ class TestTenantListOrdering:
         self, client: TestClient, seed_user, seed_tenants, seed_memberships, db_session
     ):
         # Add an extra active tenant that sorts before the existing ones
-        from control_plane.schemas.tenants import TenantModel
         from control_plane.schemas.memberships import TenantMembershipModel
+        from control_plane.schemas.tenants import TenantModel
 
         t_a = TenantModel(
             id="tenant-a",
@@ -122,9 +118,7 @@ class TestTenantListOrdering:
 
 
 class TestSwitchTenant:
-    def test_switch_tenant_issues_new_jwt(
-        self, client: TestClient, seed_user, seed_tenants, seed_memberships
-    ):
+    def test_switch_tenant_issues_new_jwt(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
             json={"email": "admin@herd.example", "password": "admin123"},
@@ -160,9 +154,7 @@ class TestSwitchTenant:
             json={"tenant_id": "tenant-2"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        new_token = switch_resp.json().get("token") or switch_resp.cookies.get(
-            "herd_token"
-        )
+        new_token = switch_resp.json().get("token") or switch_resp.cookies.get("herd_token")
 
         session_resp = client.get(
             "/api/auth/session",
@@ -175,9 +167,7 @@ class TestSwitchTenant:
         assert data["tenant"]["tenant_id"] == "tenant-2"
         assert data["tenant"]["role"] == "member"
 
-    def test_switch_to_unoccupied_tenant_denied(
-        self, client: TestClient, seed_user, seed_tenants, seed_memberships
-    ):
+    def test_switch_to_unoccupied_tenant_denied(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
             json={"email": "admin@herd.example", "password": "admin123"},
@@ -191,9 +181,7 @@ class TestSwitchTenant:
         )
         assert response.status_code == 401
 
-    def test_switch_to_suspended_tenant_denied(
-        self, client: TestClient, seed_user, seed_tenants, seed_memberships
-    ):
+    def test_switch_to_suspended_tenant_denied(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
             json={"email": "admin@herd.example", "password": "admin123"},
@@ -207,9 +195,7 @@ class TestSwitchTenant:
         )
         assert response.status_code == 401
 
-    def test_multiple_tenant_switching(
-        self, client: TestClient, seed_user, seed_tenants, seed_memberships
-    ):
+    def test_multiple_tenant_switching(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
             json={"email": "admin@herd.example", "password": "admin123"},
@@ -230,9 +216,7 @@ class TestSwitchTenant:
         switch2 = client.post(
             "/api/auth/switch-tenant",
             json={"tenant_id": "tenant-2"},
-            headers={
-                "Authorization": f"Bearer {switch1.json().get('token', token)}"
-            },
+            headers={"Authorization": f"Bearer {switch1.json().get('token', token)}"},
             cookies=new_cookies,
         )
         assert switch2.status_code == 200
@@ -264,9 +248,7 @@ class TestSessionAfterLogin:
         # Suspended tenant is filtered out
         assert len(data["tenants"]) == 2
 
-    def test_session_with_active_tenant(
-        self, client: TestClient, seed_user, seed_tenants, seed_memberships
-    ):
+    def test_session_with_active_tenant(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
             json={"email": "admin@herd.example", "password": "admin123"},
@@ -291,17 +273,7 @@ class TestSessionAfterLogin:
 
 
 class TestAccessDeniedScenarios:
-    def test_user_with_no_membership_gets_empty_tenant_list(
-        self, client: TestClient, seed_tenants
-    ):
-        user2 = UserModel(
-            id="user-no-tenants",
-            email="lonely@herd.example",
-            password_hash=hash_password("pass123"),
-            display_name="Lonely User",
-            is_active=True,
-        )
-
+    def test_user_with_no_membership_gets_empty_tenant_list(self, client: TestClient, seed_tenants):
         response = client.post(
             "/api/auth/login",
             json={"email": "lonely@herd.example", "password": "pass123"},
@@ -310,9 +282,7 @@ class TestAccessDeniedScenarios:
             data = response.json()
             assert data["tenants"] == []
 
-    def test_stale_membership_blocked(
-        self, client: TestClient, seed_user, seed_tenants, seed_memberships
-    ):
+    def test_stale_membership_blocked(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
             json={"email": "admin@herd.example", "password": "admin123"},
@@ -325,4 +295,3 @@ class TestAccessDeniedScenarios:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert switch_resp.status_code == 200
-

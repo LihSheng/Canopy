@@ -64,9 +64,7 @@ class TestInsightService:
 
     def test_uses_fallback_when_parsed_summary_empty(self, seed_analytics_data):
         db = seed_analytics_data
-        client = _FakeLlmClient(
-            '{"summary": "", "recommendations": [], "key_findings": []}'
-        )
+        client = _FakeLlmClient('{"summary": "", "recommendations": [], "key_findings": []}')
 
         result = generate_insight(db, llm=client)
 
@@ -111,6 +109,7 @@ class TestResolveGeneratedAt:
 
     def test_datetime_input_returns_asis(self):
         from datetime import UTC, datetime
+
         from insights.repository import _resolve_generated_at
 
         now = datetime.now(UTC)
@@ -118,7 +117,6 @@ class TestResolveGeneratedAt:
         assert result == now
 
     def test_valid_iso_string_parsed(self):
-        from datetime import UTC, datetime
         from insights.repository import _resolve_generated_at
 
         result = _resolve_generated_at("2026-05-15T10:00:00+00:00")
@@ -127,7 +125,8 @@ class TestResolveGeneratedAt:
 
     def test_invalid_string_falls_back_to_now(self):
         """lines 15-16: ValueError -> datetime.now(UTC)."""
-        from datetime import UTC, datetime
+        from datetime import datetime
+
         from insights.repository import _resolve_generated_at
 
         result = _resolve_generated_at("not-a-date")
@@ -135,7 +134,8 @@ class TestResolveGeneratedAt:
 
     def test_empty_string_falls_back_to_now(self):
         """line 17: empty val -> datetime.now(UTC)."""
-        from datetime import UTC, datetime
+        from datetime import datetime
+
         from insights.repository import _resolve_generated_at
 
         result = _resolve_generated_at("")

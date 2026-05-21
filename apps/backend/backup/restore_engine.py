@@ -1,19 +1,16 @@
-import os
 import threading
 import uuid
-
-from common.executor import background
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from common.database import make_session
 from backup.backup_engine import BackupEngine
 from backup.domain import BackupStatus, RestoreRun
-from backup.errors import BackupNotFoundError, RestoreValidationError
 from backup.lifecycle_validation import LifecycleValidator
 from backup.policy_manager import BackupPolicyManager
+from common.database import make_session
+from common.executor import background
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
 from control_plane.tenant_repository import TenantRepository
@@ -68,7 +65,7 @@ class RestoreEngine:
             return
 
         run.status = BackupStatus.RUNNING
-        run.started_at = datetime.now(timezone.utc)
+        run.started_at = datetime.now(UTC)
 
         session = make_session(self._db_session_factory)
         try:
@@ -90,7 +87,7 @@ class RestoreEngine:
                 self._routing_cache.invalidate_tenant(run.tenant_id)
 
             run.status = BackupStatus.COMPLETED
-            run.finished_at = datetime.now(timezone.utc)
+            run.finished_at = datetime.now(UTC)
 
             audit_service = self._audit_service_cls(session)
             audit_service.record_event(
@@ -109,7 +106,7 @@ class RestoreEngine:
 
     def _fail_run(self, run: RestoreRun, message: str, session: Session) -> None:
         run.status = BackupStatus.FAILED
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(UTC)
         run.error_message = message
         try:
             audit_service = self._audit_service_cls(session)
@@ -149,12 +146,10 @@ class RestoreEngine:
             policy_manager = BackupPolicyManager(self._config_repo_cls(session))
             policy = policy_manager.get_policy(tenant_id)
             if backup_run.finished_at:
-                cutoff = datetime.now(timezone.utc)
+                cutoff = datetime.now(UTC)
                 age_days = (cutoff - backup_run.finished_at).days
                 if age_days > policy.retention_days:
-                    errors.append(
-                        f"Backup retention expired ({age_days}d > {policy.retention_days}d)"
-                    )
+                    errors.append(f"Backup retention expired ({age_days}d > {policy.retention_days}d)")
         finally:
             session.close()
 
@@ -167,4 +162,3 @@ class RestoreEngine:
     def get_restore(self, restore_id: str) -> RestoreRun | None:
         with self._lock:
             return self._runs.get(restore_id)
-

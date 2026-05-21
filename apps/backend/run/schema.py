@@ -1,7 +1,9 @@
 import uuid
 from datetime import UTC, datetime
-from sqlalchemy import String, DateTime, Integer, Text
+
+from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+
 from common.database import Base
 
 
@@ -19,4 +21,6 @@ class RunModel(Base):
     duration_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     warning_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     error_message: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )

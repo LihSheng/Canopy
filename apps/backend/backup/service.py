@@ -19,19 +19,13 @@ class BackupService:
         self._clone_engine = clone_engine
         self._policy_manager = policy_manager
 
-    def request_backup(
-        self, tenant_id: str, backup_type: BackupType = BackupType.FULL
-    ) -> BackupRun:
+    def request_backup(self, tenant_id: str, backup_type: BackupType = BackupType.FULL) -> BackupRun:
         return self._backup_engine.create_backup(tenant_id, backup_type)
 
-    def request_restore(
-        self, tenant_id: str, backup_run_id: str
-    ) -> RestoreRun:
+    def request_restore(self, tenant_id: str, backup_run_id: str) -> RestoreRun:
         return self._restore_engine.create_restore(tenant_id, backup_run_id)
 
-    def request_clone(
-        self, source_tenant_id: str, target_tenant_name: str
-    ) -> CloneRun:
+    def request_clone(self, source_tenant_id: str, target_tenant_name: str) -> CloneRun:
         return self._clone_engine.create_clone(source_tenant_id, target_tenant_name)
 
     def get_backup_status(self, tenant_id: str) -> dict:
@@ -39,21 +33,13 @@ class BackupService:
         restores = self._restore_engine.list_restores(tenant_id)
         last_backup = backups[-1] if backups else None
         last_restore = restores[-1] if restores else None
-        pending_jobs = sum(
-            1
-            for r in backups + restores
-            if r.status in (BackupStatus.PENDING, BackupStatus.RUNNING)
-        )
+        pending_jobs = sum(1 for r in backups + restores if r.status in (BackupStatus.PENDING, BackupStatus.RUNNING))
         return {
             "last_backup": (
                 {
                     "id": last_backup.id,
                     "status": last_backup.status.value,
-                    "started_at": (
-                        last_backup.started_at.isoformat()
-                        if last_backup.started_at
-                        else None
-                    ),
+                    "started_at": (last_backup.started_at.isoformat() if last_backup.started_at else None),
                 }
                 if last_backup
                 else None
@@ -62,11 +48,7 @@ class BackupService:
                 {
                     "id": last_restore.id,
                     "status": last_restore.status.value,
-                    "started_at": (
-                        last_restore.started_at.isoformat()
-                        if last_restore.started_at
-                        else None
-                    ),
+                    "started_at": (last_restore.started_at.isoformat() if last_restore.started_at else None),
                 }
                 if last_restore
                 else None
@@ -82,13 +64,10 @@ class BackupService:
         if backup is None:
             return
         if backup.status != BackupStatus.PENDING:
-            raise BackupInProgressError(
-                f"Cannot cancel backup in '{backup.status.value}' state"
-            )
+            raise BackupInProgressError(f"Cannot cancel backup in '{backup.status.value}' state")
         backup.status = BackupStatus.FAILED
         backup.error_message = "Cancelled by user"
 
     def is_pitr_supported(self, tenant_id: str) -> bool:
         policy = self._policy_manager.get_policy(tenant_id)
         return policy.pitr_enabled
-

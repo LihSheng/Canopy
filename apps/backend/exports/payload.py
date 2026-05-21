@@ -5,6 +5,7 @@ job management and background execution.
 """
 
 from dataclasses import dataclass
+
 from sqlalchemy.orm import Session
 
 from analytics.departments import get_departments as get_departments_list
@@ -45,11 +46,7 @@ def _get_snapshot_context(
     owns_db = db is None
     db = db or session_factory()()
     try:
-        summary = (
-            get_summary_cache_for_snapshot(db, snapshot_id)
-            if snapshot_id
-            else get_dashboard_summary(db)
-        )
+        summary = get_summary_cache_for_snapshot(db, snapshot_id) if snapshot_id else get_dashboard_summary(db)
         if summary is None:
             return None
         return SnapshotContext(
@@ -178,9 +175,7 @@ def build_payload(
 ) -> ExportPayload:
     snapshot_context = _get_snapshot_context(db, snapshot_id)
     snapshot_id = (
-        snapshot_context.snapshot_id
-        if snapshot_context is not None
-        else get_snapshot_id_from_aggregates(db) or ""
+        snapshot_context.snapshot_id if snapshot_context is not None else get_snapshot_id_from_aggregates(db) or ""
     )
     if snapshot_context is None:
         snapshot_context = SnapshotContext(
@@ -193,9 +188,7 @@ def build_payload(
             created_at="",
         )
 
-    departments = (
-        _collect_departments(db, snapshot_id=snapshot_id) if include_departments else []
-    )
+    departments = _collect_departments(db, snapshot_id=snapshot_id) if include_departments else []
     anomalies = (
         _collect_anomalies(
             db,

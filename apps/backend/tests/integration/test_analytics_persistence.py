@@ -1,8 +1,8 @@
 import pytest
 
-from analytics.domain import DashboardSummaryCache, MonthlyDepartmentSpend
-from analytics.repositories.spend import SpendRepository
+from analytics.domain import DashboardSummaryCache
 from analytics.repositories.dashboard_cache import DashboardCacheRepository
+from analytics.repositories.spend import SpendRepository
 from analytics.services.builder import run_aggregation_pipeline
 from ontology.schema import (
     DepartmentModel,
@@ -17,29 +17,126 @@ SNAPSHOT_ID = "snap-analytics-test"
 @pytest.fixture
 def seed_analytics_ontology(db_session):
     departments = [
-        DepartmentModel(id="d1", snapshot_id=SNAPSHOT_ID, source_department_key="sk-d1", source_lineage=SNAPSHOT_ID, name="Engineering"),
-        DepartmentModel(id="d2", snapshot_id=SNAPSHOT_ID, source_department_key="sk-d2", source_lineage=SNAPSHOT_ID, name="Sales"),
+        DepartmentModel(
+            id="d1",
+            snapshot_id=SNAPSHOT_ID,
+            source_department_key="sk-d1",
+            source_lineage=SNAPSHOT_ID,
+            name="Engineering",
+        ),
+        DepartmentModel(
+            id="d2", snapshot_id=SNAPSHOT_ID, source_department_key="sk-d2", source_lineage=SNAPSHOT_ID, name="Sales"
+        ),
     ]
     db_session.add_all(departments)
 
     employees = [
-        EmployeeModel(id="e1", snapshot_id=SNAPSHOT_ID, source_employee_key="sk-e1", source_lineage=SNAPSHOT_ID, department_id="d1", full_name="Alice", employee_code="A001"),
-        EmployeeModel(id="e2", snapshot_id=SNAPSHOT_ID, source_employee_key="sk-e2", source_lineage=SNAPSHOT_ID, department_id="d2", full_name="Bob", employee_code="B001"),
+        EmployeeModel(
+            id="e1",
+            snapshot_id=SNAPSHOT_ID,
+            source_employee_key="sk-e1",
+            source_lineage=SNAPSHOT_ID,
+            department_id="d1",
+            full_name="Alice",
+            employee_code="A001",
+        ),
+        EmployeeModel(
+            id="e2",
+            snapshot_id=SNAPSHOT_ID,
+            source_employee_key="sk-e2",
+            source_lineage=SNAPSHOT_ID,
+            department_id="d2",
+            full_name="Bob",
+            employee_code="B001",
+        ),
     ]
     db_session.add_all(employees)
 
     payroll = [
-        PayrollExpenseModel(id="p1", snapshot_id=SNAPSHOT_ID, source_payroll_key="spk-1", source_lineage=SNAPSHOT_ID, employee_id="e1", department_id="d1", payroll_month="2026-05", amount=5000, is_resolved=True),
-        PayrollExpenseModel(id="p2", snapshot_id=SNAPSHOT_ID, source_payroll_key="spk-2", source_lineage=SNAPSHOT_ID, employee_id="e1", department_id="d1", payroll_month="2026-05", amount=3000, is_resolved=True),
-        PayrollExpenseModel(id="p3", snapshot_id=SNAPSHOT_ID, source_payroll_key="spk-3", source_lineage=SNAPSHOT_ID, employee_id="e2", department_id="d2", payroll_month="2026-05", amount=6000, is_resolved=True),
-        PayrollExpenseModel(id="p4", snapshot_id=SNAPSHOT_ID, source_payroll_key="spk-4", source_lineage=SNAPSHOT_ID, employee_id="e1", department_id="d1", payroll_month="2026-04", amount=4500, is_resolved=True),
+        PayrollExpenseModel(
+            id="p1",
+            snapshot_id=SNAPSHOT_ID,
+            source_payroll_key="spk-1",
+            source_lineage=SNAPSHOT_ID,
+            employee_id="e1",
+            department_id="d1",
+            payroll_month="2026-05",
+            amount=5000,
+            is_resolved=True,
+        ),
+        PayrollExpenseModel(
+            id="p2",
+            snapshot_id=SNAPSHOT_ID,
+            source_payroll_key="spk-2",
+            source_lineage=SNAPSHOT_ID,
+            employee_id="e1",
+            department_id="d1",
+            payroll_month="2026-05",
+            amount=3000,
+            is_resolved=True,
+        ),
+        PayrollExpenseModel(
+            id="p3",
+            snapshot_id=SNAPSHOT_ID,
+            source_payroll_key="spk-3",
+            source_lineage=SNAPSHOT_ID,
+            employee_id="e2",
+            department_id="d2",
+            payroll_month="2026-05",
+            amount=6000,
+            is_resolved=True,
+        ),
+        PayrollExpenseModel(
+            id="p4",
+            snapshot_id=SNAPSHOT_ID,
+            source_payroll_key="spk-4",
+            source_lineage=SNAPSHOT_ID,
+            employee_id="e1",
+            department_id="d1",
+            payroll_month="2026-04",
+            amount=4500,
+            is_resolved=True,
+        ),
     ]
     db_session.add_all(payroll)
 
     claims = [
-        ExpenseClaimModel(id="c1", snapshot_id=SNAPSHOT_ID, source_claim_key="sck-1", source_lineage=SNAPSHOT_ID, employee_id="e1", department_id="d1", claim_type="Travel", claim_date="2026-05-10", amount=500, is_resolved=True),
-        ExpenseClaimModel(id="c2", snapshot_id=SNAPSHOT_ID, source_claim_key="sck-2", source_lineage=SNAPSHOT_ID, employee_id="e2", department_id="d2", claim_type="Meals", claim_date="2026-05-12", amount=200, is_resolved=True),
-        ExpenseClaimModel(id="c3", snapshot_id=SNAPSHOT_ID, source_claim_key="sck-3", source_lineage=SNAPSHOT_ID, employee_id="e1", department_id="d1", claim_type="Travel", claim_date="2026-05-15", amount=300, is_resolved=True),
+        ExpenseClaimModel(
+            id="c1",
+            snapshot_id=SNAPSHOT_ID,
+            source_claim_key="sck-1",
+            source_lineage=SNAPSHOT_ID,
+            employee_id="e1",
+            department_id="d1",
+            claim_type="Travel",
+            claim_date="2026-05-10",
+            amount=500,
+            is_resolved=True,
+        ),
+        ExpenseClaimModel(
+            id="c2",
+            snapshot_id=SNAPSHOT_ID,
+            source_claim_key="sck-2",
+            source_lineage=SNAPSHOT_ID,
+            employee_id="e2",
+            department_id="d2",
+            claim_type="Meals",
+            claim_date="2026-05-12",
+            amount=200,
+            is_resolved=True,
+        ),
+        ExpenseClaimModel(
+            id="c3",
+            snapshot_id=SNAPSHOT_ID,
+            source_claim_key="sck-3",
+            source_lineage=SNAPSHOT_ID,
+            employee_id="e1",
+            department_id="d1",
+            claim_type="Travel",
+            claim_date="2026-05-15",
+            amount=300,
+            is_resolved=True,
+        ),
     ]
     db_session.add_all(claims)
     db_session.commit()

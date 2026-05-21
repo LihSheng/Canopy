@@ -1,10 +1,7 @@
 import uuid
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from common.errors import AppError
-from refresh.domain import RefreshJob, STAGE_ORDER
+from refresh.domain import STAGE_ORDER, RefreshJob
 from refresh.orchestration.service import RefreshOrchestrator
 
 
@@ -81,6 +78,7 @@ class TestRefreshStatusTransitions:
             def wrapped(*args, **kwargs):
                 call_order.append("extract_source")
                 return mock_sync_result
+
             return wrapped
 
         def make_stage_fn(name, result=None):
@@ -289,9 +287,7 @@ class TestFailureHandling:
         ]
 
     def test_previous_month_computation(self):
-        orchestrator = RefreshOrchestrator(
-            app_db=MagicMock(), source_db=MagicMock()
-        )
+        orchestrator = RefreshOrchestrator(app_db=MagicMock(), source_db=MagicMock())
         assert orchestrator._previous_month("2026-05") == "2026-04"
         assert orchestrator._previous_month("2026-01") == "2025-12"
         assert orchestrator._previous_month("2025-12") == "2025-11"

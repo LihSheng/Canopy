@@ -1,27 +1,15 @@
-import uuid
-
 import pytest
-from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
-from common.clock import utcnow
 from ontology.domain import (
     BudgetCode,
     CostCenter,
     Department,
     Employee,
     ExpenseClaim,
-    MappingContext,
     PayrollExpense,
     UnresolvedRecord,
 )
-from ontology.mappers import (
-    BudgetCodeMapper,
-    CostCenterMapper,
-    DepartmentMapper,
-    EmployeeMapper,
-)
-from ontology.orchestration.service import OntologyOrchestrator
 from ontology.repositories.ontology import OntologyRepository
 from ontology.schema import (
     DepartmentModel,
@@ -29,14 +17,6 @@ from ontology.schema import (
     ExpenseClaimModel,
     PayrollExpenseModel,
     UnresolvedMappingIssueModel,
-)
-from sync.domain import (
-    SourceBudgetCode,
-    SourceClaim,
-    SourceCostCenter,
-    SourceDepartment,
-    SourceEmployee,
-    SourcePayroll,
 )
 
 
@@ -108,6 +88,7 @@ class TestOntologyRepository:
         repo.save_cost_centers([cc])
 
         from ontology.schema import CostCenterModel
+
         model = app_session.get(CostCenterModel, "cc1")
         assert model is not None
         assert model.name == "R&D"
@@ -128,6 +109,7 @@ class TestOntologyRepository:
         repo.save_budget_codes([bc])
 
         from ontology.schema import BudgetCodeModel
+
         model = app_session.get(BudgetCodeModel, "bc1")
         assert model is not None
         assert model.name == "Opex-IT"
@@ -185,8 +167,10 @@ class TestOntologyRepository:
 
         assert repo.unresolved_issue_count_for_snapshot("s1") == 1
 
-        model = app_session.query(UnresolvedMappingIssueModel).filter(
-            UnresolvedMappingIssueModel.snapshot_id == "s1"
-        ).first()
+        model = (
+            app_session.query(UnresolvedMappingIssueModel)
+            .filter(UnresolvedMappingIssueModel.snapshot_id == "s1")
+            .first()
+        )
         assert model is not None
         assert model.reason == "Missing department"

@@ -27,7 +27,7 @@ def read_dataset_preview(
 
     skip = (page - 1) * page_size
 
-    with open(str(path), "r", encoding="utf-8") as f:
+    with open(str(path), encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:

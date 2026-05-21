@@ -120,9 +120,7 @@ class LocalStorageAdapter(StorageAdapter):
             except OSError:
                 break
 
-    def list_objects(
-        self, prefix: str, tenant_id: str | None = None
-    ) -> list[StorageObjectMeta]:
+    def list_objects(self, prefix: str, tenant_id: str | None = None) -> list[StorageObjectMeta]:
         results: list[StorageObjectMeta] = []
         prefix_path = self._root / prefix
 
@@ -138,9 +136,7 @@ class LocalStorageAdapter(StorageAdapter):
                 if filename.endswith(".meta.json"):
                     continue
                 full_path = Path(dirpath) / filename
-                relative_key = str(full_path.relative_to(self._root)).replace(
-                    os.sep, "/"
-                )
+                relative_key = str(full_path.relative_to(self._root)).replace(os.sep, "/")
                 if relative_key.startswith(prefix):
                     try:
                         meta = self._load_meta(relative_key)
@@ -153,16 +149,12 @@ class LocalStorageAdapter(StorageAdapter):
     def object_exists(self, key: str, tenant_id: str | None = None) -> bool:
         return self._full_path(key).exists()
 
-    def get_object_meta(
-        self, key: str, tenant_id: str | None = None
-    ) -> StorageObjectMeta:
+    def get_object_meta(self, key: str, tenant_id: str | None = None) -> StorageObjectMeta:
         if not self._full_path(key).exists():
             raise ObjectNotFoundError(key)
         return self._load_meta(key)
 
-    def set_lifecycle_state(
-        self, key: str, state: str, tenant_id: str | None = None
-    ) -> None:
+    def set_lifecycle_state(self, key: str, state: str, tenant_id: str | None = None) -> None:
         if not self._full_path(key).exists():
             raise ObjectNotFoundError(key)
         meta = self._load_meta(key)
@@ -170,13 +162,10 @@ class LocalStorageAdapter(StorageAdapter):
         meta.updated_at = datetime.now(UTC)
         self._save_meta(meta)
 
-    def set_retention_state(
-        self, key: str, state: str, tenant_id: str | None = None
-    ) -> None:
+    def set_retention_state(self, key: str, state: str, tenant_id: str | None = None) -> None:
         if not self._full_path(key).exists():
             raise ObjectNotFoundError(key)
         meta = self._load_meta(key)
         meta.retention_state = state
         meta.updated_at = datetime.now(UTC)
         self._save_meta(meta)
-

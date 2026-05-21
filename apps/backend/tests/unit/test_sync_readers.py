@@ -1,6 +1,6 @@
-import pytest
-
 from datetime import datetime
+
+import pytest
 
 from sync.readers._source_models import (
     SourceBase,
@@ -40,7 +40,7 @@ class TestDepartmentReader:
             [
                 SourceDepartmentRow(source_key="D001", name="Engineering"),
                 SourceDepartmentRow(source_key="D002", name="Marketing"),
-            ]
+            ],
         )
         from sqlalchemy.orm import Session
 
@@ -84,7 +84,7 @@ class TestEmployeeReader:
                     full_name="Bob Lim",
                     department_key="D002",
                 ),
-            ]
+            ],
         )
         from sqlalchemy.orm import Session
 
@@ -113,7 +113,7 @@ class TestClaimReader:
                     submitted_at="2025-01-15T10:00:00",
                     status="approved",
                 ),
-            ]
+            ],
         )
         from sqlalchemy.orm import Session
 
@@ -151,7 +151,7 @@ class TestPayrollReader:
                     period_start="2025-01",
                     period_end="2025-01",
                 ),
-            ]
+            ],
         )
         from sqlalchemy.orm import Session
 
@@ -169,13 +169,9 @@ class TestCostCenterReader:
         engine = _source_db_with_rows(
             source_engine,
             [
-                SourceCostCenterRow(
-                    source_key="CC001", name="R&D", department_key="D001"
-                ),
-                SourceCostCenterRow(
-                    source_key="CC002", name="Admin"
-                ),
-            ]
+                SourceCostCenterRow(source_key="CC001", name="R&D", department_key="D001"),
+                SourceCostCenterRow(source_key="CC002", name="Admin"),
+            ],
         )
         from sqlalchemy.orm import Session
 
@@ -193,10 +189,8 @@ class TestBudgetCodeReader:
         engine = _source_db_with_rows(
             source_engine,
             [
-                SourceBudgetCodeRow(
-                    source_key="B001", name="Opex-IT", department_key="D001"
-                ),
-            ]
+                SourceBudgetCodeRow(source_key="B001", name="Opex-IT", department_key="D001"),
+            ],
         )
         from sqlalchemy.orm import Session
 
@@ -232,6 +226,7 @@ class TestSourceDatabaseManager:
     def test_set_source_engine(self):
         """lines 35-39: set_source_engine replaces engine."""
         from sqlalchemy import create_engine
+
         from sync.source_db import _SourceDatabaseManager
 
         mgr = _SourceDatabaseManager()
@@ -267,6 +262,7 @@ class TestSourceDatabaseManager:
     def test_public_set_source_engine(self):
         """line 60-61: set_source_engine() public function."""
         from sqlalchemy import create_engine
+
         from sync.source_db import set_source_engine
 
         eng = create_engine("sqlite://")

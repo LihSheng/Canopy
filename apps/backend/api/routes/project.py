@@ -24,7 +24,9 @@ def list_projects(db: Session = Depends(get_db), user: SessionUser = Depends(get
 
 
 @router.post("/", status_code=201)
-def create_project(body: CreateProjectRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+def create_project(
+    body: CreateProjectRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)
+):
     service = ProjectService(ProjectRepository(db))
     return service.create_project(name=body.name, description=body.description)
 
@@ -36,4 +38,3 @@ def get_project(id: str, db: Session = Depends(get_db), user: SessionUser = Depe
     if project is None:
         raise NotFoundError("Project not found")
     return project
-

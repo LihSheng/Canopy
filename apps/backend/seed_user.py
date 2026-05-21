@@ -1,14 +1,16 @@
 """One-off script to seed a login user into the control plane database."""
+
 import os
 import sys
 
 # Ensure project root is on path so imports resolve
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common.database import init_db, control_plane_session_factory
-from auth.schema import UserModel
-from auth.hashing import hash_password
 from sqlalchemy import select
+
+from auth.hashing import hash_password
+from auth.schema import UserModel
+from common.database import control_plane_session_factory, init_db
 
 EMAIL = "admin@herd.example"
 PASSWORD = "admin123"
