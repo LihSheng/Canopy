@@ -1,7 +1,5 @@
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 from insights.domain import (
     AnomalyFact,
     ClaimTypeFact,
@@ -10,6 +8,8 @@ from insights.domain import (
     TopDepartmentFact,
 )
 from insights.prompt_builder import build_prompt
+
+pytestmark = pytest.mark.business_rule
 
 
 def _make_fact_bundle() -> FactBundle:

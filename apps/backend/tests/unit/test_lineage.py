@@ -5,8 +5,6 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-pytestmark = pytest.mark.unit
-
 from common.database import Base
 from connection.domain import Connection
 from connection.repository import ConnectionRepository
@@ -21,6 +19,8 @@ from ingestion.domain import (
 from ingestion.lineage import build_lineage_graph
 from run.domain import Run
 from run.repository import RunRepository
+
+pytestmark = pytest.mark.unit
 
 
 @pytest.fixture(autouse=True)

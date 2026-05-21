@@ -1,7 +1,5 @@
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 import uuid
 
 from analytics.aggregators.claims import (
@@ -21,6 +19,8 @@ from analytics.aggregators.payroll import (
     aggregate_payroll_by_employee,
 )
 from analytics.domain import DepartmentMoMDelta, MonthlyDepartmentSpend
+
+pytestmark = pytest.mark.business_rule
 
 
 SNAPSHOT_ID = "snap-1"

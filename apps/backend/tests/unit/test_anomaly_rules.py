@@ -1,10 +1,10 @@
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 from analytics.domain import MonthlyDepartmentSpend
 from anomalies.rules.department_claim_spike import department_claim_spike_rule
 from anomalies.rules.department_total_spike import department_total_spike_rule
+
+pytestmark = pytest.mark.business_rule
 
 SNAPSHOT_ID = "test-snapshot-001"
 

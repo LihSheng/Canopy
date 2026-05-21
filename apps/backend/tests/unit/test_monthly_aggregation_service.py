@@ -4,14 +4,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from analytics.domain import DashboardSummaryCache
 from analytics.services.monthly_aggregation_service import (
     AggregationInput,
     AggregationResult,
     MonthlyAggregationService,
 )
+
+pytestmark = pytest.mark.unit
 
 
 class TestMonthlyAggregationService:

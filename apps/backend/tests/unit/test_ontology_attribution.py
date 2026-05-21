@@ -1,7 +1,5 @@
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 import json
 from dataclasses import asdict
 
@@ -15,6 +13,8 @@ from ontology.mappers.attribution import AttributionResolver
 from ontology.mappers.claims import ClaimMapper
 from ontology.mappers.payroll import PayrollMapper
 from sync.domain import SourceClaim, SourcePayroll
+
+pytestmark = pytest.mark.business_rule
 
 
 def _make_dept(key, id_, name):

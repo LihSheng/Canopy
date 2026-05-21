@@ -1,8 +1,8 @@
 import pytest
 
-pytestmark = pytest.mark.api_schema
-
 from anomalies.service import detect_anomalies
+
+pytestmark = pytest.mark.api_schema
 
 
 class TestAnomalies:

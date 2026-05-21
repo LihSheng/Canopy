@@ -1,7 +1,5 @@
 import pytest
 
-pytestmark = pytest.mark.api_schema
-
 from api.schemas.anomalies import AnomalyDetailResponse, AnomalyItem, AnomalyListResponse
 from api.schemas.common import ApiResponse
 from api.schemas.dashboard import (
@@ -29,6 +27,8 @@ from api.schemas.exports import (
     TriggerExportRequest,
 )
 from api.schemas.refresh import RefreshJobResponse, RefreshRequestResponse, RefreshStatusResponse
+
+pytestmark = pytest.mark.api_schema
 
 
 class TestResponseEnvelope:

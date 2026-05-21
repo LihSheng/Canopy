@@ -3,8 +3,6 @@ from datetime import UTC, datetime
 
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 from ingestion.domain import (
     CleanedSnapshot,
     CleanedSnapshotStatus,
@@ -18,6 +16,8 @@ from ingestion.domain import (
     UploadStatus,
 )
 from ingestion.publish import activate_publish, validate_publish
+
+pytestmark = pytest.mark.business_rule
 
 
 def _make_upload(dataset_type: str = "payroll") -> UploadRecord:

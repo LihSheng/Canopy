@@ -1,11 +1,11 @@
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 from unittest.mock import MagicMock, patch
 
 from analytics.domain import MonthlyDepartmentSpend
 from anomalies.service import detect_anomalies
+
+pytestmark = pytest.mark.business_rule
 
 
 def _make_spend(

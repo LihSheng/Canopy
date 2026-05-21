@@ -4,8 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 from analytics.departments import (
     get_claims,
     get_department,
@@ -20,6 +18,8 @@ from analytics.domain import (
     MonthlyDepartmentSpend,
     MonthlyEmployeeSpend,
 )
+
+pytestmark = pytest.mark.business_rule
 
 SNAPSHOT_ID = "test-snap"
 

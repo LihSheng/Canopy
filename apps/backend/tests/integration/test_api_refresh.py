@@ -1,8 +1,8 @@
 import pytest
 
-pytestmark = pytest.mark.api_schema
-
 import time
+
+pytestmark = pytest.mark.api_schema
 
 
 class TestRefresh:

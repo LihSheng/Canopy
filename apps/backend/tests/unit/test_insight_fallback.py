@@ -1,7 +1,5 @@
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 from insights.domain import (
     AnomalyFact,
     ClaimTypeFact,
@@ -14,6 +12,8 @@ from insights.fallback import (
     build_fallback_recommendations,
     build_fallback_summary,
 )
+
+pytestmark = pytest.mark.business_rule
 
 
 def _make_facts(

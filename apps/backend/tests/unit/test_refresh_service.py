@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from refresh.domain import RefreshJob, DataSnapshot
+
+pytestmark = pytest.mark.unit
 
 
 class TestRefreshService:

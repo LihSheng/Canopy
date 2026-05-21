@@ -1,8 +1,8 @@
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 from insights.service import generate_insight
+
+pytestmark = pytest.mark.business_rule
 
 
 class _FakeLlmClient:

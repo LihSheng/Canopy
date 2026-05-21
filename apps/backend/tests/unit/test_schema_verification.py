@@ -1,10 +1,10 @@
 import pytest
 
-pytestmark = pytest.mark.api_schema
-
 from sqlalchemy import inspect
 
 from common.database import Base
+
+pytestmark = pytest.mark.api_schema
 
 
 EXPECTED_CONTROL_PLANE_TABLES = {

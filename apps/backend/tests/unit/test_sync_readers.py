@@ -1,7 +1,5 @@
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 from datetime import datetime
 
 from sync.readers._source_models import (
@@ -19,6 +17,8 @@ from sync.readers.cost_centers import CostCenterReader
 from sync.readers.departments import DepartmentReader
 from sync.readers.employees import EmployeeReader
 from sync.readers.payroll import PayrollReader
+
+pytestmark = pytest.mark.business_rule
 
 
 def _source_db_with_rows(engine, *row_lists):

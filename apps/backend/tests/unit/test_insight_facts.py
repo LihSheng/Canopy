@@ -1,11 +1,11 @@
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 from unittest.mock import MagicMock, patch
 
 from insights.domain import FactBundle
 from insights.facts import extract_facts
+
+pytestmark = pytest.mark.business_rule
 
 
 class TestFactExtraction:

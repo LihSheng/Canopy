@@ -1,7 +1,5 @@
 import pytest
 
-pytestmark = pytest.mark.business_rule
-
 import uuid
 from datetime import datetime
 
@@ -18,6 +16,8 @@ from sync.domain import (
     SourceDepartment,
     SourceEmployee,
 )
+
+pytestmark = pytest.mark.business_rule
 
 
 class TestDepartmentMapper:
