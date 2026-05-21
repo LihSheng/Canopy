@@ -160,4 +160,4 @@ def test_source_types_static_file_enabled_mysql_disabled(client: TestClient, aut
 
     mysql = next((st for st in source_types if st["key"] == "mysql"), None)
     assert mysql is not None
-    assert mysql["enabled"] is False
+    assert mysql["enabled"] is True

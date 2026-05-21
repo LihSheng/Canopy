@@ -1,16 +1,8 @@
 import pytest
 
+from common.executor import SameThreadRunner
+
 pytestmark = pytest.mark.integration
-
-
-class _InlineThread:
-    def __init__(self, target, args=(), kwargs=None, **_):
-        self._target = target
-        self._args = args
-        self._kwargs = kwargs or {}
-
-    def start(self):
-        self._target(*self._args, **self._kwargs)
 
 
 @pytest.mark.usefixtures("seed_analytics_data")
@@ -18,7 +10,7 @@ class TestExportJobsV2:
     def test_trigger_history_status_and_download(self, client, auth_headers, monkeypatch):
         from exports import service as export_service
 
-        monkeypatch.setattr(export_service.threading, "Thread", _InlineThread)
+        monkeypatch.setattr(export_service, "background", SameThreadRunner())
 
         trigger_response = client.post(
             "/api/exports/trigger",
@@ -59,7 +51,7 @@ class TestExportJobsV2:
     def test_rerun_keeps_same_snapshot_basis(self, client, auth_headers, monkeypatch):
         from exports import service as export_service
 
-        monkeypatch.setattr(export_service.threading, "Thread", _InlineThread)
+        monkeypatch.setattr(export_service, "background", SameThreadRunner())
 
         first = client.post(
             "/api/exports/trigger",
