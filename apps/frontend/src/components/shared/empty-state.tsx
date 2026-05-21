@@ -1,7 +1,8 @@
 import { NoticeBanner } from "./notice-banner";
+import { UI_LABELS } from "@/lib/constants";
 
 export function EmptyState({
-  title = "No data available",
+  title = UI_LABELS.noData,
   description,
   variant = "default",
 }: {

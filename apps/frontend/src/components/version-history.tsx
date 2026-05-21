@@ -1,4 +1,5 @@
 import type { DatasetVersion } from "@/lib/api/types";
+import { UI_LABELS } from "@/lib/constants";
 
 type Props = {
   versions: DatasetVersion[];
@@ -140,7 +141,7 @@ export function VersionHistory({
                         disabled={deletingVersionId === version.id}
                         className="rounded-md border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {deletingVersionId === version.id ? "Deleting..." : "Delete Version"}
+                        {deletingVersionId === version.id ? UI_LABELS.deleting : "Delete Version"}
                       </button>
                     ) : (
                       <span className="text-xs text-zinc-400">Locked</span>

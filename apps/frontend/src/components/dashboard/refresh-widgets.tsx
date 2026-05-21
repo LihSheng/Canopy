@@ -3,15 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchRefreshStatus, triggerRefresh } from "@/lib/api/dashboard";
 import type { RefreshStatus } from "@/lib/api/types";
+import { REFRESH_STATUS_LABELS, ERROR_MESSAGES, UI_LABELS } from "@/lib/constants";
 
 export function RefreshStatusBadge({ status }: { status: RefreshStatus["status"] }) {
-  const labels: Record<RefreshStatus["status"], { text: string; className: string }> = {
-    idle: { text: "Up to date", className: "bg-emerald-50 text-emerald-700" },
-    queued: { text: "Queued", className: "bg-blue-50 text-blue-700" },
-    running: { text: "Refreshing...", className: "bg-amber-50 text-amber-700" },
-    completed: { text: "Completed", className: "bg-emerald-50 text-emerald-700" },
-    failed: { text: "Failed", className: "bg-red-50 text-red-700" },
-  };
+  const labels = REFRESH_STATUS_LABELS;
 
   const info = labels[status] ?? labels.idle;
 
@@ -59,7 +54,7 @@ export function ManualRefreshButton() {
         <path d="M2 8a6 6 0 0111.3-3.3M14 8a6 6 0 01-11.3 3.3" />
         <path d="M13.5 2v3h-3M2.5 14v-3h3" />
       </svg>
-      {loading ? "Refreshing..." : "Refresh data"}
+      {loading ? UI_LABELS.refreshing : UI_LABELS.refreshData}
     </button>
   );
 }
@@ -110,7 +105,7 @@ export function useRefreshPoller(pollMs = 30000) {
       setStatus(s);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Status check failed");
+      setError(err instanceof Error ? err.message : ERROR_MESSAGES.statusCheckFailed);
     }
   }, []);
 

@@ -1,11 +1,5 @@
+import { STATUS_COLORS } from "@/lib/constants";
 import type { DatasetHealth } from "@/lib/api/types";
-
-const statusColor: Record<string, string> = {
-  completed: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
-  running: "bg-blue-100 text-blue-800",
-  queued: "bg-zinc-100 text-zinc-600",
-};
 
 type Props = {
   health: DatasetHealth;
@@ -32,7 +26,7 @@ export function HealthPanel({ health }: Props) {
             {health.last_run_status ? (
               <span
                 className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                  statusColor[health.last_run_status] || "bg-zinc-100 text-zinc-600"
+                  STATUS_COLORS[health.last_run_status] || "bg-zinc-100 text-zinc-600"
                 }`}
               >
                 {health.last_run_status}

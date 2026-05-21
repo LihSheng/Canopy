@@ -14,6 +14,7 @@ import {
 import type { DiscoveredTable, StaticFilePreview } from "@/lib/api/types";
 import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
 import { PreviewGrid } from "@/components/preview-grid";
+import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT } from "@/lib/constants";
 
 type Step = 1 | 2 | 3;
 
@@ -95,11 +96,11 @@ export function SourceSetupWizard() {
         setTestSuccess(true);
         setSupportsCdc(result.supports_cdc ?? false);
       } else {
-        setError(result.message ?? "Connection test failed");
+        setError(result.message ?? ERROR_MESSAGES.connectionTestFailed);
         setSupportsCdc(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Connection failed");
+      setError(err instanceof Error ? err.message : ERROR_MESSAGES.connectionFailed);
       setSupportsCdc(false);
     } finally {
       setTesting(false);
@@ -115,7 +116,7 @@ export function SourceSetupWizard() {
       setTables(discovered);
       setStep(2);
     } catch {
-      setError("Failed to discover tables");
+      setError(ERROR_MESSAGES.failedToDiscoverTables);
     } finally {
       setLoadingTables(false);
     }
@@ -133,7 +134,7 @@ export function SourceSetupWizard() {
       setActiveSheetName(sheetNames[0] || "");
       setStep(2); // Auto advance to Step 2 after upload
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : ERROR_MESSAGES.uploadFailed);
     } finally {
       setPreparing(false);
     }
@@ -257,7 +258,7 @@ export function SourceSetupWizard() {
           }),
         );
         if (results.length > 0) {
-          router.push("/dashboard/connections/datasets");
+          router.push(ROUTES.connections.datasets);
         }
       } else if (preview && file) {
         // Create connection from static file preview
@@ -287,10 +288,10 @@ export function SourceSetupWizard() {
             batch_strategy: "full_snapshot",
           });
         }
-        router.push("/dashboard/connections/datasets");
+        router.push(ROUTES.connections.datasets);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create datasets");
+      setError(err instanceof Error ? err.message : ERROR_MESSAGES.failedToCreateDatasets);
     } finally {
       setDeploying(false);
     }
@@ -428,7 +429,7 @@ export function SourceSetupWizard() {
               <div className="mt-6 flex justify-between">
                 <button
                   type="button"
-                  onClick={() => router.push("/dashboard/connections/sources")}
+                  onClick={() => router.push(ROUTES.connections.sources)}
                   className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
                 >
                   Back to Sources
@@ -440,7 +441,7 @@ export function SourceSetupWizard() {
                     disabled={testing || !host || !database}
                     className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {testing ? "Testing..." : "Test Connection"}
+                    {testing ? UI_LABELS.testing : UI_LABELS.testConnection}
                   </button>
                   <button
                     type="button"
@@ -448,7 +449,7 @@ export function SourceSetupWizard() {
                     disabled={!canProceedToStep2 || loadingTables}
                     className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {loadingTables ? "Loading..." : "Next"}
+                    {loadingTables ? UI_LABELS.loading : UI_LABELS.next}
                   </button>
                 </div>
               </div>
@@ -461,7 +462,7 @@ export function SourceSetupWizard() {
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
-                accept=".xlsx,.csv"
+                accept={FILE_ACCEPT}
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) {
@@ -534,7 +535,7 @@ export function SourceSetupWizard() {
                       onClick={() => setStep(2)}
                       className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
                     >
-                      Next
+                      {UI_LABELS.next}
                     </button>
                   </div>
                 </div>
@@ -568,8 +569,8 @@ export function SourceSetupWizard() {
                     onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-zinc-300"
                   />
-                  Select All
-                </label>
+                    {UI_LABELS.selectAll}
+                  </label>
                 <span className="text-xs text-zinc-400">
                   {selectedCount} of {totalCount} selected
                 </span>
@@ -686,90 +687,14 @@ export function SourceSetupWizard() {
               onClick={() => setStep(1)}
               className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
             >
-              Back
+              {UI_LABELS.back}
             </button>
-            <button
-              type="button"
-              onClick={handleStep2Next}
-              disabled={!canProceedToStep3}
-              className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next ({selectedCount})
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* --- Step 3: Configure Sync Policy --- */}
-      {step === 3 && (
-        <div className="rounded-lg border border-zinc-200 bg-white p-6">
-          <h3 className="mb-4 text-lg font-semibold text-zinc-900">Configure Sync Policy</h3>
-
-          {isDb ? (
-            <>
-              <p className="mb-4 text-sm text-zinc-500">
-                Choose how each selected table should be synchronized.
-              </p>
-              <div className="space-y-4">
-                {Array.from(selectedTables).map((tableName) => {
-                  const table = tables.find((t) => t.table_name === tableName);
-                  const policy = tablePolicies[tableName] ?? DEFAULT_POLICY;
-                  return (
-                    <SyncPolicyEditor
-                      key={tableName}
-                      tableName={tableName}
-                      schemaColumns={table?.columns ?? []}
-                      detectedCursorColumn={table?.detected_cursor_column ?? null}
-                      supportsCdc={supportsCdc}
-                      sourceType={sourceType}
-                      value={policy}
-                      onChange={(p) => updatePolicy(tableName, p)}
-                    />
-                  );
-                })}
-              </div>
-
-              <div className="mt-6 rounded-lg bg-zinc-50 p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-zinc-500">
-                    {selectedCount} table{selectedCount !== 1 ? "s" : ""} configured
-                  </span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="mb-4 text-sm text-zinc-500">
-                These selected sheets will be imported as snapshots.
-              </p>
-              <div className="space-y-3">
-                {Array.from(selectedSheets).map((sheetName) => (
-                  <div key={sheetName} className="rounded-lg border border-zinc-100 bg-zinc-50 p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-zinc-900">{sheetName}</span>
-                      <span className="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
-                        Batch (Full Snapshot) &middot; Manual Refresh
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {error && (
-            <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {error}
-            </div>
-          )}
-
-          <div className="mt-6 flex justify-between">
             <button
               type="button"
               onClick={() => setStep(2)}
               className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
             >
-              Back
+              {UI_LABELS.back}
             </button>
             <button
               type="button"
@@ -777,7 +702,7 @@ export function SourceSetupWizard() {
               disabled={deploying}
               className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {deploying ? "Deploying..." : "Finish & Deploy"}
+              {deploying ? UI_LABELS.deploying : UI_LABELS.finishAndDeploy}
             </button>
           </div>
         </div>

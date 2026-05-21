@@ -1,6 +1,8 @@
-const currencyFormatter = new Intl.NumberFormat("en-US", {
+import { DEFAULT_LOCALE, DEFAULT_CURRENCY, type Severity } from "@/lib/constants";
+
+const currencyFormatter = new Intl.NumberFormat(DEFAULT_LOCALE, {
   style: "currency",
-  currency: "USD",
+  currency: DEFAULT_CURRENCY,
   minimumFractionDigits: 0,
   maximumFractionDigits: 0,
 });
@@ -26,7 +28,7 @@ export function getChangeBgColor(value: number): string {
   return "bg-zinc-50 text-zinc-600";
 }
 
-export function getSeverityColor(severity: "low" | "medium" | "high"): string {
+export function getSeverityColor(severity: Severity): string {
   switch (severity) {
     case "high":
       return "bg-red-50 text-red-700 border-red-200";

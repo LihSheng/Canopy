@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { login } from "@/lib/api/auth";
+import { BRAND, ROUTES, ERROR_MESSAGES } from "@/lib/constants";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,9 +18,9 @@ export default function LoginPage() {
       setLoading(true);
       try {
         await login({ email, password });
-        router.push("/dashboard");
+        router.push(ROUTES.dashboard);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Login failed");
+        setError(err instanceof Error ? err.message : ERROR_MESSAGES.loginFailed);
       } finally {
         setLoading(false);
       }
@@ -32,7 +33,7 @@ export default function LoginPage() {
       <div className="flex w-full max-w-sm flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            Canopy Intelligence
+            {BRAND.name}
           </h1>
           <p className="text-sm text-zinc-500">
             Sign in to your account

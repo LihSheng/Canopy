@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/data-source";
 import type { DiscoveredTable } from "@/lib/api/types";
 import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
+import { ROUTES, ERROR_MESSAGES, UI_LABELS, QUERY_PARAMS } from "@/lib/constants";
 
 type Step = 1 | 2 | 3;
 
@@ -23,7 +24,7 @@ const DEFAULT_POLICY: SyncPolicy = {
 export function ConnectionWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialSource = searchParams.get("source") ?? "postgresql";
+  const initialSource = searchParams.get(QUERY_PARAMS.source) ?? "postgresql";
   const [step, setStep] = useState<Step>(1);
 
   // Step 1: Authenticate
@@ -95,11 +96,11 @@ export function ConnectionWizard() {
         setTestSuccess(true);
         setSupportsCdc(result.supports_cdc ?? false);
       } else {
-        setTestError(result.message ?? "Connection test failed");
+        setTestError(result.message ?? ERROR_MESSAGES.connectionTestFailed);
         setSupportsCdc(false);
       }
     } catch (err) {
-      setTestError(err instanceof Error ? err.message : "Connection failed");
+      setTestError(err instanceof Error ? err.message : ERROR_MESSAGES.connectionFailed);
       setSupportsCdc(false);
     } finally {
       setTesting(false);
@@ -114,7 +115,7 @@ export function ConnectionWizard() {
       setTables(discovered);
       setStep(2);
     } catch {
-      setTestError("Failed to discover tables");
+      setTestError(ERROR_MESSAGES.failedToDiscoverTables);
     } finally {
       setLoadingTables(false);
     }
@@ -191,10 +192,10 @@ export function ConnectionWizard() {
         }),
       );
       if (results.length > 0) {
-        router.push(`/dashboard/connections`);
+        router.push(ROUTES.connections.home);
       }
     } catch (err) {
-      setDeployError(err instanceof Error ? err.message : "Failed to create datasets");
+      setDeployError(err instanceof Error ? err.message : ERROR_MESSAGES.failedToCreateDatasets);
     } finally {
       setDeploying(false);
     }
@@ -317,13 +318,13 @@ export function ConnectionWizard() {
           )}
 
           <div className="mt-6 flex justify-between">
-            <button
-              type="button"
-              onClick={() => router.push("/dashboard/connections")}
-              className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-            >
-              Cancel
-            </button>
+              <button
+                type="button"
+                onClick={() => router.push(ROUTES.connections.home)}
+                className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              >
+                {UI_LABELS.cancel}
+              </button>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -331,7 +332,7 @@ export function ConnectionWizard() {
                 disabled={testing || !host || !database}
                 className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {testing ? "Testing..." : "Test Connection"}
+                {testing ? UI_LABELS.testing : UI_LABELS.testConnection}
               </button>
               <button
                 type="button"
@@ -339,7 +340,7 @@ export function ConnectionWizard() {
                 disabled={!canProceedToStep2 || loadingTables}
                 className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loadingTables ? "Loading..." : "Next"}
+                {loadingTables ? UI_LABELS.loading : UI_LABELS.next}
               </button>
             </div>
           </div>
@@ -359,7 +360,7 @@ export function ConnectionWizard() {
                 onChange={toggleSelectAll}
                 className="h-4 w-4 rounded border-zinc-300"
               />
-              Select All
+              {UI_LABELS.selectAll}
             </label>
             <span className="text-xs text-zinc-400">
               {selectedCount} of {tables.length} selected
@@ -401,7 +402,7 @@ export function ConnectionWizard() {
               onClick={() => setStep(1)}
               className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
             >
-              Back
+              {UI_LABELS.back}
             </button>
             <button
               type="button"
@@ -409,7 +410,7 @@ export function ConnectionWizard() {
               disabled={!canProceedToStep3}
               className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Next ({selectedCount})
+              {UI_LABELS.next} ({selectedCount})
             </button>
           </div>
         </div>
@@ -468,7 +469,7 @@ export function ConnectionWizard() {
               onClick={() => setStep(2)}
               className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
             >
-              Back
+              {UI_LABELS.back}
             </button>
             <button
               type="button"
@@ -476,7 +477,7 @@ export function ConnectionWizard() {
               disabled={deploying}
               className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {deploying ? "Deploying..." : "Finish & Deploy"}
+              {deploying ? UI_LABELS.deploying : UI_LABELS.finishAndDeploy}
             </button>
           </div>
         </div>

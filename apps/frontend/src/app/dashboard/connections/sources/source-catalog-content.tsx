@@ -6,6 +6,7 @@ import { fetchSourceTypes } from "@/lib/api/data-source";
 import type { SourceType } from "@/lib/api/types";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
+import { ROUTES, UI_LABELS, errorMessageFailedToLoad } from "@/lib/constants";
 
 export default function SourceCatalogContent() {
   const [sources, setSources] = useState<SourceType[]>([]);
@@ -20,7 +21,7 @@ export default function SourceCatalogContent() {
       const data = await fetchSourceTypes();
       setSources(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load sources");
+      setError(err instanceof Error ? err.message : errorMessageFailedToLoad("sources"));
     } finally {
       setLoading(false);
     }
@@ -36,7 +37,7 @@ export default function SourceCatalogContent() {
       s.tags.some((t) => t.toLowerCase().includes(search.toLowerCase())),
   );
 
-  if (loading) return <LoadingSpinner text="Loading source catalog..." />;
+  if (loading) return <LoadingSpinner text={UI_LABELS.loading} />;
   if (error) return <ErrorState message={error} onRetry={load} />;
 
   return (
@@ -80,7 +81,7 @@ export default function SourceCatalogContent() {
 function SourceCard({ source }: { source: SourceType }) {
   return (
     <Link
-      href={source.enabled ? `/dashboard/connections/setup?source=${source.key}` : "#"}
+      href={source.enabled ? ROUTES.connections.setupWithSource(source.key) : "#"}
       className={`block w-full rounded-lg border p-4 text-left shadow-sm transition-all ${
         source.enabled
           ? "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-md"

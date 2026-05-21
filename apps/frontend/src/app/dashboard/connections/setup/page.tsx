@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AnalyticsPageShell } from "@/components/analytics-shell/analytics-page-shell";
 import { buildConnectionsBreadcrumbs } from "@/components/analytics-shell/breadcrumb-helpers";
+import { ROUTES } from "@/lib/constants";
 import { SourceSetupWizard } from "@/components/data-studio/source-setup-wizard";
 
 export default function SetupPage() {
@@ -21,14 +22,14 @@ export default function SetupPage() {
       contextText={`Source: ${sourceLabel}`}
       actions={
         <Link
-          href="/dashboard/connections/sources"
+          href={ROUTES.connections.sources}
           className="rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
         >
           Back to sources
         </Link>
       }
       breadcrumbItems={buildConnectionsBreadcrumbs(
-        { label: "Source Catalog", href: "/dashboard/connections/sources" },
+        { label: "Source Catalog", href: ROUTES.connections.sources },
         { label: "Connection Setup" },
       )}
     >

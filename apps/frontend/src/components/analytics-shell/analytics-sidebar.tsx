@@ -7,9 +7,11 @@ import { AnalyticsSidebarTenantSwitcher } from "./analytics-sidebar-tenant-switc
 import { AnalyticsSidebarUtilities } from "./analytics-sidebar-utilities";
 import { useAnalyticsLayout } from "./analytics-layout-context";
 
+import { ROUTES } from "@/lib/constants";
+
 const ITEMS = [
   {
-    href: "/dashboard",
+    href: ROUTES.dashboard,
     label: "Dashboard",
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -22,7 +24,7 @@ const ITEMS = [
     ),
   },
   {
-    href: "/dashboard/anomalies",
+    href: ROUTES.anomalies,
     label: "Anomalies",
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -35,7 +37,7 @@ const ITEMS = [
     ),
   },
   {
-    href: "/dashboard/departments",
+    href: ROUTES.departments,
     label: "Departments",
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -46,7 +48,7 @@ const ITEMS = [
     ),
   },
   {
-    href: "/dashboard/reports",
+    href: ROUTES.reports,
     label: "Reports",
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -59,7 +61,7 @@ const ITEMS = [
     ),
   },
   {
-    href: "/dashboard/connections",
+    href: ROUTES.connections.home,
     label: "Data Studio",
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -113,8 +115,8 @@ export function AnalyticsSidebar({ onNavigate }: Props) {
             icon={item.icon}
             label={item.label}
             active={
-              item.href === "/dashboard"
-                ? pathname === "/dashboard"
+              item.href === ROUTES.dashboard
+                ? pathname === ROUTES.dashboard
                 : pathname.startsWith(item.href)
             }
             collapsed={!sidebarExpanded}

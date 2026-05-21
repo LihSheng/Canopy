@@ -2,8 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { LOCAL_STORAGE_KEYS } from "@/lib/constants";
 
-const STORAGE_KEY = "herd-analytics-sidebar-collapsed";
+const STORAGE_KEY = LOCAL_STORAGE_KEYS.sidebarCollapsed;
 
 type LayoutContextValue = {
   sidebarExpanded: boolean;

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/hooks/use-session";
+import { ROUTES, UI_LABELS } from "@/lib/constants";
 
 type Props = {
   collapsed: boolean;
@@ -13,13 +14,13 @@ export function AnalyticsSidebarUtilities({ collapsed, onNavigate }: Props) {
   const { user, logout } = useSession();
   const pathname = usePathname();
 
-  const profileActive = pathname === "/dashboard/profile";
+  const profileActive = pathname === ROUTES.profile;
 
   return (
     <div className={`border-t border-zinc-200 ${collapsed ? "px-2 py-3" : "px-3 py-3"}`}>
       <div className="flex flex-col gap-1">
         <Link
-          href="/dashboard/profile"
+          href={ROUTES.profile}
           onClick={onNavigate}
           className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
             profileActive
@@ -41,7 +42,7 @@ export function AnalyticsSidebarUtilities({ collapsed, onNavigate }: Props) {
           className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 ${
             collapsed ? "justify-center px-2" : ""
           }`}
-          title={collapsed ? "Sign out" : undefined}
+          title={collapsed ? UI_LABELS.signOut : undefined}
         >
           <span className="flex h-5 w-5 shrink-0 items-center justify-center">
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -57,7 +58,7 @@ export function AnalyticsSidebarUtilities({ collapsed, onNavigate }: Props) {
               />
             </svg>
           </span>
-          {!collapsed && <span>{user?.display_name ?? "Sign out"}</span>}
+          {!collapsed && <span>{user?.display_name ?? UI_LABELS.signOut}</span>}
         </button>
       </div>
     </div>

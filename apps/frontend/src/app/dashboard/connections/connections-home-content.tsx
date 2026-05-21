@@ -12,6 +12,7 @@ import {
 import type { Connection, Dataset, Run } from "@/lib/api/types";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
+import { ROUTES, UI_LABELS, ERROR_MESSAGES } from "@/lib/constants";
 
 export default function ConnectionsHomeContent() {
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -59,7 +60,7 @@ export default function ConnectionsHomeContent() {
       await deleteConnection(connection.id);
       await load();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Failed to delete connection");
+        setActionError(error instanceof Error ? error.message : ERROR_MESSAGES.failedToDeleteConnection);
     } finally {
       setDeletingId(null);
     }
@@ -82,7 +83,7 @@ export default function ConnectionsHomeContent() {
     );
   });
 
-  if (loading) return <LoadingSpinner text="Loading..." />;
+  if (loading) return <LoadingSpinner text={UI_LABELS.loading} />;
 
   return (
     <div className="space-y-6">
@@ -95,7 +96,7 @@ export default function ConnectionsHomeContent() {
         </div>
         <div className="flex gap-2">
           <Link
-            href="/dashboard/connections/sources"
+            href={ROUTES.connections.sources}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
           >
             + New Connection
@@ -104,10 +105,10 @@ export default function ConnectionsHomeContent() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <CardLink href="/dashboard/connections/datasets" title="Datasets" description={`${datasets.length} dataset${datasets.length !== 1 ? "s" : ""}`} icon={
+        <CardLink href={ROUTES.connections.datasets} title="Datasets" description={`${datasets.length} dataset${datasets.length !== 1 ? "s" : ""}`} icon={
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path d="M12.232 4.232a3 3 0 014.242 4.242L6.828 18.07a2 2 0 01-1.414.586H3.5a.5.5 0 01-.5-.5v-1.914a2 2 0 01.586-1.414l8.646-8.646z" /><path d="M9.172 5.172a1 1 0 011.414 0l.707.707-5.657 5.657-.707-.707a1 1 0 010-1.414l4.243-4.243z" /></svg>
         } />
-        <CardLink href="/dashboard/connections/runs" title="Run History" description={`${runs.length} recent run${runs.length !== 1 ? "s" : ""}`} icon={
+        <CardLink href={ROUTES.connections.runs} title="Run History" description={`${runs.length} recent run${runs.length !== 1 ? "s" : ""}`} icon={
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" /></svg>
         } />
       </div>
@@ -150,7 +151,7 @@ export default function ConnectionsHomeContent() {
                       disabled={deleting_id === connection.id}
                       className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {deleting_id === connection.id ? "Deleting..." : "Delete"}
+                      {deleting_id === connection.id ? UI_LABELS.deleting : UI_LABELS.delete}
                     </button>
                   </li>
                 ))}
@@ -176,7 +177,7 @@ export default function ConnectionsHomeContent() {
                 {datasets.slice(0, 5).map((ds) => (
                   <li key={ds.id}>
                     <Link
-                      href={`/dashboard/connections/datasets/${ds.id}`}
+                      href={ROUTES.connections.datasetDetail(ds.id)}
                       className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
                     >
                       <span className="font-medium">{ds.name}</span>
@@ -201,7 +202,7 @@ export default function ConnectionsHomeContent() {
                 {runs.slice(0, 5).map((run) => (
                   <li key={run.id}>
                     <Link
-                      href={`/dashboard/connections/runs/${run.id}`}
+                      href={ROUTES.connections.runDetail(run.id)}
                       className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
                     >
                       <span className="font-medium">Run {run.id.slice(0, 8)}</span>

@@ -7,6 +7,7 @@ import { RunHistory } from "@/components/run-history";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
+import { UI_LABELS, errorMessageFailedToLoad } from "@/lib/constants";
 
 export default function RunsListContent() {
   const [runs, setRuns] = useState<Run[]>([]);
@@ -20,7 +21,7 @@ export default function RunsListContent() {
       const data = await fetchRuns();
       setRuns(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load runs");
+      setError(err instanceof Error ? err.message : errorMessageFailedToLoad("runs"));
     } finally {
       setLoading(false);
     }
@@ -30,13 +31,13 @@ export default function RunsListContent() {
     load();
   }, [load]);
 
-  if (loading) return <LoadingSpinner text="Loading runs..." />;
+  if (loading) return <LoadingSpinner text={UI_LABELS.loading} />;
   if (error) return <ErrorState message={error} onRetry={load} />;
 
   if (runs.length === 0) {
     return (
       <EmptyState
-        title="No runs yet"
+        title={UI_LABELS.noRunsYet}
         description="Run a dataset to see processing history here."
       />
     );

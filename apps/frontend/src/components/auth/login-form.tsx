@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { UI_LABELS } from "@/lib/constants";
 
 export interface LoginFormProps {
   onSubmit: (email: string, password: string) => Promise<void>;
@@ -71,7 +72,7 @@ export function LoginForm({ onSubmit, error, loading }: LoginFormProps) {
         disabled={loading}
         className="mt-2 flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
       >
-        {loading ? "Signing in..." : "Sign in"}
+        {loading ? UI_LABELS.signingIn : UI_LABELS.signIn}
       </button>
     </form>
   );

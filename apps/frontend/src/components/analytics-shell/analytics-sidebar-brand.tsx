@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BRAND, ROUTES } from "@/lib/constants";
 
 type Props = {
   collapsed: boolean;
@@ -14,13 +15,13 @@ export function AnalyticsSidebarBrand({ collapsed }: Props) {
       }`}
     >
       <Link
-        href="/dashboard"
+        href={ROUTES.dashboard}
         className="flex items-center gap-2 font-semibold tracking-tight text-zinc-900"
       >
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-900 text-xs font-bold text-white">
           C
         </span>
-        {!collapsed && <span className="text-sm">Canopy Intelligence</span>}
+        {!collapsed && <span className="text-sm">{BRAND.name}</span>}
       </Link>
     </div>
   );

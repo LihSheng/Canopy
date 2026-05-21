@@ -7,6 +7,7 @@ import { switchTenant } from "@/lib/api/auth";
 import { useSession } from "@/hooks/use-session";
 import { getSession } from "@/lib/api/auth";
 import type { TenantContextResponse, TenantInfo } from "@/lib/api/types";
+import { ROUTES } from "@/lib/constants";
 
 interface SessionGuardProps {
   children: ReactNode;
@@ -75,7 +76,7 @@ export function SessionGuard({ children }: SessionGuardProps) {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(pathname)}`);
     }
   }, [loading, user, router, pathname]);
 

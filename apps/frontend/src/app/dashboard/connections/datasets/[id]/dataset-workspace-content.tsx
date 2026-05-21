@@ -41,6 +41,7 @@ import {
   useToast,
 } from "@/components/shared";
 import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
+import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, errorMessageFailedToLoad } from "@/lib/constants";
 
 const TABS = [
   "Overview",
@@ -128,7 +129,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
       await load();
       await loadPreview();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Upload failed";
+      const message = err instanceof Error ? err.message : ERROR_MESSAGES.uploadFailed;
       setActionError(message);
       toast.danger("Upload failed", message);
     } finally {
@@ -156,7 +157,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
       setEditingSyncPolicy(false);
       toast.success("Sync policy updated", "Dataset sync configuration saved.");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to save sync policy";
+      const message = err instanceof Error ? err.message : ERROR_MESSAGES.failedToSaveSyncPolicy;
       setActionError(message);
       toast.danger("Save failed", message);
     } finally {
@@ -189,7 +190,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
       setDeleteSummary(deleteSummaryData);
       setConnection(connData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load dataset");
+      setError(err instanceof Error ? err.message : errorMessageFailedToLoad("dataset"));
     } finally {
       setLoading(false);
     }
@@ -250,9 +251,9 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
       try {
         await deleteDataset(dataset!.id);
         toast.success("Dataset deleted", `${dataset!.name} was removed.`);
-        router.push("/dashboard/connections/datasets");
+        router.push(ROUTES.connections.datasets);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to delete dataset";
+        const message = err instanceof Error ? err.message : ERROR_MESSAGES.failedToDeleteDataset;
         setActionError(message);
         toast.danger("Delete failed", message);
       } finally {
@@ -280,7 +281,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
         await load();
         await loadPreview();
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to delete version";
+        const message = err instanceof Error ? err.message : ERROR_MESSAGES.failedToDeleteVersion;
         setActionError(message);
         toast.danger("Delete failed", message);
       } finally {
@@ -291,7 +292,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
     }
   };
 
-  if (loading) return <LoadingSpinner text="Loading dataset workspace..." />;
+  if (loading) return <LoadingSpinner text={UI_LABELS.loading} />;
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!dataset) return <ErrorState message="Dataset not found" />;
 
@@ -329,7 +330,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
           }
           className="rounded-md border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {deletingDataset ? "Deleting..." : "Delete Dataset"}
+          {deletingDataset ? UI_LABELS.deleting : "Delete Dataset"}
         </button>
       </div>
 
@@ -519,7 +520,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
                         disabled={savingSyncPolicy}
                         className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Cancel
+                        {UI_LABELS.cancel}
                       </button>
                       <span className="text-xs text-zinc-400">
                         Changes save automatically
@@ -587,7 +588,7 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
       ref={fileInputRef}
       type="file"
       className="hidden"
-      accept=".xlsx,.csv"
+      accept={FILE_ACCEPT}
       onChange={handleFileSelected}
     />
     {uploading && (

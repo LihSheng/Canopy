@@ -1,4 +1,6 @@
-export function LoadingSpinner({ text = "Loading..." }: { text?: string }) {
+import { UI_LABELS } from "@/lib/constants";
+
+export function LoadingSpinner({ text = UI_LABELS.loading }: { text?: string }) {
   return (
     <div
       className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-zinc-200 bg-white py-10 text-center shadow-sm"

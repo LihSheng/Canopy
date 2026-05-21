@@ -83,7 +83,7 @@ export function ReportHistoryRow({
           {item.status === "completed" && (
             <>
               <a
-                href={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"}${item.downloadUrl}`}
+                href={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8005"}${item.downloadUrl}`}
                 className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-zinc-800"
               >
                 Download

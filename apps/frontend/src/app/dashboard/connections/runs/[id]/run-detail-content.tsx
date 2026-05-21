@@ -6,13 +6,7 @@ import { fetchRun } from "@/lib/api/data-source";
 import type { Run } from "@/lib/api/types";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
-
-const statusColor: Record<string, string> = {
-  completed: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
-  running: "bg-blue-100 text-blue-800",
-  queued: "bg-zinc-100 text-zinc-600",
-};
+import { STATUS_COLORS, ROUTES, errorMessageFailedToLoad } from "@/lib/constants";
 
 function formatDuration(ms: number | null): string {
   if (ms === null) return "N/A";
@@ -39,7 +33,7 @@ export default function RunDetailContent({ runId }: Props) {
       const data = await fetchRun(runId);
       setRun(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load run");
+      setError(err instanceof Error ? err.message : errorMessageFailedToLoad("run"));
     } finally {
       setLoading(false);
     }
@@ -64,7 +58,7 @@ export default function RunDetailContent({ runId }: Props) {
             <h2 className="text-lg font-semibold text-zinc-900">Run {run.id.slice(0, 8)}</h2>
             <span
               className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                statusColor[run.status] || "bg-zinc-100 text-zinc-600"
+                STATUS_COLORS[run.status] || "bg-zinc-100 text-zinc-600"
               }`}
             >
               {run.status}
@@ -72,7 +66,7 @@ export default function RunDetailContent({ runId }: Props) {
           </div>
           {run.dataset_id && (
             <Link
-              href={`/dashboard/connections/datasets/${run.dataset_id}`}
+              href={ROUTES.connections.datasetDetail(run.dataset_id)}
               className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
             >
               View Dataset

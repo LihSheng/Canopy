@@ -1,6 +1,7 @@
 import type { TimeRangeKey } from "./time-range";
 import type { DepartmentDetailState } from "./route-state";
 import { writeDepartmentDetailState } from "./route-state";
+import { ROUTES, DETAIL_SOURCE } from "@/lib/constants";
 
 export function buildAnomalyToDepartmentDetailLink(
   departmentId: string,
@@ -10,8 +11,8 @@ export function buildAnomalyToDepartmentDetailLink(
   const state: DepartmentDetailState = {
     departmentId,
     timeRange,
-    source: "anomalies",
+    source: DETAIL_SOURCE.anomalies,
     anomalyId,
   };
-  return `/dashboard/departments/${encodeURIComponent(departmentId)}?${writeDepartmentDetailState(state).toString()}`;
+  return `${ROUTES.departmentDetail(departmentId)}?${writeDepartmentDetailState(state).toString()}`;
 }

@@ -53,17 +53,17 @@ automatically if they do not exist.
 ## Run
 
 ```bash
-# Terminal 1 — Backend (port 8000)
+# Terminal 1 — Backend (port 8005)
 cd apps/backend
 .venv\Scripts\activate
-uvicorn app:app --reload --port 8000
+uvicorn app:app --reload --port 8005
 
-# Terminal 2 — Frontend (port 3000)
+# Terminal 2 — Frontend (port 3005)
 cd apps/frontend
 npm run dev
 ```
 
-Open http://localhost:3000
+Open http://localhost:3005
 
 ## Test
 

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getSession, type SessionUser } from "@/lib/api/auth";
+import { ROUTES, ERROR_MESSAGES } from "@/lib/constants";
 
 export function useSession() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -25,7 +26,7 @@ export function useSession() {
         setUser(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Session check failed");
+      setError(err instanceof Error ? err.message : ERROR_MESSAGES.sessionCheckFailed);
       setUser(null);
     } finally {
       setLoading(false);
@@ -41,7 +42,7 @@ export function useSession() {
     const { logout: apiLogout } = await import("@/lib/api/auth");
     await apiLogout();
     setUser(null);
-    router.push("/login");
+    router.push(ROUTES.login);
   }, [router]);
 
   return { user, loading, error, refetch: checkSession, logout };
