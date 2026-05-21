@@ -25,26 +25,27 @@ const RunDetailContent = ({ runId }: Props) => {
   const [run, setRun] = useState<Run | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchRun(runId);
-      setRun(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : errorMessageFailedToLoad("run"));
-    } finally {
-      setLoading(false);
-    }
-  }, [runId]);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchRun(runId);
+        if (!cancelled) setRun(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : errorMessageFailedToLoad("run"));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [runId, retryKey]);
+
+  const retry = useCallback(() => setRetryKey((k) => k + 1), []);
 
   if (loading) return <LoadingSpinner text="Loading run details..." />;
-  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (error) return <ErrorState message={error} onRetry={retry} />;
   if (!run) return <ErrorState message="Run not found" />;
 
   const progress = run.status === "completed" ? 100 : run.status === "failed" ? 100 : run.status === "running" ? 60 : 0;

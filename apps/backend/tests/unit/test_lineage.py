@@ -468,10 +468,25 @@ class TestDatasetLineageHandler:
             DatasetRepository(session).save(dataset)
 
             run_repo = RunRepository(session)
-            run_repo.save(Run(id="run-1", project_id="proj-1", connection_id="conn-1", dataset_id="ds-1", status="completed"))
-            run_repo.save(Run(id="run-2", project_id="proj-1", connection_id="conn-1", dataset_id="ds-1", status="failed"))
+            run_repo.save(Run(
+                id="run-1",
+                project_id="proj-1",
+                connection_id="conn-1",
+                dataset_id="ds-1",
+                status="completed",
+            ))
+            run_repo.save(Run(
+                id="run-2",
+                project_id="proj-1",
+                connection_id="conn-1",
+                dataset_id="ds-1",
+                status="failed",
+            ))
 
-            result = DatasetService(DatasetRepository(session), DatasetVersionRepository(session)).get_lineage("ds-1")
+            result = DatasetService(
+                DatasetRepository(session),
+                DatasetVersionRepository(session),
+            ).get_lineage("ds-1")
 
             run_to_ds = [e for e in result["edges"] if e["from"].startswith("run_") and e["to"].startswith("dataset_")]
             assert len(run_to_ds) == 2

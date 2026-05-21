@@ -68,26 +68,27 @@ const DatasetListContent = () => {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchDatasets();
-      setDatasets(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load datasets");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchDatasets();
+        if (!cancelled) setDatasets(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load datasets");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [retryKey]);
+
+  const retry = useCallback(() => setRetryKey((k) => k + 1), []);
 
   if (loading) return <LoadingSpinner text="Loading datasets..." />;
-  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (error) return <ErrorState message={error} onRetry={retry} />;
 
   if (datasets.length === 0) {
     return (
@@ -107,7 +108,7 @@ const DatasetListContent = () => {
       getRowId={(row) => String(row.id)}
       loading={loading}
       error={error}
-      onRetry={load}
+      onRetry={retry}
       emptyText="No datasets yet"
     />
   );

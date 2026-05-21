@@ -1,6 +1,5 @@
 import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { Mock } from "vitest";
 
 const mockPush = vi.fn();
 const mockReplace = vi.fn();

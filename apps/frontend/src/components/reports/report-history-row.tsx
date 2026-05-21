@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { formatCurrency } from "@/lib/formatters";
 import { TIME_RANGE_LABELS } from "@/lib/navigation/time-range";
 import type { ExportHistoryItem } from "./report-mappers";
 

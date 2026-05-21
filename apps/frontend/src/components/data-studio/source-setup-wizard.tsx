@@ -12,7 +12,7 @@ import {
   createProject,
 } from "@/lib/api/data-source";
 import type { DiscoveredTable, StaticFilePreview } from "@/lib/api/types";
-import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
+import type { SyncPolicy } from "@/components/data-studio/sync-policy-editor";
 import { PreviewGrid } from "@/components/preview-grid";
 import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT } from "@/lib/constants";
 
@@ -197,7 +197,7 @@ export const SourceSetupWizard = () => {
     });
   }, [activeSheetName]);
 
-  const handleStep2Next = useCallback(() => {
+  const _handleStep2Next = useCallback(() => {
     if (isDb) {
       const policies: Record<string, SyncPolicy> = {};
       for (const name of selectedTables) {
@@ -221,7 +221,7 @@ export const SourceSetupWizard = () => {
 
   // ---- Step 3 handlers ----
 
-  const updatePolicy = useCallback(
+  const _updatePolicy = useCallback(
     (tableName: string, policy: SyncPolicy) => {
       setTablePolicies((prev) => ({ ...prev, [tableName]: policy }));
     },
@@ -302,7 +302,7 @@ export const SourceSetupWizard = () => {
   const selectedCount = isDb ? selectedTables.size : selectedSheets.size;
   const totalCount = isDb ? tables.length : preview?.sheet_profiles.length ?? 0;
   const canProceedToStep2 = isDb ? (testSuccess && connectionId != null) : (preview != null);
-  const canProceedToStep3 = selectedCount > 0;
+  const _canProceedToStep3 = selectedCount > 0;
   const stepLabel = (s: Step) =>
     s === 1 ? (isDb ? "Authenticate" : "Upload") : s === 2 ? "Select Objects" : "Sync Policy";
 

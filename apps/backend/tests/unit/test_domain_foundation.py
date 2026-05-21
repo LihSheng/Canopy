@@ -1,6 +1,8 @@
 """Tests for domain foundation: SyncMode, BatchStrategy, Dataset sync fields."""
 from datetime import UTC, datetime
 
+import pytest
+
 from dataset.domain import (
     BatchStrategy,
     Dataset,

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { LOCAL_STORAGE_KEYS } from "@/lib/constants";
 
@@ -44,14 +44,16 @@ const writeCollapsed = (v: boolean) => {
 }
 
 export const AnalyticsLayoutProvider = ({ children }: { children: ReactNode }) => {
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => !readCollapsed());
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    setSidebarExpanded(!readCollapsed());
-    setHydrated(true);
-  }, []);
+  // On the server, isHydrated is false (no children rendered).
+  // On the client after hydration, it switches to true.
+  const isHydrated = useSyncExternalStore(
+    () => () => {}, // subscribe – no external events to listen to
+    () => true,     // getSnapshot – client is always hydrated
+    () => false,     // getServerSnapshot – server is never hydrated
+  );
 
   const toggleSidebar = useCallback(() => {
     setSidebarExpanded((prev) => {
@@ -76,7 +78,7 @@ export const AnalyticsLayoutProvider = ({ children }: { children: ReactNode }) =
         closeDrawer,
       }}
     >
-      {hydrated ? children : null}
+      {isHydrated ? children : null}
     </AnalyticsLayoutContext.Provider>
   );
 }

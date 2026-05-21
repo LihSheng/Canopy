@@ -13,23 +13,24 @@ const SourceCatalogContent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchSourceTypes();
-      setSources(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : errorMessageFailedToLoad("sources"));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchSourceTypes();
+        if (!cancelled) setSources(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : errorMessageFailedToLoad("sources"));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [retryKey]);
+
+  const retry = useCallback(() => setRetryKey((k) => k + 1), []);
 
   const filtered = sources.filter(
     (s) =>
@@ -38,7 +39,7 @@ const SourceCatalogContent = () => {
   );
 
   if (loading) return <LoadingSpinner text={UI_LABELS.loading} />;
-  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (error) return <ErrorState message={error} onRetry={retry} />;
 
   return (
     <div className="space-y-6">

@@ -5,7 +5,7 @@ const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
   useSearchParams: () => ({
-    get: (key: string) => null,
+    get: (_key: string) => null,
   }),
 }));
 

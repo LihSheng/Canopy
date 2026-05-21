@@ -13,26 +13,27 @@ const RunsListContent = () => {
   const [runs, setRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchRuns();
-      setRuns(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : errorMessageFailedToLoad("runs"));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchRuns();
+        if (!cancelled) setRuns(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : errorMessageFailedToLoad("runs"));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [retryKey]);
+
+  const retry = useCallback(() => setRetryKey((k) => k + 1), []);
 
   if (loading) return <LoadingSpinner text={UI_LABELS.loading} />;
-  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (error) return <ErrorState message={error} onRetry={retry} />;
 
   if (runs.length === 0) {
     return (

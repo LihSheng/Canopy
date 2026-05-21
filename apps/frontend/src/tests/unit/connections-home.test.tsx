@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import ConnectionsHomeContent from "@/app/dashboard/connections/connections-home-content";
-import * as api from "@/lib/api/data-source";
 
 // Mock API calls
 vi.mock("@/lib/api/data-source", () => ({

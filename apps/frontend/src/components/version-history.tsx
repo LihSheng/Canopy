@@ -83,7 +83,7 @@ export const VersionHistory = ({
           {versions.map((version) => {
             const isActive = version.id === activeVersionId;
             const isSuperseded = !isActive && version.status === "ready";
-            const isFailed = version.status === "failed";
+            const _isFailed = version.status === "failed";
             return (
               <tr key={version.id} className="hover:bg-zinc-50">
                 <td className="px-4 py-2">

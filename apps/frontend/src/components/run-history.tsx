@@ -18,7 +18,7 @@ type Props = {
   datasetId?: string;
 };
 
-export const RunHistory = ({ runs = [], datasetId }: Props) => {
+export const RunHistory = ({ runs = [], datasetId: _datasetId }: Props) => {
   if (!runs || runs.length === 0) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-zinc-500">
