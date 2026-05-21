@@ -46,6 +46,8 @@ class RefreshOrchestrator:
         self._app_db = app_db
         self._source_db = source_db
         self._repo = RefreshRepository(app_db)
+        self._sync_result: SyncResult | None = None
+        self._snapshot_id: str | None = None
 
     def run(self, job: RefreshJob) -> RefreshJob:
         job.status = "running"

@@ -38,10 +38,13 @@ class MockCursorHelper:
 
     @staticmethod
     def fetch_table_callback(rows: list[dict]):
-        """Return a callable that returns an async generator yielding the given rows."""
+        """Return an async callable that returns an async generator yielding the given rows."""
 
         async def _fetch(config, table, cursor_column=None, cursor_value=None):
-            yield rows
+            async def _generate():
+                yield rows
+
+            return _generate()
 
         return _fetch
 

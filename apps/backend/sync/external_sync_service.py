@@ -48,7 +48,16 @@ class ExternalDbSyncService:
             if ds.sync_mode not in ("batch", "real_time"):
                 continue
 
-            snap = await self._sync_one(ds, started_at)
+            try:
+                snap = await self._sync_one(ds, started_at)
+            except Exception as exc:
+                snap = EntitySnapshot(
+                    entity_type=ds.name,
+                    status="failed",
+                    started_at=started_at,
+                    completed_at=utcnow(),
+                    error_message=str(exc),
+                )
             snapshots.append(snap)
             if snap.status == "failed":
                 errors.append(f"{ds.name}: {snap.error_message}")

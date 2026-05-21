@@ -13,7 +13,6 @@ from api.schemas.dashboard import (
     TopDepartmentItem,
 )
 from api.schemas.departments import (
-    AiSummary,
     ClaimDetailItem,
     DepartmentDetailResponse,
     DepartmentItem,
@@ -313,7 +312,6 @@ class TestNewV2Schemas:
         assert d.ai_summary is None
 
     def test_department_detail_with_ai_summary(self):
-        ai = AiSummary(summary_text="Stable spend", key_findings=["No anomalies"])
         d = DepartmentDetailResponse(
             id="d1",
             name="Engineering",
@@ -323,9 +321,8 @@ class TestNewV2Schemas:
             change_pct=5.5,
             employee_count=42,
             attention_state="attention",
-            ai_summary=ai,
+            ai_summary="Stable spend",
         )
         assert d.attention_state == "attention"
         assert d.ai_summary is not None
-        assert d.ai_summary.summary_text == "Stable spend"
-        assert d.ai_summary.key_findings == ["No anomalies"]
+        assert d.ai_summary == "Stable spend"

@@ -119,6 +119,8 @@ def make_session(session_source):
         candidate = session_source()
         if not isinstance(candidate, Session):
             raise TypeError("Expected a SQLAlchemy Session from sessionmaker")
+        if candidate.bind is None:
+            raise RuntimeError("Session does not have an engine bind")
         return candidate
 
     candidate = session_source() if callable(session_source) else session_source

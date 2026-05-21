@@ -175,8 +175,8 @@ class TestGetDepartmentTrends:
         with patch("analytics.departments.SpendRepository") as mock_repo_cls:
             mock_repo = MagicMock()
             mock_repo.get_monthly_spends_for_department.return_value = [
-                _mock_dept_spend("d1", "2026-04", payroll=400, claims=100),
-                _mock_dept_spend("d1", "2026-05", payroll=500, claims=200),
+                _mock_dept_spend("d1", "2026-04", total=500, payroll=400, claims=100),
+                _mock_dept_spend("d1", "2026-05", total=700, payroll=500, claims=200),
             ]
             mock_repo_cls.return_value = mock_repo
             trends = get_department_trends(MagicMock(), "d1")

@@ -1,5 +1,7 @@
 """Tests for SecretStore encryption."""
 
+from base64 import b64decode, b64encode
+
 import pytest
 
 from connection.secret_store import AesGcmSecretStore, EncryptionError
@@ -36,10 +38,10 @@ class TestAesGcmSecretStore:
     def test_tampered_ciphertext_raises_encryption_error(self):
         store = AesGcmSecretStore(key=_TEST_KEY)
         ciphertext = store.encrypt("hello")
-        # Flip a byte in the middle
-        raw = bytearray(ciphertext.encode("ascii"))
+        # Decode base64, flip a byte in the binary, re-encode
+        raw = bytearray(b64decode(ciphertext))
         raw[len(raw) // 2] ^= 1
-        tampered = raw.decode("ascii")
+        tampered = b64encode(bytes(raw)).decode("ascii")
         with pytest.raises(EncryptionError, match="Decryption failed"):
             store.decrypt(tampered)
 

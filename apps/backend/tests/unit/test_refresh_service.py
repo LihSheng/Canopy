@@ -19,7 +19,7 @@ class TestRefreshService:
         from refresh.service import get_job
 
         mock_db = MagicMock()
-        mock_factory.return_value = mock_db
+        mock_factory.return_value = lambda: mock_db
         mock_db.query.return_value.filter.return_value.first.return_value = None
 
         result = get_job("nonexistent")

@@ -174,7 +174,7 @@ class TestGetExportJob:
 
         with patch("exports.service.session_factory") as mock_factory:
             mock_db = MagicMock()
-            mock_factory.return_value = mock_db
+            mock_factory.return_value = lambda: mock_db
             mock_db.query.return_value.filter.return_value.first.return_value = None
 
             result = get_export_job("nonexistent")

@@ -154,7 +154,7 @@ def get_department_trends(db: Session, department_id: str) -> list[MonthlyTrend]
             month=s.month,
             payroll=round(s.payroll_total, 2),
             claims=round(s.claims_total, 2),
-            total=round(s.total, 2),
+            total=round(s.payroll_total + s.claims_total, 2),
         )
         for s in spends
     ]
