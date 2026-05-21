@@ -54,8 +54,8 @@ class RefreshOrchestrator:
         job.started_at = utcnow()
         self._repo.update_job(job)
 
-        self._sync_result: SyncResult | None = None
-        self._snapshot_id: str | None = None
+        self._sync_result = None
+        self._snapshot_id = None
 
         for stage in STAGE_ORDER:
             job.current_stage = stage
