@@ -90,7 +90,7 @@ class RestoreEngine:
                 self._routing_cache.invalidate_tenant(run.tenant_id)
 
             run.status = BackupStatus.COMPLETED
-        run.finished_at = datetime.now(datetime.UTC)
+            run.finished_at = datetime.now(timezone.utc)
 
             audit_service = self._audit_service_cls(session)
             audit_service.record_event(
