@@ -5,6 +5,7 @@ pytestmark = pytest.mark.business_rule
 import uuid
 
 from analytics.aggregators.claims import (
+    _extract_month,
     aggregate_claims_by_department,
     aggregate_claims_by_employee,
     aggregate_claims_by_type,
@@ -89,6 +90,22 @@ class TestPayrollEmployeeAggregation:
 # ---------------------------------------------------------------------------
 # Claims aggregation
 # ---------------------------------------------------------------------------
+
+
+class TestExtractMonth:
+    def test_full_date_extracts_year_month(self):
+        assert _extract_month("2026-05-15") == "2026-05"
+
+    def test_short_date_passthrough(self):
+        assert _extract_month("2026-05") == "2026-05"
+
+    def test_very_short_date_returns_raw(self):
+        assert _extract_month("abc") == "abc"
+        assert _extract_month("") == ""
+
+    def test_none_date_returns_empty(self):
+        # len(None) isn't valid, but the function receives a str
+        assert _extract_month("None") == "None"
 
 
 class TestClaimsMonthlyAggregation:

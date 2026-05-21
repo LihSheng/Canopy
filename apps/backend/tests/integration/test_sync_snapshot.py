@@ -127,3 +127,44 @@ class TestSnapshotPersistence:
         assert fetched.status == "failed"
         assert fetched.error_message == "no such table: claims"
         assert fetched.row_count == 0
+
+
+class TestSnapshotRepositoryExtractors:
+    """Cover _extract_source_key and _row_to_dict edge cases (lines 38-54)."""
+
+    def test_extract_source_key_from_object(self):
+        """line 40-41: object with source_key attribute."""
+        class Obj:
+            source_key = "KEY001"
+        result = SnapshotRepository._extract_source_key(Obj())
+        assert result == "KEY001"
+
+    def test_extract_source_key_from_dict(self):
+        """line 42-43: dict with source_key key."""
+        result = SnapshotRepository._extract_source_key({"source_key": "KEY002"})
+        assert result == "KEY002"
+
+    def test_extract_source_key_unknown(self):
+        """line 44: no source_key found -> 'unknown'."""
+        result = SnapshotRepository._extract_source_key(42)
+        assert result == "unknown"
+
+    def test_row_to_dict_from_dataclass(self):
+        """line 48-51: dataclass input."""
+        from dataclasses import dataclass
+        @dataclass
+        class FakeRow:
+            source_key: str
+            name: str
+        result = SnapshotRepository._row_to_dict(FakeRow("K1", "Eng"))
+        assert result == {"source_key": "K1", "name": "Eng"}
+
+    def test_row_to_dict_from_dict(self):
+        """line 52-53: dict input returns as-is."""
+        result = SnapshotRepository._row_to_dict({"a": 1})
+        assert result == {"a": 1}
+
+    def test_row_to_dict_fallback(self):
+        """line 54: fallback wraps in {'value': str}."""
+        result = SnapshotRepository._row_to_dict(42)
+        assert result == {"value": "42"}

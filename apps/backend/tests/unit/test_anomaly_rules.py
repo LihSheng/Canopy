@@ -165,6 +165,19 @@ class TestDepartmentClaimSpikeRule:
 
         assert len(results) == 0
 
+    def test_prev_zero_claims_negative_current_skipped(self):
+        """line 33: prev_claims=0, cur_claims<0 hits else branch (continue).
+
+        Both-zero is handled earlier; this edge case is prev=0 with
+        negative cur (e.g. adjustment credits).
+        """
+        prev = [_make_spend("dept-1", "2026-04", 50000, 0)]
+        cur = [_make_spend("dept-1", "2026-05", 50000, -100)]
+
+        results = department_claim_spike_rule(SNAPSHOT_ID, cur, prev)
+
+        assert len(results) == 0
+
     def test_claim_driver_details(self):
         prev = [_make_spend("dept-1", "2026-04", 50000, 10000, claim_count=3)]
         cur = [_make_spend("dept-1", "2026-05", 50000, 25000, claim_count=8)]

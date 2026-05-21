@@ -104,3 +104,39 @@ class TestInsightService:
 
         assert result is not None
         assert result.snapshot_id != ""
+
+
+class TestResolveGeneratedAt:
+    """Cover _resolve_generated_at edge cases (lines 9-17)."""
+
+    def test_datetime_input_returns_asis(self):
+        from datetime import UTC, datetime
+        from insights.repository import _resolve_generated_at
+
+        now = datetime.now(UTC)
+        result = _resolve_generated_at(now)
+        assert result == now
+
+    def test_valid_iso_string_parsed(self):
+        from datetime import UTC, datetime
+        from insights.repository import _resolve_generated_at
+
+        result = _resolve_generated_at("2026-05-15T10:00:00+00:00")
+        assert result.year == 2026
+        assert result.month == 5
+
+    def test_invalid_string_falls_back_to_now(self):
+        """lines 15-16: ValueError -> datetime.now(UTC)."""
+        from datetime import UTC, datetime
+        from insights.repository import _resolve_generated_at
+
+        result = _resolve_generated_at("not-a-date")
+        assert isinstance(result, datetime)
+
+    def test_empty_string_falls_back_to_now(self):
+        """line 17: empty val -> datetime.now(UTC)."""
+        from datetime import UTC, datetime
+        from insights.repository import _resolve_generated_at
+
+        result = _resolve_generated_at("")
+        assert isinstance(result, datetime)

@@ -132,6 +132,51 @@ class TestAnalyticsPersistence:
         assert cache.year == 2026
         assert cache.total_payroll > 0
 
+    def test_save_summary_cache_with_string_created_at(self, db_session, seed_analytics_ontology):
+        """Cover line 19: save_summary_cache with a non-empty string created_at."""
+        cache_repo = DashboardCacheRepository(db_session)
+        cache = DashboardSummaryCache(
+            snapshot_id="str-time-snap",
+            year=2026,
+            month=6,
+            total_payroll=1000.0,
+            total_claims=200.0,
+            department_count=1,
+            anomaly_count=0,
+            created_at="2026-06-15T10:00:00+00:00",
+        )
+        model = cache_repo.save_summary_cache(cache)
+        assert model.id == "str-time-snap"
+
+    def test_get_summary_cache_for_period(self, db_session, seed_analytics_ontology):
+        """Cover lines 54-77: get_summary_cache_for_period."""
+        _run_pipeline(db_session)
+        cache_repo = DashboardCacheRepository(db_session)
+        cache = cache_repo.get_summary_cache_for_period(2026, 5)
+        assert cache is not None
+        assert cache.year == 2026
+        assert cache.month == 5
+
+    def test_get_summary_cache_for_period_not_found(self, db_session):
+        """Cover line 66-67: model is None returns None."""
+        cache_repo = DashboardCacheRepository(db_session)
+        cache = cache_repo.get_summary_cache_for_period(2020, 1)
+        assert cache is None
+
+    def test_get_summary_cache_for_snapshot(self, db_session, seed_analytics_ontology):
+        """Cover lines 79-99: query by snapshot_id."""
+        _run_pipeline(db_session)
+        cache_repo = DashboardCacheRepository(db_session)
+        cache = cache_repo.get_summary_cache_for_snapshot(SNAPSHOT_ID)
+        assert cache is not None
+        assert cache.snapshot_id == SNAPSHOT_ID
+
+    def test_get_summary_cache_for_snapshot_not_found(self, db_session):
+        """Cover line 88-89: model is None returns None."""
+        cache_repo = DashboardCacheRepository(db_session)
+        cache = cache_repo.get_summary_cache_for_snapshot("nonexistent")
+        assert cache is None
+
     def test_clear_snapshot_removes_data(self, db_session, seed_analytics_ontology):
         run_aggregation_pipeline(
             db=db_session,
@@ -216,3 +261,72 @@ class TestAnalyticsPersistence:
         repo = SpendRepository(db_session)
         names = repo.get_department_map()
         assert len(names) == 2
+
+
+def _run_pipeline(db_session):
+    """Helper to run the standard pipeline."""
+    return run_aggregation_pipeline(
+        db=db_session,
+        snapshot_id=SNAPSHOT_ID,
+        current_month="2026-05",
+        previous_month="2026-04",
+    )
+
+
+class TestSpendRepositorySnapshotFilters:
+    """Cover snapshot_id filter branches in SpendRepository methods."""
+
+    def test_get_monthly_spends_for_month_with_snapshot(self, db_session, seed_analytics_ontology):
+        """line 116-117: snapshot_id filter."""
+        _run_pipeline(db_session)
+        repo = SpendRepository(db_session)
+        results = repo.get_monthly_spends_for_month("2026-05", snapshot_id=SNAPSHOT_ID)
+        assert len(results) == 2
+        # wrong snapshot returns nothing
+        empty = repo.get_monthly_spends_for_month("2026-05", snapshot_id="wrong-snap")
+        assert len(empty) == 0
+
+    def test_get_monthly_spends_for_department_with_snapshot(self, db_session, seed_analytics_ontology):
+        """line 126-127: snapshot_id filter on department query."""
+        _run_pipeline(db_session)
+        repo = SpendRepository(db_session)
+        results = repo.get_monthly_spends_for_department("d1", snapshot_id=SNAPSHOT_ID)
+        assert len(results) > 0
+        empty = repo.get_monthly_spends_for_department("d1", snapshot_id="wrong-snap")
+        assert len(empty) == 0
+
+    def test_get_employee_spends_for_department_with_snapshot(self, db_session, seed_analytics_ontology):
+        """line 171-172: snapshot_id filter on employee query."""
+        _run_pipeline(db_session)
+        repo = SpendRepository(db_session)
+        results = repo.get_employee_spends_for_department("d1", snapshot_id=SNAPSHOT_ID)
+        assert len(results) > 0
+        empty = repo.get_employee_spends_for_department("d1", snapshot_id="wrong-snap")
+        assert len(empty) == 0
+
+    def test_get_claim_type_spends_with_snapshot(self, db_session, seed_analytics_ontology):
+        """line 200-201: snapshot_id filter on claim type query."""
+        _run_pipeline(db_session)
+        repo = SpendRepository(db_session)
+        results = repo.get_claim_type_spends(snapshot_id=SNAPSHOT_ID)
+        assert len(results) > 0
+        empty = repo.get_claim_type_spends(snapshot_id="wrong-snap")
+        assert len(empty) == 0
+
+    def test_get_employee_contributions_with_snapshot(self, db_session, seed_analytics_ontology):
+        """lines 237-240: snapshot_id filters on employee contributions."""
+        _run_pipeline(db_session)
+        repo = SpendRepository(db_session)
+        results = repo.get_employee_contributions("d1", snapshot_id=SNAPSHOT_ID)
+        assert len(results) > 0
+        empty = repo.get_employee_contributions("d1", snapshot_id="wrong-snap")
+        assert len(empty) == 0
+
+    def test_get_claim_details_with_snapshot(self, db_session, seed_analytics_ontology):
+        """lines 273-276: snapshot_id filters on claim details."""
+        _run_pipeline(db_session)
+        repo = SpendRepository(db_session)
+        results = repo.get_claim_details(snapshot_id=SNAPSHOT_ID)
+        assert len(results) > 0
+        empty = repo.get_claim_details(snapshot_id="wrong-snap")
+        assert len(empty) == 0

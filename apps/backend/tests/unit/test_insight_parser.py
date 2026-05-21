@@ -89,3 +89,38 @@ class TestResponseParser:
 
         assert "123" in result.recommendations
         assert "F1" in result.key_findings
+
+
+class TestGeneratedInsightModel:
+    """Cover GeneratedInsightModel.pack_list and unpack_list edge cases.
+
+    Lines 50-51: JSONDecodeError / TypeError -> empty list.
+    """
+
+    def test_pack_unpack_roundtrip(self):
+        from insights.schema import GeneratedInsightModel
+
+        items = ["Review claims", "Check payroll"]
+        packed = GeneratedInsightModel.pack_list(items)
+        unpacked = GeneratedInsightModel.unpack_list(packed)
+        assert unpacked == items
+
+    def test_unpack_list_invalid_json(self):
+        """line 50-51: JSONDecodeError returns empty list."""
+        from insights.schema import GeneratedInsightModel
+
+        result = GeneratedInsightModel.unpack_list("not-json")
+        assert result == []
+
+    def test_unpack_list_type_error(self):
+        """line 50-51: TypeError returns empty list."""
+        from insights.schema import GeneratedInsightModel
+
+        result = GeneratedInsightModel.unpack_list(None)
+        assert result == []
+
+    def test_unpack_list_empty_default(self):
+        from insights.schema import GeneratedInsightModel
+
+        result = GeneratedInsightModel.unpack_list("[]")
+        assert result == []

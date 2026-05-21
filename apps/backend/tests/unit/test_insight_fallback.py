@@ -3,6 +3,7 @@ import pytest
 pytestmark = pytest.mark.business_rule
 
 from insights.domain import (
+    AnomalyFact,
     ClaimTypeFact,
     DepartmentRankingFact,
     FactBundle,
@@ -19,7 +20,14 @@ def _make_facts(
     anomaly_count: int = 2,
     total_payroll: float = 1000000.0,
     total_claims: float = 50000.0,
+    include_anomaly_facts: bool = False,
 ) -> FactBundle:
+    anomalies: list[AnomalyFact] = []
+    if include_anomaly_facts:
+        anomalies = [
+            AnomalyFact(department_name="Engineering", severity="high", description="Spike"),
+            AnomalyFact(department_name="Sales", severity="medium", description="Increase"),
+        ]
     return FactBundle(
         snapshot_id="snap-1",
         current_month="2026-05",
@@ -28,6 +36,7 @@ def _make_facts(
         total_claims=total_claims,
         department_count=4,
         anomaly_count=anomaly_count,
+        anomalies=anomalies,
         top_departments=[
             TopDepartmentFact(
                 id="dept-1", name="Engineering",
@@ -145,6 +154,14 @@ class TestFallbackFindings:
         findings = build_fallback_findings(facts)
 
         assert len(findings) <= 5
+
+    def test_anomaly_severity_counting(self):
+        """lines 100-109: severity breakdown in findings."""
+        facts = _make_facts(anomaly_count=2, include_anomaly_facts=True)
+        findings = build_fallback_findings(facts)
+        severity_text = " ".join(findings)
+        assert "high-severity" in severity_text
+        assert "medium-severity" in severity_text
 
     def test_handles_zero_anomalies(self):
         facts = _make_facts(anomaly_count=0)

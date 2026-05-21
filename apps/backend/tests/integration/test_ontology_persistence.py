@@ -94,6 +94,46 @@ class TestOntologyRepository:
         assert model is not None
         assert model.full_name == "Alice"
 
+    def test_save_cost_centers(self, app_session):
+        """Cover save_cost_centers (lines 74-87)."""
+        repo = OntologyRepository(app_session)
+        cc = CostCenter(
+            id="cc1",
+            snapshot_id="s1",
+            source_cost_center_key="CC001",
+            source_lineage="{}",
+            code="CC001",
+            name="R&D",
+        )
+        repo.save_cost_centers([cc])
+
+        from ontology.schema import CostCenterModel
+        model = app_session.get(CostCenterModel, "cc1")
+        assert model is not None
+        assert model.name == "R&D"
+        assert model.code == "CC001"
+
+    def test_save_budget_codes(self, app_session):
+        """Cover save_budget_codes (lines 92-106)."""
+        repo = OntologyRepository(app_session)
+        bc = BudgetCode(
+            id="bc1",
+            snapshot_id="s1",
+            source_budget_code_key="B001",
+            source_lineage="{}",
+            code="B001",
+            name="Opex-IT",
+            category="Operating",
+        )
+        repo.save_budget_codes([bc])
+
+        from ontology.schema import BudgetCodeModel
+        model = app_session.get(BudgetCodeModel, "bc1")
+        assert model is not None
+        assert model.name == "Opex-IT"
+        assert model.code == "B001"
+        assert model.category == "Operating"
+
     def test_save_expense_claims_with_lineage(self, app_session):
         repo = OntologyRepository(app_session)
         claim = ExpenseClaim(

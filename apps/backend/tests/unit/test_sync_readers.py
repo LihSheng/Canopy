@@ -206,3 +206,74 @@ class TestBudgetCodeReader:
 
         assert len(result) == 1
         assert result[0].name == "Opex-IT"
+
+
+class TestSourceDatabaseManager:
+    """Cover _SourceDatabaseManager lazy init and set/reset (source_db.py lines 15-43, 52-65)."""
+
+    def test_source_engine_lazy_init(self):
+        """line 23-26: engine created on first access."""
+        from sync.source_db import _SourceDatabaseManager
+
+        mgr = _SourceDatabaseManager()
+        eng = mgr.source_engine()
+        assert eng is not None
+        # second call returns cached
+        assert mgr.source_engine() is eng
+
+    def test_source_session_factory_lazy_init(self):
+        """line 28-33: session factory created on first access."""
+        from sync.source_db import _SourceDatabaseManager
+
+        mgr = _SourceDatabaseManager()
+        factory = mgr.source_session_factory()
+        assert factory is not None
+
+    def test_set_source_engine(self):
+        """lines 35-39: set_source_engine replaces engine."""
+        from sqlalchemy import create_engine
+        from sync.source_db import _SourceDatabaseManager
+
+        mgr = _SourceDatabaseManager()
+        eng = create_engine("sqlite://")
+        mgr.set_source_engine(eng)
+        assert mgr.source_engine() is eng
+
+    def test_reset_source_engine(self):
+        """lines 41-43: reset clears cache."""
+        from sync.source_db import _SourceDatabaseManager
+
+        mgr = _SourceDatabaseManager()
+        _ = mgr.source_engine()  # trigger lazy init
+        mgr.reset_source_engine()
+        # After reset, a new call creates new engine
+        eng2 = mgr.source_engine()
+        assert eng2 is not None
+
+    def test_public_source_engine_function(self):
+        """line 52-53: source_engine() public function."""
+        from sync.source_db import source_engine
+
+        e = source_engine()
+        assert e is not None
+
+    def test_public_source_session_factory(self):
+        """line 56-57: source_session_factory() public function."""
+        from sync.source_db import source_session_factory
+
+        f = source_session_factory()
+        assert f is not None
+
+    def test_public_set_source_engine(self):
+        """line 60-61: set_source_engine() public function."""
+        from sqlalchemy import create_engine
+        from sync.source_db import set_source_engine
+
+        eng = create_engine("sqlite://")
+        set_source_engine(eng)
+
+    def test_public_reset_source_engine(self):
+        """line 64-65: reset_source_engine() public function."""
+        from sync.source_db import reset_source_engine
+
+        reset_source_engine()

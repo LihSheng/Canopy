@@ -110,3 +110,32 @@ class TestAuthServiceValidateSession:
         session = service.validate_session(login_result.token)
 
         assert session.authenticated is False
+
+
+class TestCreateTokenImpersonation:
+    """Cover _create_token impersonation branch (lines 37-39)."""
+
+    def test_create_token_with_impersonation(self):
+        from auth.service import _create_token
+
+        token, expires = _create_token(
+            user_id="admin-1",
+            tenant_id="tenant-1",
+            impersonated=True,
+            admin_id="admin-1",
+            impersonation_session_id="sess-1",
+        )
+        assert token is not None
+        assert expires is not None
+
+
+class TestLogout:
+    """Cover logout no-op (line 159)."""
+
+    def test_logout_does_nothing(self):
+        from unittest.mock import MagicMock
+        from auth.service import AuthService
+
+        service = AuthService(MagicMock())
+        # Should not raise
+        service.logout("some-token")
