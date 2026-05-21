@@ -1,6 +1,7 @@
 import json
-import threading
 import uuid
+
+from common.executor import background
 from collections.abc import Callable
 from datetime import datetime, timezone
 
@@ -46,13 +47,11 @@ class CloneEngine:
         with self._lock:
             self._runs[run.id] = run
 
-        thread = threading.Thread(
+        background.run(
             target=self._execute_clone,
             args=(run.id,),
-            daemon=True,
             name=f"clone-{run.id}",
         )
-        thread.start()
         return run
 
     def _execute_clone(self, run_id: str) -> None:

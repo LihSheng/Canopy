@@ -2,6 +2,7 @@ import threading
 import time
 from collections import defaultdict, deque
 
+from common.executor import background
 from quotas.domain import QuotaType
 from quotas.registry import DEFAULT_QUOTAS
 from quotas.usage_tracker import UsageTracker
@@ -20,7 +21,6 @@ class TenantJobQueue:
         self._registry = JobRegistry()
         self._tracker = UsageTracker()
         self._running = False
-        self._worker_thread: threading.Thread | None = None
 
     @property
     def registry(self) -> JobRegistry:
@@ -76,10 +76,10 @@ class TenantJobQueue:
         if self._running:
             return
         self._running = True
-        self._worker_thread = threading.Thread(
-            target=self._dispatch_loop, daemon=True, name="tenant-queue-dispatcher"
+        background.run(
+            target=self._dispatch_loop,
+            name="tenant-queue-dispatcher",
         )
-        self._worker_thread.start()
 
     def stop(self) -> None:
         self._running = False
@@ -94,13 +94,11 @@ class TenantJobQueue:
             job_id, job_callable, args, kwargs = item
             self._registry.update_status(job_id, JobStatus.RUNNING.value)
 
-            thread = threading.Thread(
+            background.run(
                 target=self._execute_job,
                 args=(job_id, job_callable, args, kwargs),
-                daemon=True,
                 name=f"tenant-job-{job_id}",
             )
-            thread.start()
 
     def _execute_job(
         self, job_id: str, job_callable, args: tuple, kwargs: dict

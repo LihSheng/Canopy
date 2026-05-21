@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from analytics.services.builder import run_aggregation_pipeline
+from analytics.services.monthly_aggregation_service import MonthlyAggregationService
 from anomalies.service import detect_anomalies
 from common.clock import utcnow
 from insights.service import generate_insight
@@ -112,8 +112,8 @@ class RefreshOrchestrator:
 
     def _rebuild_aggregates(self, job: RefreshJob) -> None:
         current_month, previous_month = self._resolve_months()
-        run_aggregation_pipeline(
-            db=self._app_db,
+        service = MonthlyAggregationService(self._app_db)
+        service.compute_monthly_spends(
             snapshot_id=job.snapshot_id or "",
             current_month=current_month,
             previous_month=previous_month,

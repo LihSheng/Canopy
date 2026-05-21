@@ -5,13 +5,13 @@ from exports.domain import (
     DepartmentExportRow,
     ExportPayload,
 )
-from exports.service import _build_payload, _collect_departments, _collect_trends
+from exports.payload import _collect_departments, _collect_trends, build_payload
 
 
 class TestExportServiceBuildPayload:
-    def test_build_payload_uses_dashboard_summary(self, db_session, seed_analytics_data):
+    def testbuild_payload_uses_dashboard_summary(self, db_session, seed_analytics_data):
         db = seed_analytics_data
-        payload = _build_payload(db, include_departments=True, include_anomalies=True)
+        payload = build_payload(db, include_departments=True, include_anomalies=True)
 
         assert payload.snapshot_id == "test-snapshot-001"
         assert payload.department_count == 6
@@ -19,24 +19,24 @@ class TestExportServiceBuildPayload:
         assert payload.summary_claims > 0
         assert payload.period_label == "2026-05"
 
-    def test_build_payload_includes_departments(self, db_session, seed_analytics_data):
+    def testbuild_payload_includes_departments(self, db_session, seed_analytics_data):
         db = seed_analytics_data
-        payload = _build_payload(db, include_departments=True, include_anomalies=False)
+        payload = build_payload(db, include_departments=True, include_anomalies=False)
 
         assert len(payload.departments) > 0
         assert len(payload.anomalies) == 0
         dept_names = [d.department_name for d in payload.departments]
         assert "Engineering" in dept_names
 
-    def test_build_payload_includes_anomalies(self, db_session, seed_analytics_data):
+    def testbuild_payload_includes_anomalies(self, db_session, seed_analytics_data):
         db = seed_analytics_data
-        payload = _build_payload(db, include_departments=False, include_anomalies=True)
+        payload = build_payload(db, include_departments=False, include_anomalies=True)
 
         assert len(payload.departments) == 0
 
-    def test_build_payload_includes_trends(self, db_session, seed_analytics_data):
+    def testbuild_payload_includes_trends(self, db_session, seed_analytics_data):
         db = seed_analytics_data
-        payload = _build_payload(db, include_departments=False, include_anomalies=False)
+        payload = build_payload(db, include_departments=False, include_anomalies=False)
 
         assert len(payload.trends) > 0
         months = [t.month for t in payload.trends]
@@ -64,7 +64,7 @@ class TestExportServiceSnapshotAlignment:
         from analytics.service import get_dashboard_summary
 
         db = seed_analytics_data
-        payload = _build_payload(db, include_departments=True, include_anomalies=True)
+        payload = build_payload(db, include_departments=True, include_anomalies=True)
         dashboard = get_dashboard_summary(db)
 
         assert payload.summary_payroll == dashboard.total_payroll

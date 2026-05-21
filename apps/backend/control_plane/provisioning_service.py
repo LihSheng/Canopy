@@ -1,8 +1,8 @@
-import threading
 import uuid
 
 from common.clock import utcnow
 from common.database import session_factory
+from common.executor import background
 from cache.hooks import after_tenant_provisioned
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
@@ -97,13 +97,11 @@ class ProvisioningService:
         self._db.commit()
         self._db.refresh(job)
 
-        thread = threading.Thread(
+        background.run(
             target=_execute_provisioning,
             args=(job.id,),
-            daemon=True,
             name=f"provision-{job.id}",
         )
-        thread.start()
 
         return job
 

@@ -1,18 +1,15 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/hooks/use-session", () => ({
-  useSession: () => ({
-    user: { id: "1", email: "test@test.com", display_name: "Test User" },
-    loading: false, error: null, refetch: vi.fn(), logout: vi.fn(),
-  }),
-}));
+vi.mock("@/hooks/use-session", async () => {
+  const { createSessionMock } = await import("@/tests/mocks/session");
+  return { useSession: () => createSessionMock() };
+});
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  usePathname: () => "/dashboard/departments",
-  useSearchParams: () => new URLSearchParams(),
-}));
+vi.mock("next/navigation", async () => {
+  const { createRouterMock } = await import("@/tests/mocks/navigation");
+  return createRouterMock({ pathname: "/dashboard/departments" });
+});
 
 import { DepartmentRankedRow } from "@/components/departments/department-ranked-row";
 import { DepartmentsFilterBar } from "@/components/departments/departments-filter-bar";

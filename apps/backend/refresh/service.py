@@ -1,9 +1,9 @@
-import threading
 import uuid
 
 from api.schemas.refresh import RefreshJobResponse, RefreshRequestResponse, RefreshStatusResponse
 from common.clock import iso_now, utcnow
 from common.database import session_factory
+from common.executor import background
 from refresh.domain import RefreshJob
 from refresh.orchestration.service import RefreshOrchestrator
 from refresh.repository import RefreshRepository
@@ -26,13 +26,11 @@ def trigger_refresh(user_id: str | None = None) -> RefreshRequestResponse:
     finally:
         db.close()
 
-    thread = threading.Thread(
+    background.run(
         target=_run_refresh,
         args=(job_id,),
-        daemon=True,
         name=f"refresh-{job_id}",
     )
-    thread.start()
 
     return RefreshRequestResponse(accepted=True, job_id=job_id)
 

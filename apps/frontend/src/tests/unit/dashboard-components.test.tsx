@@ -3,21 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 
 const mockPush = vi.fn();
 
-vi.mock("@/hooks/use-session", () => ({
-  useSession: () => ({
-    user: { id: "1", email: "test@test.com", display_name: "Test User" },
-    loading: false,
-    error: null,
-    refetch: vi.fn(),
-    logout: vi.fn(),
-  }),
-}));
+vi.mock("@/hooks/use-session", async () => {
+  const { createSessionMock } = await import("@/tests/mocks/session");
+  return { useSession: () => createSessionMock() };
+});
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, replace: vi.fn() }),
-  usePathname: () => "/dashboard",
-  useSearchParams: () => new URLSearchParams(),
-}));
+vi.mock("next/navigation", async () => {
+  const { createRouterMock } = await import("@/tests/mocks/navigation");
+  return createRouterMock({ push: mockPush, pathname: "/dashboard" });
+});
 
 vi.mock("@/lib/api/dashboard", () => ({
   fetchSummary: vi.fn(),

@@ -1,6 +1,7 @@
 import os
-import threading
 import uuid
+
+from common.executor import background
 from collections.abc import Callable
 from datetime import datetime, timezone
 
@@ -45,13 +46,11 @@ class BackupEngine:
         with self._lock:
             self._runs[run.id] = run
 
-        thread = threading.Thread(
+        background.run(
             target=self._execute_backup,
             args=(run.id,),
-            daemon=True,
             name=f"backup-{run.id}",
         )
-        thread.start()
         return run
 
     def _execute_backup(self, run_id: str) -> None:

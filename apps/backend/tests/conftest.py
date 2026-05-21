@@ -15,7 +15,7 @@ from ontology.schema import (
     ExpenseClaimModel,
     PayrollExpenseModel,
 )
-from analytics.services.builder import run_aggregation_pipeline
+from analytics.services.monthly_aggregation_service import MonthlyAggregationService
 from tenant_data.base import TenantDataBase
 
 _TEST_SERVER_URL = os.environ.get(
@@ -297,8 +297,7 @@ def seed_analytics_data(db_session):
     _seed_claims(db_session)
     db_session.commit()
 
-    run_aggregation_pipeline(
-        db=db_session,
+    MonthlyAggregationService(db_session).compute_monthly_spends(
         snapshot_id=_SNAPSHOT_ID,
         current_month="2026-05",
         previous_month="2026-04",

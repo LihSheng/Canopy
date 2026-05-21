@@ -52,7 +52,7 @@ class TestRefreshStatusTransitions:
                 return_value=mock_onto_orch,
             ),
             patch(
-                "refresh.orchestration.service.run_aggregation_pipeline",
+                "analytics.services.monthly_aggregation_service.run_aggregation_pipeline",
             ),
             patch(
                 "refresh.orchestration.service.detect_anomalies",
@@ -110,7 +110,7 @@ class TestRefreshStatusTransitions:
                 return_value=mock_onto_orch,
             ),
             patch(
-                "refresh.orchestration.service.run_aggregation_pipeline",
+                "analytics.services.monthly_aggregation_service.run_aggregation_pipeline",
                 side_effect=make_stage_fn("rebuild_aggregates"),
             ),
             patch(
@@ -168,7 +168,7 @@ class TestPublishGating:
                 return_value=mock_onto_orch,
             ),
             patch(
-                "refresh.orchestration.service.run_aggregation_pipeline",
+                "analytics.services.monthly_aggregation_service.run_aggregation_pipeline",
             ),
             patch(
                 "refresh.orchestration.service.detect_anomalies",
@@ -233,7 +233,7 @@ class TestFailureHandling:
                 return_value=mock_onto_orch,
             ),
             patch(
-                "refresh.orchestration.service.run_aggregation_pipeline",
+                "analytics.services.monthly_aggregation_service.run_aggregation_pipeline",
                 side_effect=RuntimeError("DB timeout"),
             ),
             patch.object(
