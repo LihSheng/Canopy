@@ -4,8 +4,8 @@ interface SessionMock {
   user: { id: string; email: string; display_name: string } | null;
   loading: boolean;
   error: string | null;
-  refetch: (...args: any[]) => any;
-  logout: (...args: any[]) => any;
+  refetch: (...args: unknown[]) => void;
+  logout: (...args: unknown[]) => void;
 }
 
 export const createSessionMock = (overrides?: Partial<SessionMock>): SessionMock => ({
