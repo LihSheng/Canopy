@@ -78,9 +78,25 @@ jobs:
   backend-unit:
     runs-on: ubuntu-latest
     needs: backend-lint-format-typecheck
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: apps/backend
+    env:
+      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -93,9 +109,25 @@ jobs:
   backend-integration:
     runs-on: ubuntu-latest
     needs: backend-lint-format-typecheck
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: apps/backend
+    env:
+      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -110,9 +142,25 @@ jobs:
   backend-coverage:
     runs-on: ubuntu-latest
     needs: [backend-unit, backend-integration]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: apps/backend
+    env:
+      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -174,9 +222,25 @@ jobs:
   backend-api-schema-gate:
     runs-on: ubuntu-latest
     needs: backend-lint-format-typecheck
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: apps/backend
+    env:
+      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -189,9 +253,25 @@ jobs:
   backend-business-rule-gate:
     runs-on: ubuntu-latest
     needs: backend-lint-format-typecheck
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: apps/backend
+    env:
+      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -214,9 +294,25 @@ jobs:
       - frontend-analytics-shell-gate
       - backend-api-schema-gate
       - backend-business-rule-gate
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: apps/backend
+    env:
+      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
