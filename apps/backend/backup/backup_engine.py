@@ -79,7 +79,7 @@ class BackupEngine:
             run.snapshot_ref = f"pg_dump:{run.tenant_id}:{run.id}"
 
             run.status = BackupStatus.COMPLETED
-            run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(datetime.UTC)
 
             audit_service = self._audit_service_cls(session)
             audit_service.record_event(

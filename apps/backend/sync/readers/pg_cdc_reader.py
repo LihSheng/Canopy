@@ -106,9 +106,12 @@ class PostgresCdcReader:
                         except Exception as inner_err:
                             logger.error(f"Error reading replication message: {inner_err}")
                             await asyncio.sleep(1)
-                            
+
         except Exception as e:
-            logger.error(f"PostgreSQL CDC streaming worker failed to start: {e}. Falling back to simulation.")
+            logger.error(
+                f"PostgreSQL CDC streaming worker failed to start: {e}. "
+                "Falling back to simulation."
+            )
             await self._run_simulation(storage_path, on_event)
 
     async def _run_simulation(self, storage_path: Path, on_event: Callable[[dict], Any] | None = None) -> None:

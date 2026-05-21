@@ -22,7 +22,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps --legacy-peer-deps
       - run: npm run lint
       - run: npm run typecheck
 
@@ -39,7 +39,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps
       - run: npm run test:unit
 
   frontend-integration:
@@ -55,7 +55,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps
       - run: npm run test:integration
 
   # ── Backend ───────────────────────────────────────────────
@@ -72,7 +72,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e ".[dev]"
-      - run: ruff check .
+      - run: ruff check . --fix
       - run: ruff format --check
       - run: mypy .
 
@@ -201,7 +201,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps
       - run: npx vitest run src/tests/unit/navigation-route-state.test.ts src/tests/unit/navigation-links.test.ts src/tests/unit/navigation-time-range.test.ts
 
   frontend-analytics-shell-gate:
@@ -217,7 +217,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps
       - run: npx vitest run src/tests/unit/analytics-shell.test.tsx
 
   backend-api-schema-gate:

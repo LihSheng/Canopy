@@ -109,7 +109,7 @@ class CloneEngine:
             session.refresh(new_tenant)
 
             run.status = BackupStatus.COMPLETED
-            run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(datetime.UTC)
             run.new_database_target_ref = db_target.id
 
             audit_service = self._audit_service_cls(session)

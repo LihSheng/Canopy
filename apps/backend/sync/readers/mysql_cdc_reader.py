@@ -110,7 +110,10 @@ class MysqlCdcReader:
                 stream.close()
                 
         except Exception as e:
-            logger.error(f"MySQL CDC binlog streaming reader failed: {e}. Falling back to simulation.")
+            logger.error(
+                f"MySQL CDC binlog streaming reader failed: {e}. "
+                "Falling back to simulation."
+            )
             await self._run_simulation(storage_path, on_event)
 
     async def _run_simulation(self, storage_path: Path, on_event: Callable[[dict], Any] | None = None) -> None:
