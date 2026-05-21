@@ -25,11 +25,11 @@ const DEFAULT_POLICY: SyncPolicy = {
   frequencyMinutes: 1440,
 };
 
-function isDbSource(source: string): boolean {
+const isDbSource = (source: string): boolean => {
   return source === "postgresql" || source === "mysql";
 }
 
-export function SourceSetupWizard() {
+export const SourceSetupWizard = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sourceType = searchParams.get("source") ?? "static_file";

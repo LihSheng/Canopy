@@ -7,11 +7,11 @@ type Props = {
   activeVersionNumber: number | undefined;
 };
 
-function formatNumber(n: number): string {
+const formatNumber = (n: number): string => {
   return n.toLocaleString();
 }
 
-export function DatasetSummaryCards({ health, versionCount, activeVersionNumber }: Props) {
+export const DatasetSummaryCards = ({ health, versionCount, activeVersionNumber }: Props) => {
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="rounded-lg border border-zinc-200 bg-white p-4">

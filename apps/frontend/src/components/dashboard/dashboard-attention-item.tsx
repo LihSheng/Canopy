@@ -9,7 +9,7 @@ type Props = {
   timeRange: TimeRangeKey;
 };
 
-export function DashboardAttentionItem({ item, timeRange }: Props) {
+export const DashboardAttentionItem = ({ item, timeRange }: Props) => {
   const detailLink = buildDashboardToDepartmentDetailLink(
     item.departmentId,
     timeRange,

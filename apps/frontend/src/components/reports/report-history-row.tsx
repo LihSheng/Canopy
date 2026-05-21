@@ -19,7 +19,7 @@ const STATUS_LABELS: Record<ExportHistoryItem["status"], string> = {
   failed: "Failed",
 };
 
-export function ReportHistoryRow({
+export const ReportHistoryRow = ({
   item,
   onRerun,
   exporting,
@@ -27,7 +27,7 @@ export function ReportHistoryRow({
   item: ExportHistoryItem;
   onRerun: (id: string) => void;
   exporting: string | null;
-}) {
+}) => {
   const [showDetails, setShowDetails] = useState(false);
 
   const timeLabel = TIME_RANGE_LABELS[item.timeRange] ?? item.timeRange;

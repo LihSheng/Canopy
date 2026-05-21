@@ -9,7 +9,7 @@ type Props = {
   error: string | null;
 };
 
-function isNumeric(value: string | number | boolean | null): boolean {
+const isNumeric = (value: string | number | boolean | null): boolean => {
   if (value === null) return false;
   if (typeof value === "boolean") return false;
   if (typeof value === "number") return true;
@@ -18,7 +18,7 @@ function isNumeric(value: string | number | boolean | null): boolean {
   return !isNaN(Number(trimmed));
 }
 
-function inferColumnTypes(columns: string[], rows: (string | number | boolean | null)[][]): { numeric: number; text: number } {
+const inferColumnTypes = (columns: string[], rows: (string | number | boolean | null)[][]): { numeric: number; text: number } => {
   const sampleRows = rows.slice(0, 20);
   let numericCount = 0;
   let textCount = 0;
@@ -40,7 +40,7 @@ function inferColumnTypes(columns: string[], rows: (string | number | boolean | 
   return { numeric: numericCount, text: textCount };
 }
 
-export function DatasetCharts({ columns, rows, loading, error }: Props) {
+export const DatasetCharts = ({ columns, rows, loading, error }: Props) => {
   if (loading) {
     return <LoadingSpinner text="Loading charts..." />;
   }

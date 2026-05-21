@@ -8,7 +8,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
 import { ROUTES, UI_LABELS, errorMessageFailedToLoad } from "@/lib/constants";
 
-export default function SourceCatalogContent() {
+const SourceCatalogContent = () => {
   const [sources, setSources] = useState<SourceType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +77,9 @@ export default function SourceCatalogContent() {
     </div>
   );
 }
+export default SourceCatalogContent;
 
-function SourceCard({ source }: { source: SourceType }) {
+const SourceCard = ({ source }: { source: SourceType }) => {
   return (
     <Link
       href={source.enabled ? ROUTES.connections.setupWithSource(source.key) : "#"}

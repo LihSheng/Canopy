@@ -1,13 +1,13 @@
 import { formatCurrency } from "@/lib/formatters";
 import type { EmployeeContribution } from "@/lib/api/types";
 
-export function EmployeeContributionTable({
+export const EmployeeContributionTable = ({
   data,
   loading,
 }: {
   data: EmployeeContribution[];
   loading?: boolean;
-}) {
+}) => {
   if (loading) {
     return <TableSkeleton cols={4} rows={5} />;
   }
@@ -62,7 +62,7 @@ export function EmployeeContributionTable({
   );
 }
 
-export function TableSkeleton({ cols, rows }: { cols: number; rows: number }) {
+export const TableSkeleton = ({ cols, rows }: { cols: number; rows: number }) => {
   return (
     <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
       <div className="border-b border-zinc-100 px-6 py-3">

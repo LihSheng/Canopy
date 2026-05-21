@@ -1,7 +1,7 @@
 import { NoticeBanner } from "./notice-banner";
 import { UI_LABELS } from "@/lib/constants";
 
-export function EmptyState({
+export const EmptyState = ({
   title = UI_LABELS.noData,
   description,
   variant = "default",
@@ -9,7 +9,7 @@ export function EmptyState({
   title?: string;
   description?: string;
   variant?: "default" | "minimal";
-}) {
+}) => {
   if (variant === "minimal") {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">

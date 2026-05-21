@@ -5,7 +5,7 @@ type Props = {
   health: DatasetHealth;
 };
 
-export function HealthPanel({ health }: Props) {
+export const HealthPanel = ({ health }: Props) => {
   return (
     <div className="rounded-lg border border-zinc-200 bg-white">
       <div className="border-b border-zinc-100 px-4 py-3">
@@ -53,7 +53,7 @@ export function HealthPanel({ health }: Props) {
   );
 }
 
-function Metric({
+const Metric = ({
   label,
   value,
   valueClass,
@@ -61,7 +61,7 @@ function Metric({
   label: string;
   value: string;
   valueClass?: string;
-}) {
+}) => {
   return (
     <div>
       <span className="text-xs font-medium text-zinc-500">{label}</span>

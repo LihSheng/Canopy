@@ -9,7 +9,7 @@ type Props = {
   timeRange: TimeRangeKey;
 };
 
-export function DashboardAttentionPanel({ items, timeRange }: Props) {
+export const DashboardAttentionPanel = ({ items, timeRange }: Props) => {
   const viewAllLink = buildDashboardToAnomaliesLink(timeRange);
 
   return (
@@ -45,7 +45,7 @@ export function DashboardAttentionPanel({ items, timeRange }: Props) {
   );
 }
 
-export function DashboardAttentionPanelSkeleton() {
+export const DashboardAttentionPanelSkeleton = () => {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white">
       <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3.5">

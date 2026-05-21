@@ -12,7 +12,7 @@ type Props = {
   onClick?: () => void;
 };
 
-export function AnalyticsSidebarItem({ href, icon, label, active, collapsed, onClick }: Props) {
+export const AnalyticsSidebarItem = ({ href, icon, label, active, collapsed, onClick }: Props) => {
   return (
     <Link
       href={href}

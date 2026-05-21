@@ -20,13 +20,13 @@ export type DepartmentDetailState = {
   anomalyId?: string;
 };
 
-export function readDashboardState(params: URLSearchParams | ReadonlyURLSearchParams): DashboardPageState {
+export const readDashboardState = (params: URLSearchParams | ReadonlyURLSearchParams): DashboardPageState => {
   return {
     timeRange: parseTimeRange(params.get(QUERY_PARAMS.range)),
   };
 }
 
-export function readAnomalyState(params: URLSearchParams | ReadonlyURLSearchParams): AnomalyPageState {
+export const readAnomalyState = (params: URLSearchParams | ReadonlyURLSearchParams): AnomalyPageState => {
   const severity = params.get(QUERY_PARAMS.severity);
   return {
     timeRange: parseTimeRange(params.get(QUERY_PARAMS.range)),
@@ -38,9 +38,9 @@ export function readAnomalyState(params: URLSearchParams | ReadonlyURLSearchPara
   };
 }
 
-export function readDepartmentDetailState(
+export const readDepartmentDetailState = (
   params: URLSearchParams | ReadonlyURLSearchParams,
-): DepartmentDetailState {
+): DepartmentDetailState => {
   const source = params.get(QUERY_PARAMS.source);
   return {
     departmentId: params.get(QUERY_PARAMS.departmentId) ?? "",
@@ -55,7 +55,7 @@ export function readDepartmentDetailState(
   };
 }
 
-export function writeDashboardState(state: DashboardPageState): URLSearchParams {
+export const writeDashboardState = (state: DashboardPageState): URLSearchParams => {
   const params = new URLSearchParams();
   if (state.timeRange !== DEFAULT_TIME_RANGE) {
     params.set(QUERY_PARAMS.range, state.timeRange);
@@ -63,7 +63,7 @@ export function writeDashboardState(state: DashboardPageState): URLSearchParams 
   return params;
 }
 
-export function writeAnomalyState(state: AnomalyPageState): URLSearchParams {
+export const writeAnomalyState = (state: AnomalyPageState): URLSearchParams => {
   const params = new URLSearchParams();
   if (state.timeRange !== DEFAULT_TIME_RANGE) {
     params.set(QUERY_PARAMS.range, state.timeRange);
@@ -77,7 +77,7 @@ export function writeAnomalyState(state: AnomalyPageState): URLSearchParams {
   return params;
 }
 
-export function writeDepartmentDetailState(state: DepartmentDetailState): URLSearchParams {
+export const writeDepartmentDetailState = (state: DepartmentDetailState): URLSearchParams => {
   const params = new URLSearchParams();
   if (state.timeRange !== DEFAULT_TIME_RANGE) {
     params.set(QUERY_PARAMS.range, state.timeRange);

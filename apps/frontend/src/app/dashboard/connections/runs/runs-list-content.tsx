@@ -9,7 +9,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
 import { UI_LABELS, errorMessageFailedToLoad } from "@/lib/constants";
 
-export default function RunsListContent() {
+const RunsListContent = () => {
   const [runs, setRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,3 +45,4 @@ export default function RunsListContent() {
 
   return <RunHistory runs={runs} />;
 }
+export default RunsListContent;

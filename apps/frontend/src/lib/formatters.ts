@@ -7,28 +7,28 @@ const currencyFormatter = new Intl.NumberFormat(DEFAULT_LOCALE, {
   maximumFractionDigits: 0,
 });
 
-export function formatCurrency(value: number): string {
+export const formatCurrency = (value: number): string => {
   return currencyFormatter.format(value);
 }
 
-export function formatPercent(value: number): string {
+export const formatPercent = (value: number): string => {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(1)}%`;
 }
 
-export function getChangeColor(value: number): string {
+export const getChangeColor = (value: number): string => {
   if (value > 5) return "text-red-600";
   if (value < -5) return "text-emerald-600";
   return "text-zinc-500";
 }
 
-export function getChangeBgColor(value: number): string {
+export const getChangeBgColor = (value: number): string => {
   if (value > 5) return "bg-red-50 text-red-700";
   if (value < -5) return "bg-emerald-50 text-emerald-700";
   return "bg-zinc-50 text-zinc-600";
 }
 
-export function getSeverityColor(severity: Severity): string {
+export const getSeverityColor = (severity: Severity): string => {
   switch (severity) {
     case "high":
       return "bg-red-50 text-red-700 border-red-200";

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { STATUS_COLORS, ROUTES } from "@/lib/constants";
 import type { Run } from "@/lib/api/types";
 
-function formatDuration(ms: number | null): string {
+const formatDuration = (ms: number | null): string => {
   if (ms === null) return "--";
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
@@ -18,7 +18,7 @@ type Props = {
   datasetId?: string;
 };
 
-export function RunHistory({ runs = [], datasetId }: Props) {
+export const RunHistory = ({ runs = [], datasetId }: Props) => {
   if (!runs || runs.length === 0) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-zinc-500">

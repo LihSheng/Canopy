@@ -3,13 +3,13 @@ import { SummaryCard } from "./summary-card";
 import { getSeverityColor } from "@/lib/formatters";
 import type { Anomaly } from "@/lib/api/types";
 
-export function AnomalyHighlightsCard({
+export const AnomalyHighlightsCard = ({
   anomalies,
   loading,
 }: {
   anomalies: Anomaly[];
   loading?: boolean;
-}) {
+}) => {
   if (loading) {
     return (
       <SummaryCard title="Anomalies">

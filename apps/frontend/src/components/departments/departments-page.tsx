@@ -20,7 +20,7 @@ type DataState =
   | { status: "error"; message: string }
   | { status: "success"; items: DepartmentRankingItem[] };
 
-export function DepartmentsPage() {
+export const DepartmentsPage = () => {
   const [search, setSearch] = useState("");
   const [attentionOnly, setAttentionOnly] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("this_month");

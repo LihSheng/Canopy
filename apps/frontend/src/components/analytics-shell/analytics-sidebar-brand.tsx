@@ -7,7 +7,7 @@ type Props = {
   collapsed: boolean;
 };
 
-export function AnalyticsSidebarBrand({ collapsed }: Props) {
+export const AnalyticsSidebarBrand = ({ collapsed }: Props) => {
   return (
     <div
       className={`flex items-center border-b border-zinc-200 px-3 ${

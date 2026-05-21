@@ -12,13 +12,13 @@ import {
 } from "recharts";
 import type { TrendChartData } from "@/lib/mappers";
 
-export function MonthlyTrendChart({
+export const MonthlyTrendChart = ({
   data,
   loading,
 }: {
   data: TrendChartData[];
   loading?: boolean;
-}) {
+}) => {
   if (loading) {
     return <ChartSkeleton />;
   }
@@ -96,7 +96,7 @@ export function MonthlyTrendChart({
   );
 }
 
-function ChartSkeleton() {
+const ChartSkeleton = () => {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6">
       <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
@@ -105,7 +105,7 @@ function ChartSkeleton() {
   );
 }
 
-function ChartEmpty() {
+const ChartEmpty = () => {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6">
       <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-500">

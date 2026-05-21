@@ -21,7 +21,7 @@ interface TenantContextValue {
 
 const TenantCtx = createContext<TenantContextValue | null>(null);
 
-export function useTenant(): TenantContextValue {
+export const useTenant = (): TenantContextValue => {
   const ctx = useContext(TenantCtx);
   if (!ctx) {
     throw new Error("useTenant must be used within SessionGuard");
@@ -29,7 +29,7 @@ export function useTenant(): TenantContextValue {
   return ctx;
 }
 
-export function SessionGuard({ children }: SessionGuardProps) {
+export const SessionGuard = ({ children }: SessionGuardProps) => {
   const { user, loading } = useSession();
   const router = useRouter();
   const pathname = usePathname();

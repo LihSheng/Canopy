@@ -28,7 +28,7 @@ type DataState =
   | { status: "error"; message: string }
   | { status: "success"; view: DashboardCommandView };
 
-export function DashboardPage() {
+export const DashboardPage = () => {
   const searchParams = useSearchParams();
   const { timeRange } = readDashboardState(searchParams);
   const { status: refreshStatus } = useRefreshPoller();

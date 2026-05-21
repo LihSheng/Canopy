@@ -135,7 +135,7 @@ export const UI_LABELS = {
 } as const;
 
 // ─── Error Message Patterns ───
-export function errorMessageFailedToLoad(resource: string): string {
+export const errorMessageFailedToLoad = (resource: string): string => {
   return `Failed to load ${resource}`;
 }
 

@@ -21,7 +21,7 @@ export type AnomalyListView = {
   groups: AnomalyGroup[];
 };
 
-export function mapAnomalyListView(anomalies: Anomaly[]): AnomalyListView {
+export const mapAnomalyListView = (anomalies: Anomaly[]): AnomalyListView => {
   const map = new Map<string, AnomalyListItem[]>();
 
   for (const a of anomalies) {
@@ -56,11 +56,11 @@ export function mapAnomalyListView(anomalies: Anomaly[]): AnomalyListView {
   };
 }
 
-export function filterAnomalies(
+export const filterAnomalies = (
   items: AnomalyListItem[],
   severity: "high" | "medium" | "low" | null,
   departmentId?: string,
-): AnomalyListItem[] {
+): AnomalyListItem[] => {
   let filtered = items;
 
   if (severity) {

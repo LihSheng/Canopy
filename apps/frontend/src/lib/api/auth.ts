@@ -26,24 +26,24 @@ export interface SessionResponse {
   tenants: TenantInfo[];
 }
 
-export async function login(payload: LoginPayload): Promise<LoginResponse> {
+export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
   return request<LoginResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-export async function logout(): Promise<void> {
+export const logout = async (): Promise<void> => {
   await request("/api/auth/logout", { method: "POST" });
 }
 
-export async function getSession(): Promise<SessionResponse> {
+export const getSession = async (): Promise<SessionResponse> => {
   return request<SessionResponse>("/api/auth/session");
 }
 
-export async function switchTenant(
+export const switchTenant = async (
   tenantId: string
-): Promise<SessionResponse> {
+): Promise<SessionResponse> => {
   return request<SessionResponse>("/api/auth/switch-tenant", {
     method: "POST",
     body: JSON.stringify({ tenant_id: tenantId }),

@@ -22,7 +22,7 @@ type ToastContextValue = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const dismissToast = useCallback((id: string) => {
@@ -53,7 +53,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useToast(): ToastContextValue {
+export const useToast = (): ToastContextValue => {
   const ctx = useContext(ToastContext);
   if (!ctx) {
     throw new Error("useToast must be used within ToastProvider");
@@ -61,13 +61,13 @@ export function useToast(): ToastContextValue {
   return ctx;
 }
 
-function ToastViewport({
+const ToastViewport = ({
   toasts,
   onDismiss,
 }: {
   toasts: ToastItem[];
   onDismiss: (id: string) => void;
-}) {
+}) => {
   if (toasts.length === 0) {
     return null;
   }

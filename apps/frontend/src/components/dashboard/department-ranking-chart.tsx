@@ -11,13 +11,13 @@ import {
 } from "recharts";
 import type { DepartmentSummary } from "@/lib/api/types";
 
-export function DepartmentRankingChart({
+export const DepartmentRankingChart = ({
   data,
   loading,
 }: {
   data: DepartmentSummary[];
   loading?: boolean;
-}) {
+}) => {
   if (loading) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white p-6">

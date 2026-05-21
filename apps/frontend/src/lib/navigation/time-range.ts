@@ -8,7 +8,7 @@ export const TIME_RANGE_LABELS: Record<TimeRangeKey, string> = {
   last_12_months: "Last 12 months",
 };
 
-export function parseTimeRange(raw: string | null | undefined): TimeRangeKey {
+export const parseTimeRange = (raw: string | null | undefined): TimeRangeKey => {
   if (raw === "last_3_months" || raw === "last_12_months") return raw;
   return DEFAULT_TIME_RANGE;
 }

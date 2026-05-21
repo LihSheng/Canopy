@@ -23,7 +23,7 @@ type DataState =
   | { status: "error"; message: string }
   | { status: "success"; view: ReportsWorkspaceView };
 
-export function ReportsPage() {
+export const ReportsPage = () => {
   const searchParams = useSearchParams();
   const { timeRange } = readDashboardState(searchParams);
 

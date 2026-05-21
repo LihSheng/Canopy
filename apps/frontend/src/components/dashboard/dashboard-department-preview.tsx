@@ -9,7 +9,7 @@ type Props = {
   timeRange: TimeRangeKey;
 };
 
-export function DashboardDepartmentPreview({ departments, timeRange }: Props) {
+export const DashboardDepartmentPreview = ({ departments, timeRange }: Props) => {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white">
       <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3.5">
@@ -71,7 +71,7 @@ export function DashboardDepartmentPreview({ departments, timeRange }: Props) {
   );
 }
 
-export function DashboardDepartmentPreviewSkeleton() {
+export const DashboardDepartmentPreviewSkeleton = () => {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white">
       <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3.5">

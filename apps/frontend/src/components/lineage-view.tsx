@@ -3,7 +3,7 @@ type Props = {
   edges: { from: string; to: string; type: string }[];
 };
 
-export function LineageView({ nodes = [], edges = [] }: Props) {
+export const LineageView = ({ nodes = [], edges = [] }: Props) => {
   if (!nodes || nodes.length === 0) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-zinc-500">

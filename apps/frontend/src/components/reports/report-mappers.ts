@@ -41,12 +41,12 @@ export type ReportsWorkspaceView = {
   recentExports: ExportHistoryItem[];
 };
 
-function mapStatus(raw: string): ExportHistoryItem["status"] {
+const mapStatus = (raw: string): ExportHistoryItem["status"] => {
   if (raw === "running" || raw === "completed" || raw === "failed") return raw;
   return "queued";
 }
 
-export function mapExportJob(job: ExportJob): ExportHistoryItem {
+export const mapExportJob = (job: ExportJob): ExportHistoryItem => {
   return {
     id: job.id,
     presetName: job.preset_name,
@@ -59,7 +59,7 @@ export function mapExportJob(job: ExportJob): ExportHistoryItem {
   };
 }
 
-export function mapReportsWorkspace(jobs: ExportJob[]): ReportsWorkspaceView {
+export const mapReportsWorkspace = (jobs: ExportJob[]): ReportsWorkspaceView => {
   return {
     presets: EXPORT_PRESETS,
     recentExports: jobs.map(mapExportJob),

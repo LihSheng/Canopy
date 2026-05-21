@@ -11,11 +11,11 @@ interface TenantSwitcherProps {
   onTenantSwitch: () => void;
 }
 
-export function TenantSwitcher({
+export const TenantSwitcher = ({
   tenants,
   activeTenantId,
   onTenantSwitch,
-}: TenantSwitcherProps) {
+}: TenantSwitcherProps) => {
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

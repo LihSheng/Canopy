@@ -5,7 +5,7 @@ import { ErrorState } from "@/components/shared/error-state";
 import { useSession } from "@/hooks/use-session";
 import { ProfileIdentityCard, ProfileIdentityCardSkeleton } from "./profile-identity-card";
 
-export function ProfilePage() {
+export const ProfilePage = () => {
   const { user, loading, error, refetch } = useSession();
 
   const breadcrumbItems = [

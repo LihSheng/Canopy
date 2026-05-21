@@ -17,7 +17,7 @@ const SEVERITY_LABELS: Record<string, string> = {
   low: "Low severity",
 };
 
-export function AnomaliesGroup({ group, timeRange, expandedByDefault }: Props) {
+export const AnomaliesGroup = ({ group, timeRange, expandedByDefault }: Props) => {
   const [expanded, setExpanded] = useState(expandedByDefault);
 
   return (

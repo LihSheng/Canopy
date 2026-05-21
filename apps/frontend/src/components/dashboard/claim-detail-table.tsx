@@ -1,13 +1,13 @@
 import { formatCurrency } from "@/lib/formatters";
 import type { ClaimDetail } from "@/lib/api/types";
 
-export function ClaimDetailTable({
+export const ClaimDetailTable = ({
   data,
   loading,
 }: {
   data: ClaimDetail[];
   loading?: boolean;
-}) {
+}) => {
   if (loading) {
     return (
       <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">

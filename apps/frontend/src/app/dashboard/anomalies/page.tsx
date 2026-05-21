@@ -3,10 +3,11 @@ import { AnomaliesPage as AnomaliesPageContent } from "@/components/anomalies/an
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { UI_LABELS } from "@/lib/constants";
 
-export default function AnomaliesPage() {
+const AnomaliesPage = () => {
   return (
     <Suspense fallback={<LoadingSpinner text={UI_LABELS.loading} />}>
       <AnomaliesPageContent />
     </Suspense>
   );
 }
+export default AnomaliesPage;

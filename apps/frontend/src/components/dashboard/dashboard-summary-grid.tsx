@@ -14,7 +14,7 @@ type Props = {
   timeRange: TimeRangeKey;
 };
 
-function MetricValue({ value }: { value: number }) {
+const MetricValue = ({ value }: { value: number }) => {
   return (
     <p className="text-2xl font-semibold tracking-tight tabular-nums text-zinc-900">
       {formatCurrency(value)}
@@ -22,11 +22,11 @@ function MetricValue({ value }: { value: number }) {
   );
 }
 
-function MetricSkeleton() {
+const MetricSkeleton = () => {
   return <div className="h-8 w-28 animate-pulse rounded bg-zinc-100" />;
 }
 
-export function DashboardSummaryGrid({ cards, timeRange }: Props) {
+export const DashboardSummaryGrid = ({ cards, timeRange }: Props) => {
   const attentionLink = buildDashboardToAnomaliesLink(timeRange);
 
   return (
@@ -72,7 +72,7 @@ export function DashboardSummaryGrid({ cards, timeRange }: Props) {
   );
 }
 
-export function DashboardSummaryGridSkeleton() {
+export const DashboardSummaryGridSkeleton = () => {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {[1, 2, 3, 4].map((i) => (

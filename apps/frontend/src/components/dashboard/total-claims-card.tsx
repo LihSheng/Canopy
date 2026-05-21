@@ -1,7 +1,7 @@
 import { SummaryCard } from "./summary-card";
 import { formatCurrency } from "@/lib/formatters";
 
-export function TotalClaimsCard({
+export const TotalClaimsCard = ({
   value,
   changePct,
   loading,
@@ -9,7 +9,7 @@ export function TotalClaimsCard({
   value: number;
   changePct?: number;
   loading?: boolean;
-}) {
+}) => {
   if (loading) {
     return (
       <SummaryCard title="Total Claims">

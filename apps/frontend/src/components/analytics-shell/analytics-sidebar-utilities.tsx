@@ -10,7 +10,7 @@ type Props = {
   onNavigate?: () => void;
 };
 
-export function AnalyticsSidebarUtilities({ collapsed, onNavigate }: Props) {
+export const AnalyticsSidebarUtilities = ({ collapsed, onNavigate }: Props) => {
   const { user, logout } = useSession();
   const pathname = usePathname();
 

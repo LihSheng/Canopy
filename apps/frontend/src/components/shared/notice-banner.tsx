@@ -7,7 +7,7 @@ type Props = {
   className?: string;
 };
 
-export function NoticeBanner({ tone = "info", title, description, className = "" }: Props) {
+export const NoticeBanner = ({ tone = "info", title, description, className = "" }: Props) => {
   return (
     <div className={`rounded-lg border px-4 py-3 text-sm ${noticeToneStyles[tone]} ${className}`.trim()}>
       <p className="font-medium">{title}</p>

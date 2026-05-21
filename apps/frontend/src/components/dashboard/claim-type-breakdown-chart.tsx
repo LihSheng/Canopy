@@ -11,13 +11,13 @@ import type { ClaimTypeBreakdown } from "@/lib/api/types";
 
 const COLORS = ["#111111", "#3b82f6", "#f59e0b", "#10b981", "#8b5cf6", "#ec4899"];
 
-export function ClaimTypeBreakdownChart({
+export const ClaimTypeBreakdownChart = ({
   data,
   loading,
 }: {
   data: ClaimTypeBreakdown[];
   loading?: boolean;
-}) {
+}) => {
   if (loading) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white p-6">

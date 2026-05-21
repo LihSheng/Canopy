@@ -37,7 +37,7 @@ type Props =
  * and a scrollable padded content area — removing ~15 lines of boilerplate
  * from every page.
  */
-export function AnalyticsPageShell(props: Props) {
+export const AnalyticsPageShell = (props: Props) => {
   const { breadcrumbItems, children } = props;
 
   return (

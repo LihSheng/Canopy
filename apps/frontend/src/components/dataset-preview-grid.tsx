@@ -18,7 +18,7 @@ type Props = {
   onRetry?: () => void;
 };
 
-function formatCellValue(value: string | number | boolean | null): GridCell {
+const formatCellValue = (value: string | number | boolean | null): GridCell => {
   if (value === null) {
     return {
       kind: GridCellKind.Text,
@@ -41,7 +41,7 @@ function formatCellValue(value: string | number | boolean | null): GridCell {
   };
 }
 
-function buildGridColumns(columns: string[], availableWidth: number | null): GridColumn[] {
+const buildGridColumns = (columns: string[], availableWidth: number | null): GridColumn[] => {
   const base_columns = columns.map((column_name) => ({
     id: column_name,
     title: column_name,
@@ -69,7 +69,7 @@ function buildGridColumns(columns: string[], availableWidth: number | null): Gri
   return result;
 }
 
-export function DatasetPreviewGrid({
+export const DatasetPreviewGrid = ({
   columns = [],
   rows = [],
   totalRowCount = 0,
@@ -79,7 +79,7 @@ export function DatasetPreviewGrid({
   error,
   onPageChange,
   onRetry,
-}: Props) {
+}: Props) => {
   const [showSearch, setShowSearch] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [availableWidth, setAvailableWidth] = useState<number | null>(null);

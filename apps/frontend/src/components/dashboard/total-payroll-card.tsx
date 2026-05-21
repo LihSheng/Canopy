@@ -1,7 +1,7 @@
 import { SummaryCard } from "./summary-card";
 import { formatCurrency } from "@/lib/formatters";
 
-export function TotalPayrollCard({
+export const TotalPayrollCard = ({
   value,
   changePct,
   loading,
@@ -9,7 +9,7 @@ export function TotalPayrollCard({
   value: number;
   changePct?: number;
   loading?: boolean;
-}) {
+}) => {
   if (loading) {
     return (
       <SummaryCard title="Total Payroll">

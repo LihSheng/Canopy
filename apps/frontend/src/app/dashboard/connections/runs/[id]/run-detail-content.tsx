@@ -8,7 +8,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorState } from "@/components/shared/error-state";
 import { STATUS_COLORS, ROUTES, errorMessageFailedToLoad } from "@/lib/constants";
 
-function formatDuration(ms: number | null): string {
+const formatDuration = (ms: number | null): string => {
   if (ms === null) return "N/A";
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
@@ -21,7 +21,7 @@ type Props = {
   runId: string;
 };
 
-export default function RunDetailContent({ runId }: Props) {
+const RunDetailContent = ({ runId }: Props) => {
   const [run, setRun] = useState<Run | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,8 +123,9 @@ export default function RunDetailContent({ runId }: Props) {
     </div>
   );
 }
+export default RunDetailContent;
 
-function DetailRow({
+const DetailRow = ({
   label,
   value,
   isError,
@@ -132,7 +133,7 @@ function DetailRow({
   label: string;
   value: string;
   isError?: boolean;
-}) {
+}) => {
   return (
     <div className="flex justify-between">
       <dt className="text-zinc-500">{label}</dt>

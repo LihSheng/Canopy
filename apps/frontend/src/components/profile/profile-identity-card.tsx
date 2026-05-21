@@ -4,7 +4,7 @@ type Props = {
   user: SessionUser;
 };
 
-export function ProfileIdentityCard({ user }: Props) {
+export const ProfileIdentityCard = ({ user }: Props) => {
   return (
     <div className="max-w-lg rounded-xl border border-zinc-200 bg-white p-6">
       <div className="flex items-center gap-4 mb-6">
@@ -37,7 +37,7 @@ export function ProfileIdentityCard({ user }: Props) {
   );
 }
 
-export function ProfileIdentityCardSkeleton() {
+export const ProfileIdentityCardSkeleton = () => {
   return (
     <div className="max-w-lg rounded-xl border border-zinc-200 bg-white p-6 animate-pulse">
       <div className="flex items-center gap-4 mb-6">

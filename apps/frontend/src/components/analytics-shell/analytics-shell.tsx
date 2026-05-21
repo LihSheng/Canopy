@@ -5,7 +5,7 @@ import { AnalyticsLayoutProvider, useAnalyticsLayout } from "./analytics-layout-
 import { AnalyticsSidebar } from "./analytics-sidebar";
 import { AnalyticsDrawer } from "./analytics-drawer";
 
-function ShellInner({ children }: { children: ReactNode }) {
+const ShellInner = ({ children }: { children: ReactNode }) => {
   const { openDrawer } = useAnalyticsLayout();
 
   return (
@@ -46,7 +46,7 @@ function ShellInner({ children }: { children: ReactNode }) {
   );
 }
 
-export function AnalyticsShell({ children }: { children: ReactNode }) {
+export const AnalyticsShell = ({ children }: { children: ReactNode }) => {
   return (
     <AnalyticsLayoutProvider>
       <ShellInner>{children}</ShellInner>

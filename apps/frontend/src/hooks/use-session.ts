@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getSession, type SessionUser } from "@/lib/api/auth";
 import { ROUTES, ERROR_MESSAGES } from "@/lib/constants";
 
-export function useSession() {
+export const useSession = () => {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

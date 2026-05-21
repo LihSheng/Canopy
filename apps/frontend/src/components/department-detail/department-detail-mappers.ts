@@ -34,14 +34,14 @@ export type DepartmentDetailView = {
   topClaimTypes: ContributorItem[];
 };
 
-export function mapDepartmentDetailView(
+export const mapDepartmentDetailView = (
   department: DepartmentDetail,
   employees: EmployeeContribution[],
   claims: ClaimDetail[],
   trends: MonthlyTrend[],
   anomalies: Anomaly[],
   timeRange: TimeRangeKey,
-): DepartmentDetailView {
+): DepartmentDetailView => {
   const snapshotId = `${new Date().toISOString().slice(0, 7)}`;
 
   const severityOrder = { high: 3, medium: 2, low: 1 } as const;
@@ -119,7 +119,7 @@ export function mapDepartmentDetailView(
   };
 }
 
-function formatCompact(value: number): string {
+const formatCompact = (value: number): string => {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}k`;
   return `$${value.toFixed(0)}`;

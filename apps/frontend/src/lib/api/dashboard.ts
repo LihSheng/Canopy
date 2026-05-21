@@ -12,46 +12,46 @@ import type {
   MonthFilterParams,
 } from "./types";
 
-export function fetchSummary(): Promise<DashboardSummary> {
+export const fetchSummary = (): Promise<DashboardSummary> => {
   return request<DashboardSummary>("/api/dashboard/summary");
 }
 
-export function fetchDepartments(params?: MonthFilterParams): Promise<DepartmentSummary[]> {
+export const fetchDepartments = (params?: MonthFilterParams): Promise<DepartmentSummary[]> => {
   const qs = params ? `?year=${params.year}&month=${params.month}` : "";
   return request<DepartmentSummary[]>(`/api/departments${qs}`);
 }
 
-export function fetchMonthlyTrends(params?: MonthFilterParams): Promise<MonthlyTrend[]> {
+export const fetchMonthlyTrends = (params?: MonthFilterParams): Promise<MonthlyTrend[]> => {
   const qs = params ? `?year=${params.year}&month=${params.month}` : "";
   return request<MonthlyTrend[]>(`/api/dashboard/trends${qs}`);
 }
 
-export function fetchClaimTypeBreakdown(params?: MonthFilterParams): Promise<ClaimTypeBreakdown[]> {
+export const fetchClaimTypeBreakdown = (params?: MonthFilterParams): Promise<ClaimTypeBreakdown[]> => {
   const qs = params ? `?year=${params.year}&month=${params.month}` : "";
   return request<ClaimTypeBreakdown[]>(`/api/dashboard/claim-types${qs}`);
 }
 
-export function fetchAnomalies(): Promise<Anomaly[]> {
+export const fetchAnomalies = (): Promise<Anomaly[]> => {
   return request<Anomaly[]>("/api/anomalies");
 }
 
-export function fetchDepartmentDetail(id: string, params?: MonthFilterParams): Promise<DepartmentDetail> {
+export const fetchDepartmentDetail = (id: string, params?: MonthFilterParams): Promise<DepartmentDetail> => {
   const qs = params ? `?year=${params.year}&month=${params.month}` : "";
   return request<DepartmentDetail>(`/api/departments/${id}${qs}`);
 }
 
-export function fetchEmployeeContributions(
+export const fetchEmployeeContributions = (
   departmentId: string,
   params?: MonthFilterParams,
-): Promise<EmployeeContribution[]> {
+): Promise<EmployeeContribution[]> => {
   const qs = params ? `?year=${params.year}&month=${params.month}` : "";
   return request<EmployeeContribution[]>(`/api/departments/${departmentId}/employees${qs}`);
 }
 
-export function fetchClaimDetails(
+export const fetchClaimDetails = (
   departmentId?: string,
   params?: MonthFilterParams,
-): Promise<ClaimDetail[]> {
+): Promise<ClaimDetail[]> => {
   const parts: string[] = [];
   if (departmentId) parts.push(`department_id=${departmentId}`);
   if (params) parts.push(`year=${params.year}`, `month=${params.month}`);
@@ -59,10 +59,10 @@ export function fetchClaimDetails(
   return request<ClaimDetail[]>(`/api/claims${qs}`);
 }
 
-export function fetchRefreshStatus(): Promise<RefreshStatus> {
+export const fetchRefreshStatus = (): Promise<RefreshStatus> => {
   return request<RefreshStatus>("/api/refresh/current");
 }
 
-export function triggerRefresh(): Promise<{ accepted: boolean }> {
+export const triggerRefresh = (): Promise<{ accepted: boolean }> => {
   return request<{ accepted: boolean }>("/api/refresh", { method: "POST" });
 }

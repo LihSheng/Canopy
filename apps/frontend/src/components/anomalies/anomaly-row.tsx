@@ -9,7 +9,7 @@ type Props = {
   timeRange: TimeRangeKey;
 };
 
-export function AnomalyRow({ item, timeRange }: Props) {
+export const AnomalyRow = ({ item, timeRange }: Props) => {
   const detailLink = buildAnomalyToDepartmentDetailLink(
     item.departmentId,
     timeRange,

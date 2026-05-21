@@ -6,7 +6,7 @@ type Props = {
   topClaimTypes: ContributorItem[];
 };
 
-export function DepartmentContributorsSplit({ topEmployees, topClaimTypes }: Props) {
+export const DepartmentContributorsSplit = ({ topEmployees, topClaimTypes }: Props) => {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <DepartmentContributorPanel title="Top Employees" items={topEmployees} />
@@ -15,7 +15,7 @@ export function DepartmentContributorsSplit({ topEmployees, topClaimTypes }: Pro
   );
 }
 
-export function DepartmentContributorsSplitSkeleton() {
+export const DepartmentContributorsSplitSkeleton = () => {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <DepartmentContributorPanelSkeleton />

@@ -9,7 +9,7 @@ export interface LoginFormProps {
   loading: boolean;
 }
 
-export function LoginForm({ onSubmit, error, loading }: LoginFormProps) {
+export const LoginForm = ({ onSubmit, error, loading }: LoginFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 

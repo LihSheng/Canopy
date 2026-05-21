@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function DataStudioPage() {
+const DataStudioPage = () => {
   redirect("/dashboard/connections");
 }
+export default DataStudioPage;

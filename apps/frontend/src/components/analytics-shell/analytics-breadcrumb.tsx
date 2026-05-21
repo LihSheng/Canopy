@@ -12,7 +12,7 @@ type Props = {
   items: BreadcrumbItem[];
 };
 
-export function AnalyticsBreadcrumb({ items }: Props) {
+export const AnalyticsBreadcrumb = ({ items }: Props) => {
   return (
     <nav aria-label="Breadcrumb" className="px-6 py-1.5">
       <ol className="flex items-center gap-1.5 text-sm text-zinc-500">

@@ -5,7 +5,7 @@ import { fetchRefreshStatus, triggerRefresh } from "@/lib/api/dashboard";
 import type { RefreshStatus } from "@/lib/api/types";
 import { REFRESH_STATUS_LABELS, ERROR_MESSAGES, UI_LABELS } from "@/lib/constants";
 
-export function RefreshStatusBadge({ status }: { status: RefreshStatus["status"] }) {
+export const RefreshStatusBadge = ({ status }: { status: RefreshStatus["status"] }) => {
   const labels = REFRESH_STATUS_LABELS;
 
   const info = labels[status] ?? labels.idle;
@@ -23,7 +23,7 @@ export function RefreshStatusBadge({ status }: { status: RefreshStatus["status"]
   );
 }
 
-export function ManualRefreshButton() {
+export const ManualRefreshButton = () => {
   const [loading, setLoading] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -59,13 +59,13 @@ export function ManualRefreshButton() {
   );
 }
 
-export function RefreshTimelinePanel({
+export const RefreshTimelinePanel = ({
   lastRefresh,
   lastAttempt,
 }: {
   lastRefresh: string | null;
   lastAttempt: string | null;
-}) {
+}) => {
   const formatDate = (d: string | null) => {
     if (!d) return "N/A";
     return new Date(d).toLocaleString("en-US", {
@@ -94,7 +94,7 @@ export function RefreshTimelinePanel({
   );
 }
 
-export function useRefreshPoller(pollMs = 30000) {
+export const useRefreshPoller = (pollMs = 30000) => {
   const [status, setStatus] = useState<RefreshStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

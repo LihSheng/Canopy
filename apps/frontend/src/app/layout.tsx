@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   description: "Executive HR spend intelligence platform",
 };
 
-export default function RootLayout({
+const RootLayout = ({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+}>) => {
   return (
     <html
       lang="en"
@@ -31,4 +31,6 @@ export default function RootLayout({
       <body className="h-full overflow-hidden bg-white">{children}</body>
     </html>
   );
-}
+};
+
+export default RootLayout;

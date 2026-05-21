@@ -7,7 +7,7 @@ import { buildConnectionsBreadcrumbs } from "@/components/analytics-shell/breadc
 import { ROUTES } from "@/lib/constants";
 import { SourceSetupWizard } from "@/components/data-studio/source-setup-wizard";
 
-export default function SetupPage() {
+const SetupPage = () => {
   const searchParams = useSearchParams();
   const sourceKey = searchParams.get("source") || "static_file";
 
@@ -37,3 +37,4 @@ export default function SetupPage() {
     </AnalyticsPageShell>
   );
 }
+export default SetupPage;

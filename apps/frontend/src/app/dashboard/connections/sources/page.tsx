@@ -5,7 +5,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { UI_LABELS } from "@/lib/constants";
 import SourceCatalogContent from "./source-catalog-content";
 
-export default function SourcesPage() {
+const SourcesPage = () => {
   return (
     <AnalyticsPageShell
       title="Source Catalog"
@@ -18,3 +18,4 @@ export default function SourcesPage() {
     </AnalyticsPageShell>
   );
 }
+export default SourcesPage;

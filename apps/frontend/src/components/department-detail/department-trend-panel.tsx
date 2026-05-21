@@ -21,7 +21,7 @@ const COLORS: Record<string, string> = {
   Claims: "#34d399",
 };
 
-export function DepartmentTrendPanel({ series }: Props) {
+export const DepartmentTrendPanel = ({ series }: Props) => {
   const chartData = useMemo(() => {
     if (series.length === 0) return [];
     const months = series[0].data.map((d) => d.month);
@@ -110,7 +110,7 @@ export function DepartmentTrendPanel({ series }: Props) {
   );
 }
 
-export function DepartmentTrendPanelSkeleton() {
+export const DepartmentTrendPanelSkeleton = () => {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-5">
       <div className="h-3 w-28 animate-pulse rounded bg-zinc-100" />

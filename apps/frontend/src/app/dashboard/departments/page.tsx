@@ -3,10 +3,11 @@ import { DepartmentsPage as DepartmentsPageContent } from "@/components/departme
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { UI_LABELS } from "@/lib/constants";
 
-export default function DepartmentsPage() {
+const DepartmentsPage = () => {
   return (
     <Suspense fallback={<LoadingSpinner text={UI_LABELS.loading} />}>
       <DepartmentsPageContent />
     </Suspense>
   );
 }
+export default DepartmentsPage;

@@ -1,13 +1,13 @@
 import { NoticeBanner } from "./notice-banner";
 import { buttonToneStyles, sharedButtonBase } from "./ui-styles";
 
-export function ErrorState({
+export const ErrorState = ({
   message = "Something went wrong",
   onRetry,
 }: {
   message?: string;
   onRetry?: () => void;
-}) {
+}) => {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-12 text-center" role="alert">
       <NoticeBanner

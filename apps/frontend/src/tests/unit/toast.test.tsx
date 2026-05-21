@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { ToastProvider, useToast } from "@/components/shared/toast";
 
-function ToastTrigger() {
+const ToastTrigger = () => {
   const toast = useToast();
 
   return (

@@ -4,7 +4,7 @@ import { buildConnectionsBreadcrumbs } from "@/components/analytics-shell/breadc
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import ConnectionsHomeContent from "./connections-home-content";
 
-export default function ConnectionsPage() {
+const ConnectionsPage = () => {
   return (
     <AnalyticsPageShell
       title="Data Studio"
@@ -16,3 +16,4 @@ export default function ConnectionsPage() {
     </AnalyticsPageShell>
   );
 }
+export default ConnectionsPage;

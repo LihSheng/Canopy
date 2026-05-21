@@ -16,7 +16,7 @@ type Props = {
   onClose: () => void;
 };
 
-export function ConfirmDialog({
+export const ConfirmDialog = ({
   open,
   title,
   description,
@@ -26,7 +26,7 @@ export function ConfirmDialog({
   busy = false,
   onConfirm,
   onClose,
-}: Props) {
+}: Props) => {
   useEffect(() => {
     if (!open) {
       return;

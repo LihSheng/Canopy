@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ROUTES, UI_LABELS, ERROR_MESSAGES } from "@/lib/constants";
 
-export default function ConnectionsHomeContent() {
+const ConnectionsHomeContent = () => {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
@@ -218,8 +218,9 @@ export default function ConnectionsHomeContent() {
     </div>
   );
 }
+export default ConnectionsHomeContent;
 
-function CardLink({
+const CardLink = ({
   href,
   title,
   description,
@@ -229,7 +230,7 @@ function CardLink({
   title: string;
   description: string;
   icon: React.ReactNode;
-}) {
+}) => {
   return (
     <Link
       href={href}

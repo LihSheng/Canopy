@@ -7,7 +7,7 @@ import { LoginForm } from "@/components/auth/login-form";
 import { login } from "@/lib/api/auth";
 import { BRAND, ROUTES, ERROR_MESSAGES } from "@/lib/constants";
 
-export default function LoginPage() {
+const LoginPage = () => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,3 +45,4 @@ export default function LoginPage() {
     </div>
   );
 }
+export default LoginPage;

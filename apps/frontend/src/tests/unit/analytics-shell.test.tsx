@@ -46,7 +46,7 @@ import { AnalyticsBreadcrumb } from "@/components/analytics-shell/analytics-brea
 import { AnalyticsPageShell } from "@/components/analytics-shell/analytics-page-shell";
 import { AnalyticsShell } from "@/components/analytics-shell/analytics-shell";
 
-function Wrapper({ children }: { children: React.ReactNode }) {
+const Wrapper = ({ children }: { children: React.ReactNode }) => {
   return <AnalyticsLayoutProvider>{children}</AnalyticsLayoutProvider>;
 }
 

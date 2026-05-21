@@ -64,7 +64,7 @@ const DATASET_LIST_COLUMNS: ColumnDef[] = [
   },
 ];
 
-export default function DatasetListContent() {
+const DatasetListContent = () => {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,3 +112,4 @@ export default function DatasetListContent() {
     />
   );
 }
+export default DatasetListContent;

@@ -25,60 +25,60 @@ export interface DatasetPreviewResponse {
   page_size: number;
 }
 
-export function fetchProjects(): Promise<Project[]> {
+export const fetchProjects = (): Promise<Project[]> => {
   return request<Project[]>("/api/projects/");
 }
 
-export function fetchProject(id: string): Promise<Project> {
+export const fetchProject = (id: string): Promise<Project> => {
   return request<Project>(`/api/projects/${id}`);
 }
 
-export function createProject(data: { name: string; description?: string }): Promise<Project> {
+export const createProject = (data: { name: string; description?: string }): Promise<Project> => {
   return request<Project>("/api/projects/", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export function fetchSourceTypes(): Promise<SourceType[]> {
+export const fetchSourceTypes = (): Promise<SourceType[]> => {
   return request<SourceType[]>("/api/source-types/");
 }
 
-export function fetchConnections(projectId?: string): Promise<Connection[]> {
+export const fetchConnections = (projectId?: string): Promise<Connection[]> => {
   const qs = projectId ? `?project_id=${projectId}` : "";
   return request<Connection[]>(`/api/connections/${qs}`);
 }
 
-export function fetchConnection(id: string): Promise<Connection> {
+export const fetchConnection = (id: string): Promise<Connection> => {
   return request<Connection>(`/api/connections/${id}`);
 }
 
-export function fetchConnectionDependencies(id: string): Promise<ConnectionDependencySummary> {
+export const fetchConnectionDependencies = (id: string): Promise<ConnectionDependencySummary> => {
   return request<ConnectionDependencySummary>(`/api/connections/${id}/dependencies`);
 }
 
-export function createConnection(data: {
+export const createConnection = (data: {
   project_id: string;
   source_type: string;
   name: string;
   config_json: Record<string, unknown>;
-}): Promise<Connection> {
+}): Promise<Connection> => {
   return request<Connection>("/api/connections/", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export function deleteConnection(id: string): Promise<{ deleted: boolean; id: string }> {
+export const deleteConnection = (id: string): Promise<{ deleted: boolean; id: string }> => {
   return request<{ deleted: boolean; id: string }>(`/api/connections/${id}`, {
     method: "DELETE",
   });
 }
 
-export async function previewStaticFile(
+export const previewStaticFile = async (
   file: File,
   sourceType = "static_file",
-): Promise<StaticFilePreview> {
+): Promise<StaticFilePreview> => {
   const form = new FormData();
   form.append("file", file);
   form.append("source_type", sourceType);
@@ -89,14 +89,14 @@ export async function previewStaticFile(
   });
 }
 
-export function deleteStaticFilePreview(sourceFilePath: string): Promise<{ deleted: boolean }> {
+export const deleteStaticFilePreview = (sourceFilePath: string): Promise<{ deleted: boolean }> => {
   return request<{ deleted: boolean }>("/api/connections/preview", {
     method: "DELETE",
     body: JSON.stringify({ source_file_path: sourceFilePath }),
   });
 }
 
-export function fetchDatasets(projectId?: string, connectionId?: string): Promise<Dataset[]> {
+export const fetchDatasets = (projectId?: string, connectionId?: string): Promise<Dataset[]> => {
   const params = new URLSearchParams();
   if (projectId) params.set("project_id", projectId);
   if (connectionId) params.set("connection_id", connectionId);
@@ -104,7 +104,7 @@ export function fetchDatasets(projectId?: string, connectionId?: string): Promis
   return request<Dataset[]>(`/api/datasets/${qs ? `?${qs}` : ""}`);
 }
 
-export function createDataset(data: {
+export const createDataset = (data: {
   project_id: string;
   connection_id: string;
   name: string;
@@ -113,25 +113,25 @@ export function createDataset(data: {
   batch_strategy?: string | null;
   real_time_strategy?: string | null;
   cursor_column?: string | null;
-}): Promise<Dataset> {
+}): Promise<Dataset> => {
   return request<Dataset>("/api/datasets/", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export function fetchDataset(id: string): Promise<Dataset> {
+export const fetchDataset = (id: string): Promise<Dataset> => {
   return request<Dataset>(`/api/datasets/${id}`);
 }
 
-export function fetchDatasetVersions(datasetId: string): Promise<DatasetVersion[]> {
+export const fetchDatasetVersions = (datasetId: string): Promise<DatasetVersion[]> => {
   return request<DatasetVersion[]>(`/api/datasets/${datasetId}/versions`);
 }
 
-export function fetchDatasetPreview(
+export const fetchDatasetPreview = (
   datasetId: string,
   params?: { page?: number; page_size?: number },
-): Promise<DatasetPreviewResponse> {
+): Promise<DatasetPreviewResponse> => {
   const qs = new URLSearchParams();
   if (params?.page) qs.set("page", String(params.page));
   if (params?.page_size) qs.set("page_size", String(params.page_size));
@@ -141,66 +141,66 @@ export function fetchDatasetPreview(
   );
 }
 
-export function fetchDatasetLineage(datasetId: string): Promise<{ nodes: { id: string; type: string; label: string }[]; edges: { from: string; to: string; type: string }[] }> {
+export const fetchDatasetLineage = (datasetId: string): Promise<{ nodes: { id: string; type: string; label: string }[]; edges: { from: string; to: string; type: string }[] }> => {
   return request<{ nodes: { id: string; type: string; label: string }[]; edges: { from: string; to: string; type: string }[] }>(
     `/api/datasets/${datasetId}/lineage`,
   );
 }
 
-export function fetchDatasetHealth(datasetId: string): Promise<DatasetHealth> {
+export const fetchDatasetHealth = (datasetId: string): Promise<DatasetHealth> => {
   return request<DatasetHealth>(`/api/datasets/${datasetId}/health`);
 }
 
-export function fetchDatasetDeleteSummary(datasetId: string): Promise<DatasetDeleteSummary> {
+export const fetchDatasetDeleteSummary = (datasetId: string): Promise<DatasetDeleteSummary> => {
   return request<DatasetDeleteSummary>(`/api/datasets/${datasetId}/dependencies`);
 }
 
-export function fetchDatasetVersionDeleteSummary(
+export const fetchDatasetVersionDeleteSummary = (
   datasetId: string,
   versionId: string,
-): Promise<DatasetVersionDeleteSummary> {
+): Promise<DatasetVersionDeleteSummary> => {
   return request<DatasetVersionDeleteSummary>(
     `/api/datasets/${datasetId}/versions/${versionId}/dependencies`,
   );
 }
 
-export function deleteDataset(datasetId: string): Promise<{ deleted: boolean; id: string }> {
+export const deleteDataset = (datasetId: string): Promise<{ deleted: boolean; id: string }> => {
   return request<{ deleted: boolean; id: string }>(`/api/datasets/${datasetId}`, {
     method: "DELETE",
   });
 }
 
-export function deleteDatasetVersion(
+export const deleteDatasetVersion = (
   datasetId: string,
   versionId: string,
-): Promise<{ deleted: boolean; id: string }> {
+): Promise<{ deleted: boolean; id: string }> => {
   return request<{ deleted: boolean; id: string }>(`/api/datasets/${datasetId}/versions/${versionId}`, {
     method: "DELETE",
   });
 }
 
-export function fetchRuns(datasetId?: string): Promise<Run[]> {
+export const fetchRuns = (datasetId?: string): Promise<Run[]> => {
   const qs = datasetId ? `?dataset_id=${datasetId}` : "";
   return request<Run[]>(`/api/runs/${qs}`);
 }
 
-export function reimportDatasetVersion(
+export const reimportDatasetVersion = (
   datasetId: string,
   data_path: string,
   columns: string[],
   sheet_name?: string,
-): Promise<DatasetVersion> {
+): Promise<DatasetVersion> => {
   return request<DatasetVersion>(`/api/datasets/${datasetId}/reimport`, {
     method: "POST",
     body: JSON.stringify({ data_path, columns, sheet_name }),
   });
 }
 
-export function fetchRun(id: string): Promise<Run> {
+export const fetchRun = (id: string): Promise<Run> => {
   return request<Run>(`/api/runs/${id}`);
 }
 
-export function createRun(data: { dataset_id: string }): Promise<Run> {
+export const createRun = (data: { dataset_id: string }): Promise<Run> => {
   return request<Run>("/api/runs/", {
     method: "POST",
     body: JSON.stringify(data),
@@ -209,21 +209,21 @@ export function createRun(data: { dataset_id: string }): Promise<Run> {
 
 // --- Connection Wizard API ---
 
-export function fetchConnectionTest(id: string): Promise<ConnectionTestResult> {
+export const fetchConnectionTest = (id: string): Promise<ConnectionTestResult> => {
   return request<ConnectionTestResult>(`/api/connections/${id}/test`, {
     method: "POST",
   });
 }
 
-export function fetchTableDiscovery(id: string): Promise<DiscoveredTable[]> {
+export const fetchTableDiscovery = (id: string): Promise<DiscoveredTable[]> => {
   return request<DiscoveredTable[]>(`/api/connections/${id}/discover`);
 }
 
-export function fetchTablePreview(id: string, table: string): Promise<TablePreview> {
+export const fetchTablePreview = (id: string, table: string): Promise<TablePreview> => {
   return request<TablePreview>(`/api/connections/${id}/discover/${encodeURIComponent(table)}`);
 }
 
-export function updateSyncPolicy(id: string, policy: SyncPolicyUpdate): Promise<Dataset> {
+export const updateSyncPolicy = (id: string, policy: SyncPolicyUpdate): Promise<Dataset> => {
   return request<Dataset>(`/api/datasets/${id}/sync-policy`, {
     method: "PATCH",
     body: JSON.stringify(policy),

@@ -1,6 +1,6 @@
 import { NoticeBanner } from "./notice-banner";
 
-export function StaleIndicator({ lastUpdated }: { lastUpdated?: string }) {
+export const StaleIndicator = ({ lastUpdated }: { lastUpdated?: string }) => {
   if (!lastUpdated) return null;
 
   return (

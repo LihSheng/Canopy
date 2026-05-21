@@ -57,14 +57,14 @@ export type DashboardCommandView = {
   topDepartments: DepartmentPreviewItem[];
 };
 
-export function mapCommandView(
+export const mapCommandView = (
   summary: DashboardSummary,
   departments: DepartmentSummary[],
   trends: MonthlyTrend[],
   claimTypes: ClaimTypeBreakdown[],
   anomalies: Anomaly[],
   timeRange: TimeRangeKey,
-): DashboardCommandView {
+): DashboardCommandView => {
   const snapshotId = summary.last_updated;
   const snapshotLabel = `${summary.period.year}-${String(summary.period.month).padStart(2, "0")}`;
 

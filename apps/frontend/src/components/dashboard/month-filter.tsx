@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 
-export function MonthFilter() {
+export const MonthFilter = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 

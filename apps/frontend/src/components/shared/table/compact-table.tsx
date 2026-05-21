@@ -23,13 +23,13 @@ type CompactTableProps = {
   totalRowCount?: number;
 };
 
-function alignClass(align?: "left" | "center" | "right"): string {
+const alignClass = (align?: "left" | "center" | "right"): string => {
   if (align === "right") return "text-right";
   if (align === "center") return "text-center";
   return "text-left";
 }
 
-export function CompactTable({
+export const CompactTable = ({
   columns,
   rows,
   getRowId,
@@ -43,7 +43,7 @@ export function CompactTable({
   searchValue,
   onSearchChange,
   searchPlaceholder = "Search...",
-}: CompactTableProps) {
+}: CompactTableProps) => {
   if (loading) {
     return <LoadingSpinner text="Loading..." />;
   }

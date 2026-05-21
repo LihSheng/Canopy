@@ -16,13 +16,13 @@ const statusStyles: Record<string, string> = {
   processing: "bg-blue-100 text-blue-800",
 };
 
-export function VersionHistory({
+export const VersionHistory = ({
   versions = [],
   activeVersionId,
   onDeleteVersion,
   deletingVersionId = null,
   onUploadVersion,
-}: Props) {
+}: Props) => {
   if (!versions || versions.length === 0) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-zinc-500">

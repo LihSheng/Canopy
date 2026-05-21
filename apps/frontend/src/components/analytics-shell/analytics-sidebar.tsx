@@ -75,7 +75,7 @@ type Props = {
   onNavigate?: () => void;
 };
 
-export function AnalyticsSidebar({ onNavigate }: Props) {
+export const AnalyticsSidebar = ({ onNavigate }: Props) => {
   const pathname = usePathname();
   const { sidebarExpanded, toggleSidebar } = useAnalyticsLayout();
 

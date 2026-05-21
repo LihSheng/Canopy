@@ -21,7 +21,7 @@ const DEFAULT_POLICY: SyncPolicy = {
   frequencyMinutes: 1440,
 };
 
-export function ConnectionWizard() {
+export const ConnectionWizard = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSource = searchParams.get(QUERY_PARAMS.source) ?? "postgresql";

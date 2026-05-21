@@ -4,7 +4,7 @@ type Props = {
   summary: SummaryBrief;
 };
 
-export function DepartmentAiSummary({ summary }: Props) {
+export const DepartmentAiSummary = ({ summary }: Props) => {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-5">
       <div className="flex items-center gap-2 mb-3">
@@ -28,7 +28,7 @@ export function DepartmentAiSummary({ summary }: Props) {
   );
 }
 
-export function DepartmentAiSummarySkeleton() {
+export const DepartmentAiSummarySkeleton = () => {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-5">
       <div className="flex items-center gap-2 mb-3">

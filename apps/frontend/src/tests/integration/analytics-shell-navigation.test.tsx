@@ -33,7 +33,7 @@ vi.mock("next/navigation", () => ({
 import { AnalyticsShell } from "@/components/analytics-shell/analytics-shell";
 import { AnalyticsLayoutProvider } from "@/components/analytics-shell/analytics-layout-context";
 
-function Wrapper({ children }: { children: React.ReactNode }) {
+const Wrapper = ({ children }: { children: React.ReactNode }) => {
   return <AnalyticsLayoutProvider>{children}</AnalyticsLayoutProvider>;
 }
 

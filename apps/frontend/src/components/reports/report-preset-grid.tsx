@@ -1,6 +1,6 @@
 import type { ExportPreset } from "./report-mappers";
 
-export function ReportPresetGrid({
+export const ReportPresetGrid = ({
   presets,
   onTrigger,
   exporting,
@@ -8,7 +8,7 @@ export function ReportPresetGrid({
   presets: ExportPreset[];
   onTrigger: (key: ExportPreset["key"]) => void;
   exporting: ExportPreset["key"] | null;
-}) {
+}) => {
   return (
     <div className="mb-8">
       <h2 className="text-base font-semibold text-zinc-900 mb-4">Export presets</h2>

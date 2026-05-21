@@ -18,7 +18,7 @@ type LayoutContextValue = {
 
 const AnalyticsLayoutContext = createContext<LayoutContextValue | null>(null);
 
-export function useAnalyticsLayout() {
+export const useAnalyticsLayout = () => {
   const ctx = useContext(AnalyticsLayoutContext);
   if (!ctx) {
     throw new Error("useAnalyticsLayout must be used within AnalyticsLayoutProvider");
@@ -26,7 +26,7 @@ export function useAnalyticsLayout() {
   return ctx;
 }
 
-function readCollapsed(): boolean {
+const readCollapsed = (): boolean => {
   if (typeof window === "undefined") return false;
   try {
     return localStorage.getItem(STORAGE_KEY) === "true";
@@ -35,7 +35,7 @@ function readCollapsed(): boolean {
   }
 }
 
-function writeCollapsed(v: boolean) {
+const writeCollapsed = (v: boolean) => {
   try {
     localStorage.setItem(STORAGE_KEY, String(v));
   } catch {
@@ -43,7 +43,7 @@ function writeCollapsed(v: boolean) {
   }
 }
 
-export function AnalyticsLayoutProvider({ children }: { children: ReactNode }) {
+export const AnalyticsLayoutProvider = ({ children }: { children: ReactNode }) => {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);

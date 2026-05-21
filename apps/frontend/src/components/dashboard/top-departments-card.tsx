@@ -3,13 +3,13 @@ import { SummaryCard } from "./summary-card";
 import { formatCurrency, formatPercent, getChangeColor } from "@/lib/formatters";
 import type { DepartmentSummary } from "@/lib/api/types";
 
-export function TopDepartmentsCard({
+export const TopDepartmentsCard = ({
   departments,
   loading,
 }: {
   departments: DepartmentSummary[];
   loading?: boolean;
-}) {
+}) => {
   if (loading) {
     return (
       <SummaryCard title="Top Departments">

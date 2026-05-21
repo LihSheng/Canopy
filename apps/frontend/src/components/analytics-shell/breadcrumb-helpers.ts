@@ -6,6 +6,6 @@ const CONNECTIONS_ITEM: BreadcrumbItem = {
   href: "/dashboard/connections",
 };
 
-export function buildConnectionsBreadcrumbs(...items: BreadcrumbItem[]): BreadcrumbItem[] {
+export const buildConnectionsBreadcrumbs = (...items: BreadcrumbItem[]): BreadcrumbItem[] => {
   return [DASHBOARD_ITEM, CONNECTIONS_ITEM, ...items];
 }

@@ -3,10 +3,11 @@ import { ProfilePage as ProfilePageContent } from "@/components/profile/profile-
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { UI_LABELS } from "@/lib/constants";
 
-export default function ProfilePage() {
+const ProfilePage = () => {
   return (
     <Suspense fallback={<LoadingSpinner text={UI_LABELS.loading} />}>
       <ProfilePageContent />
     </Suspense>
   );
 }
+export default ProfilePage;

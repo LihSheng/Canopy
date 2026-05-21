@@ -9,7 +9,7 @@ type Props = {
   children: ReactNode;
 };
 
-export function AuthenticatedAppLayout({ children }: Props) {
+export const AuthenticatedAppLayout = ({ children }: Props) => {
   return (
     <SessionGuard>
       <ToastProvider>

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function NewConnectionPage() {
+const NewConnectionPage = () => {
   redirect("/dashboard/connections/sources");
 }
+export default NewConnectionPage;

@@ -5,7 +5,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ROUTES, UI_LABELS } from "@/lib/constants";
 import DatasetWorkspaceContent from "./dataset-workspace-content";
 
-export default async function DatasetWorkspacePage(props: { params: Promise<{ id: string }> }) {
+const DatasetWorkspacePage = async (props: { params: Promise<{ id: string }> }) => {
   const { id } = await props.params;
   return (
     <AnalyticsPageShell
@@ -21,3 +21,4 @@ export default async function DatasetWorkspacePage(props: { params: Promise<{ id
     </AnalyticsPageShell>
   );
 }
+export default DatasetWorkspacePage;

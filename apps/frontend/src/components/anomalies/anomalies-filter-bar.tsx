@@ -23,13 +23,13 @@ const SEVERITY_OPTIONS: { key: "high" | "medium" | "low" | null; label: string }
   { key: "low", label: "Low" },
 ];
 
-export function AnomaliesFilterBar({
+export const AnomaliesFilterBar = ({
   timeRange,
   severity,
   departmentId,
   onTimeRangeChange,
   onSeverityChange,
-}: Props) {
+}: Props) => {
   return (
     <div className="flex flex-wrap items-center gap-3">
       {departmentId && (

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { AnalyticsSidebar } from "./analytics-sidebar";
 import { useAnalyticsLayout } from "./analytics-layout-context";
 
-export function AnalyticsDrawer() {
+export const AnalyticsDrawer = () => {
   const { mobileDrawerOpen, closeDrawer } = useAnalyticsLayout();
 
   useEffect(() => {

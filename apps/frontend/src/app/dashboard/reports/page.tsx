@@ -3,10 +3,11 @@ import { ReportsPage as ReportsPageContent } from "@/components/reports/reports-
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { UI_LABELS } from "@/lib/constants";
 
-export default function ReportsPage() {
+const ReportsPage = () => {
   return (
     <Suspense fallback={<LoadingSpinner text={UI_LABELS.loading} />}>
       <ReportsPageContent />
     </Suspense>
   );
 }
+export default ReportsPage;

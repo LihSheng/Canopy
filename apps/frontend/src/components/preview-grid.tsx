@@ -9,7 +9,7 @@ type Props = {
   totalRowCount: number;
 };
 
-function formatCellValue(value: string | number | boolean | null): GridCell {
+const formatCellValue = (value: string | number | boolean | null): GridCell => {
   if (value === null) {
     return {
       kind: GridCellKind.Text,
@@ -32,7 +32,7 @@ function formatCellValue(value: string | number | boolean | null): GridCell {
   };
 }
 
-function buildGridColumns(columns: string[]): GridColumn[] {
+const buildGridColumns = (columns: string[]): GridColumn[] => {
   return columns.map((column_name, column_index) => ({
     id: column_name,
     title: column_name,
@@ -42,7 +42,7 @@ function buildGridColumns(columns: string[]): GridColumn[] {
   }));
 }
 
-export function PreviewGrid({ columns = [], rows = [], totalRowCount = 0 }: Props) {
+export const PreviewGrid = ({ columns = [], rows = [], totalRowCount = 0 }: Props) => {
   const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {

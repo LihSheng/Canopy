@@ -9,7 +9,7 @@ type Props = {
   timeRange: TimeRangeKey;
 };
 
-export function DepartmentRankedRow({ item, timeRange }: Props) {
+export const DepartmentRankedRow = ({ item, timeRange }: Props) => {
   const detailLink = buildDashboardToDepartmentDetailLink(
     item.id,
     timeRange,

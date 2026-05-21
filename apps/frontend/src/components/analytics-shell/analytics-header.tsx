@@ -8,7 +8,7 @@ type Props = {
   actions?: ReactNode;
 };
 
-export function AnalyticsHeader({ title, contextText, actions }: Props) {
+export const AnalyticsHeader = ({ title, contextText, actions }: Props) => {
   return (
     <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
       <div>

@@ -33,7 +33,7 @@ type DataState =
   | { status: "error"; message: string }
   | { status: "success"; view: DepartmentDetailView };
 
-export function DepartmentDetailPage({ id }: Props) {
+export const DepartmentDetailPage = ({ id }: Props) => {
   const searchParams = useSearchParams();
   const state = readDepartmentDetailState(searchParams);
 

@@ -24,10 +24,10 @@ const ATTENTION_SEVERITY: Record<string, number> = {
   low: 2,
 };
 
-export function attachAttentionState(
+export const attachAttentionState = (
   departments: DepartmentSummary[],
   anomalies: Anomaly[],
-): DepartmentRankingItem[] {
+): DepartmentRankingItem[] => {
   const anomalyMap = new Map<string, "high" | "medium" | "low">();
   for (const a of anomalies) {
     const existing = anomalyMap.get(a.department_id);
@@ -47,7 +47,7 @@ export function attachAttentionState(
   }));
 }
 
-export function sortItems(items: DepartmentRankingItem[], sort: SortKey): DepartmentRankingItem[] {
+export const sortItems = (items: DepartmentRankingItem[], sort: SortKey): DepartmentRankingItem[] => {
   const sorted = [...items];
 
   switch (sort) {
@@ -69,11 +69,11 @@ export function sortItems(items: DepartmentRankingItem[], sort: SortKey): Depart
   return sorted;
 }
 
-export function filterDepartments(
+export const filterDepartments = (
   items: DepartmentRankingItem[],
   search: string,
   attentionOnly: boolean,
-): DepartmentRankingItem[] {
+): DepartmentRankingItem[] => {
   let filtered = items;
 
   if (search.trim()) {

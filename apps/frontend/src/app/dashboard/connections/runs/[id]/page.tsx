@@ -5,7 +5,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ROUTES, UI_LABELS } from "@/lib/constants";
 import RunDetailContent from "./run-detail-content";
 
-export default async function RunDetailPage(props: { params: Promise<{ id: string }> }) {
+const RunDetailPage = async (props: { params: Promise<{ id: string }> }) => {
   const { id } = await props.params;
   return (
     <AnalyticsPageShell
@@ -21,3 +21,4 @@ export default async function RunDetailPage(props: { params: Promise<{ id: strin
     </AnalyticsPageShell>
   );
 }
+export default RunDetailPage;

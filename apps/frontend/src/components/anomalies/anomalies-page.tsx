@@ -19,7 +19,7 @@ type DataState =
   | { status: "error"; message: string }
   | { status: "success"; view: AnomalyListView; allAnomalies: Anomaly[] };
 
-export function AnomaliesPage() {
+export const AnomaliesPage = () => {
   const searchParams = useSearchParams();
   const state = readAnomalyState(searchParams);
 

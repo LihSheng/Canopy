@@ -6,7 +6,7 @@ type Props = {
   items: ContributorItem[];
 };
 
-export function DepartmentContributorPanel({ title, items }: Props) {
+export const DepartmentContributorPanel = ({ title, items }: Props) => {
   if (items.length === 0) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white p-5">
@@ -54,7 +54,7 @@ export function DepartmentContributorPanel({ title, items }: Props) {
   );
 }
 
-export function DepartmentContributorPanelSkeleton() {
+export const DepartmentContributorPanelSkeleton = () => {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white">
       <div className="border-b border-zinc-100 px-5 py-3.5">

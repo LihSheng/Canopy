@@ -2,11 +2,11 @@ import { Suspense } from "react";
 import { DepartmentDetailPage } from "@/components/department-detail/department-detail-page";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 
-export default async function DepartmentDetailRoute({
+const DepartmentDetailRoute = async ({
   params,
 }: {
   params: Promise<{ id: string }>;
-}) {
+}) => {
   const { id } = await params;
 
   return (
@@ -14,4 +14,6 @@ export default async function DepartmentDetailRoute({
       <DepartmentDetailPage id={id} />
     </Suspense>
   );
-}
+};
+
+export default DepartmentDetailRoute;

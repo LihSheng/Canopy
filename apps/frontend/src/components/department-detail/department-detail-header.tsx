@@ -21,7 +21,7 @@ const TIME_RANGE_OPTIONS: { key: TimeRangeKey; label: string }[] = [
   { key: "last_12_months", label: "Last 12 months" },
 ];
 
-export function DepartmentDetailHeader({ summary, timeRange, onTimeRangeChange }: Props) {
+export const DepartmentDetailHeader = ({ summary, timeRange, onTimeRangeChange }: Props) => {
   return (
     <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
       <div className="min-w-0">

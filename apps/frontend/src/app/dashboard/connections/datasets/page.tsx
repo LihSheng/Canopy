@@ -4,7 +4,7 @@ import { buildConnectionsBreadcrumbs } from "@/components/analytics-shell/breadc
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import DatasetListContent from "./dataset-list-content";
 
-export default function DatasetsPage() {
+const DatasetsPage = () => {
   return (
     <AnalyticsPageShell
       title="Datasets"
@@ -17,3 +17,4 @@ export default function DatasetsPage() {
     </AnalyticsPageShell>
   );
 }
+export default DatasetsPage;

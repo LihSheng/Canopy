@@ -1,7 +1,7 @@
 import type { ExportHistoryItem } from "./report-mappers";
 import { ReportHistoryRow } from "./report-history-row";
 
-export function ReportHistoryList({
+export const ReportHistoryList = ({
   items,
   onRerun,
   exporting,
@@ -9,7 +9,7 @@ export function ReportHistoryList({
   items: ExportHistoryItem[];
   onRerun: (id: string) => void;
   exporting: string | null;
-}) {
+}) => {
   if (items.length === 0) {
     return (
       <div>

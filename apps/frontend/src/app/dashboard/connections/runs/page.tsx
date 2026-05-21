@@ -5,7 +5,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { UI_LABELS } from "@/lib/constants";
 import RunsListContent from "./runs-list-content";
 
-export default function RunsPage() {
+const RunsPage = () => {
   return (
     <AnalyticsPageShell
       title="Run History"
@@ -18,3 +18,4 @@ export default function RunsPage() {
     </AnalyticsPageShell>
   );
 }
+export default RunsPage;

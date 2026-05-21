@@ -23,7 +23,7 @@ const TIME_RANGE_OPTIONS: { key: TimeRangeKey; label: string }[] = [
 
 const SORT_OPTIONS: SortKey[] = ["attention", "total_spend", "change_percent"];
 
-export function DepartmentsFilterBar({
+export const DepartmentsFilterBar = ({
   search,
   attentionOnly,
   timeRange,
@@ -32,7 +32,7 @@ export function DepartmentsFilterBar({
   onAttentionOnlyChange,
   onTimeRangeChange,
   onSortChange,
-}: Props) {
+}: Props) => {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="relative">

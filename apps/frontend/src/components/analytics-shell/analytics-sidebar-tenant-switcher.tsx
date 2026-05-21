@@ -10,7 +10,7 @@ type Props = {
   collapsed: boolean;
 };
 
-export function AnalyticsSidebarTenantSwitcher({ collapsed }: Props) {
+export const AnalyticsSidebarTenantSwitcher = ({ collapsed }: Props) => {
   const { tenant, tenants, refetch } = useTenant();
   const router = useRouter();
   const [open, setOpen] = useState(false);

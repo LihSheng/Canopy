@@ -60,7 +60,7 @@ type Props = {
   datasetId: string;
 };
 
-export default function DatasetWorkspaceContent({ datasetId }: Props) {
+const DatasetWorkspaceContent = ({ datasetId }: Props) => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeTab = (searchParams.get("tab") as Tab) || "Overview";
@@ -628,3 +628,4 @@ export default function DatasetWorkspaceContent({ datasetId }: Props) {
     </>
   );
 }
+export default DatasetWorkspaceContent;

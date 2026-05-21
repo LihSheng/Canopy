@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/constants";
 
-export default function IngestionPage() {
+const IngestionPage = () => {
   redirect(ROUTES.connections.home);
 }
+export default IngestionPage;

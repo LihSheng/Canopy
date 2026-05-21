@@ -43,7 +43,7 @@ const FREQUENCY_OPTIONS: { value: number; label: string }[] = [
   { value: 10080, label: "Every 7 days" },
 ];
 
-export function SyncPolicyEditor({
+export const SyncPolicyEditor = ({
   tableName,
   schemaColumns,
   detectedCursorColumn,
@@ -51,7 +51,7 @@ export function SyncPolicyEditor({
   onChange,
   supportsCdc = false,
   sourceType,
-}: SyncPolicyEditorProps) {
+}: SyncPolicyEditorProps) => {
   const cursorColumns = schemaColumns.filter((c) =>
     ["timestamp", "timestamptz", "datetime", "date"].some((t) =>
       c.data_type.toLowerCase().includes(t),
