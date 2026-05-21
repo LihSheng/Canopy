@@ -1,10 +1,21 @@
 import uuid
 from datetime import UTC, datetime
+from typing import TypedDict
 
 from source_type.domain import SourceType, SourceTypeCategory
 from source_type.repository import SourceTypeRepository
 
-_SEED_TYPES = [
+
+class _SeedTypeEntry(TypedDict):
+    key: str
+    label: str
+    category: str
+    enabled: bool
+    tags: list[str]
+    description: str
+
+
+_SEED_TYPES: list[_SeedTypeEntry] = [
     {
         "key": "static_file",
         "label": "Static File",

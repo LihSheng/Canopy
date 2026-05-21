@@ -84,7 +84,7 @@ def _build_summary(
         total_claims=total_claims,
         department_count=dept_count,
         anomaly_count=anomaly_count,
-        created_at=utcnow(),
+        created_at=utcnow(),  # type: ignore[arg-type]
     )
 
 

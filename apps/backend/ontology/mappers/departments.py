@@ -21,7 +21,7 @@ from sync.domain import (
 
 
 def _make_lineage(source_entity: object) -> str:
-    return json.dumps(asdict(source_entity), default=str)
+    return json.dumps(asdict(source_entity), default=str)  # type: ignore[call-overload]
 
 
 class DepartmentMapper(OntologyMapper[SourceDepartment, Department]):

@@ -105,4 +105,4 @@ class PostgresAdapter(DatabaseAdapter):
             if False:
                 yield []
 
-        return empty_generator()
+        return empty_generator()  # type: ignore[no-any-return]

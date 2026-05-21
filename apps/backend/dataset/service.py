@@ -240,6 +240,16 @@ class DatasetService:
 
         dataset = self._hydrate_dataset_version(dataset)
 
+        if dataset.active_version_id is None:
+            return {
+                "columns": [],
+                "rows": [],
+                "total_row_count": 0,
+                "filtered_row_count": 0,
+                "page": page,
+                "page_size": page_size,
+            }
+
         version = self._version_repo.get_active_version(id, dataset.active_version_id)
         if version is None or not version.storage_path:
             return {

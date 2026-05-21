@@ -7,6 +7,7 @@ from insights.service import generate_insight
 from ontology.orchestration.service import OntologyOrchestrator
 from refresh.domain import STAGE_ORDER, RefreshJob, RefreshStage
 from refresh.repository import RefreshRepository
+from sync.domain import SyncResult
 from sync.orchestration.service import SyncOrchestrator
 from sync.readers import (
     BudgetCodeReader,
@@ -51,7 +52,7 @@ class RefreshOrchestrator:
         job.started_at = utcnow()
         self._repo.update_job(job)
 
-        self._sync_result = None
+        self._sync_result: SyncResult | None = None
         self._snapshot_id: str | None = None
 
         for stage in STAGE_ORDER:
@@ -77,7 +78,7 @@ class RefreshOrchestrator:
 
     def _extract_source(self, job: RefreshJob) -> None:
         orchestrator = SyncOrchestrator(
-            readers=ALL_READERS,
+            readers=ALL_READERS,  # type: ignore[arg-type]
             app_db=self._app_db,
             source_db=self._source_db,
         )
@@ -141,7 +142,10 @@ class RefreshOrchestrator:
 
     def _collect_source_rows(self) -> dict[str, list]:
         source_data: dict[str, list] = {}
-        for snap in self._sync_result.snapshots:
+        result = self._sync_result
+        if result is None:
+            return source_data
+        for snap in result.snapshots:
             if snap.status == "completed":
                 key = snap.entity_type
                 source_data[key] = list(snap.rows) if snap.rows else []

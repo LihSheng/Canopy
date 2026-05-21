@@ -52,6 +52,6 @@ def detect_cursor_column(columns: list[dict]) -> str | None:
     for col in columns:
         dtype = col.get("data_type", "").lower()
         if any(ts_type in dtype for ts_type in _TIMESTAMP_TYPES):
-            return col["name"]
+            return col["name"]  # type: ignore[no-any-return]
 
     return None

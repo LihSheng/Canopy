@@ -1,6 +1,7 @@
 import threading
 import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 
 from common.executor import background
 from job_queue.job_registry import JobRegistry, JobStatus
@@ -38,7 +39,7 @@ class TenantJobQueue:
             self._queues[tenant_id].append((job_id, job_callable, args, kwargs))
         return job_id
 
-    def dequeue(self) -> tuple[str, callable, tuple, dict] | None:
+    def dequeue(self) -> tuple[str, Callable, tuple, dict] | None:
         with self._lock:
             if self._total_active >= self._max_concurrent_global:
                 return None

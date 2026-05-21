@@ -75,7 +75,7 @@ class PostgresCdcReader:
                     while self.running:
                         try:
                             # Await logical replication message
-                            msg = await conn.receive()
+                            msg = await conn.receive()  # type: ignore[attr-defined]
                             if msg is None:
                                 continue
 
@@ -99,7 +99,7 @@ class PostgresCdcReader:
                                 on_event(event)
 
                             # Send feedback to keep replication slot alive
-                            conn.send_feedback(write_lsn=msg.wal_start)
+                            conn.send_feedback(write_lsn=msg.wal_start)  # type: ignore[attr-defined]
 
                         except asyncio.CancelledError:
                             break

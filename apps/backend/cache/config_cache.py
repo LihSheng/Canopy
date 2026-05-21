@@ -14,7 +14,7 @@ class ConfigCache:
         cache_key = self._key(tenant_id, key)
         cached = self._store.get(cache_key)
         if cached is not None:
-            return cached
+            return cached  # type: ignore[no-any-return]
 
         if self._config_repository is None:
             return None
@@ -25,7 +25,7 @@ class ConfigCache:
 
         value = config.config_value_json
         self.cache_tenant_config(tenant_id, key, value)
-        return value
+        return value  # type: ignore[no-any-return]
 
     def cache_tenant_config(self, tenant_id: str, key: str, value: str, ttl_seconds: int = 120) -> None:
         self._store.set(self._key(tenant_id, key), value, ttl_seconds)

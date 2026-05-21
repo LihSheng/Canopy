@@ -106,10 +106,10 @@ class ProvisioningService:
         return job
 
     def get_provisioning_status(self, job_id: str) -> ProvisioningJobModel | None:
-        return self._db.query(ProvisioningJobModel).filter(ProvisioningJobModel.id == job_id).first()
+        return self._db.query(ProvisioningJobModel).filter(ProvisioningJobModel.id == job_id).first()  # type: ignore[no-any-return]
 
     def list_provisioning_jobs(self, tenant_id: str | None = None) -> list[ProvisioningJobModel]:
         q = self._db.query(ProvisioningJobModel).order_by(ProvisioningJobModel.created_at.desc())
         if tenant_id is not None:
             q = q.filter(ProvisioningJobModel.tenant_id == tenant_id)
-        return q.all()
+        return q.all()  # type: ignore[no-any-return]

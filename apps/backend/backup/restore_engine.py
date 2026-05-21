@@ -84,7 +84,7 @@ class RestoreEngine:
                 return
 
             if self._routing_cache is not None:
-                self._routing_cache.invalidate_tenant(run.tenant_id)
+                self._routing_cache.invalidate_tenant(run.tenant_id)  # type: ignore[attr-defined]
 
             run.status = BackupStatus.COMPLETED
             run.finished_at = datetime.now(UTC)

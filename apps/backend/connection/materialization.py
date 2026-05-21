@@ -48,7 +48,7 @@ def _materialize_csv_version(storage_path: Path, dataset_id: str) -> tuple[Path,
     if not rows:
         return write_jsonl_version([], dataset_id, storage_path.stem), 0, 0
 
-    headers = normalize_header(rows[0], len(rows[0]))
+    headers = normalize_header(rows[0], len(rows[0]))  # type: ignore[arg-type]
     output_rows = []
     for row in rows[1:]:
         output_rows.append({header: row[index] if index < len(row) else None for index, header in enumerate(headers)})

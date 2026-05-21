@@ -34,7 +34,7 @@ def _extract_json(raw: str) -> dict:
         content_lines = lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
         raw = "\n".join(content_lines)
 
-    return json.loads(raw)
+    return json.loads(raw)  # type: ignore[no-any-return]
 
 
 def _clean_text(text: str) -> str:

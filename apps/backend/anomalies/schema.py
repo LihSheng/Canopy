@@ -44,6 +44,6 @@ class DetectedAnomalyModel(Base):
     @classmethod
     def unpack_drivers(cls, payload_json: str) -> list[str]:
         try:
-            return json.loads(payload_json)
+            return json.loads(payload_json)  # type: ignore[no-any-return]
         except (json.JSONDecodeError, TypeError):
             return []

@@ -29,7 +29,7 @@ class DepartmentDetailResponse(BaseModel):
     change_pct: float
     employee_count: int
     attention_state: str | None = None
-    ai_summary: AiSummary | None = None
+    ai_summary: str | None = None
 
 
 class EmployeeContributionItem(BaseModel):

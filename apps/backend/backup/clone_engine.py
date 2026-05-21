@@ -120,7 +120,7 @@ class CloneEngine:
             )
 
             if self._routing_cache is not None:
-                self._routing_cache.invalidate_tenant(new_tenant.id)
+                self._routing_cache.invalidate_tenant(new_tenant.id)  # type: ignore[attr-defined]
         except Exception as e:
             self._fail_run(run, str(e), session)
         finally:

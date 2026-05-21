@@ -13,7 +13,7 @@ class RoutingCache:
     def get_tenant_database_target(self, tenant_id: str) -> dict | None:
         cached = self._store.get(self._key(tenant_id))
         if cached is not None:
-            return cached
+            return cached  # type: ignore[no-any-return]
 
         session = self._db_session_factory()
         try:

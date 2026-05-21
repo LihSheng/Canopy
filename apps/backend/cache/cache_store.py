@@ -1,14 +1,15 @@
 import threading
 import time
+from typing import Any
 
 
 class CacheStore:
     def __init__(self, default_ttl_seconds: int = 60):
         self._default_ttl = default_ttl_seconds
         self._lock = threading.Lock()
-        self._store: dict[str, tuple[float, any]] = {}
+        self._store: dict[str, tuple[float, Any]] = {}
 
-    def get(self, key: str) -> any:
+    def get(self, key: str) -> Any:
         with self._lock:
             entry = self._store.get(key)
             if entry is None:
@@ -19,7 +20,7 @@ class CacheStore:
                 return None
             return value
 
-    def set(self, key: str, value: any, ttl_seconds: int | None = None) -> None:
+    def set(self, key: str, value: Any, ttl_seconds: int | None = None) -> None:
         ttl = ttl_seconds if ttl_seconds is not None else self._default_ttl
         expires_at = time.monotonic() + ttl
         with self._lock:

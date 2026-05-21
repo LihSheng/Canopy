@@ -14,7 +14,7 @@ class DashboardCacheRepository:
         self._db = db
 
     def save_summary_cache(self, cache: DashboardSummaryCache) -> DashboardSummaryCacheModel:
-        created_at = cache.created_at
+        created_at: datetime | str = cache.created_at
         if isinstance(created_at, str):
             created_at = datetime.fromisoformat(created_at) if created_at else utcnow()
         model = DashboardSummaryCacheModel(

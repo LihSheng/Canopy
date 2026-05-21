@@ -65,8 +65,8 @@ def trigger_export(
         time_range=time_range,
         snapshot_timestamp=snapshot_context.created_at if snapshot_context else None,
         requested_by_user_id=user_id,
-        include_departments=include_departments,
-        include_anomalies=include_anomalies,
+        include_departments=include_departments or False,
+        include_anomalies=include_anomalies or False,
     )
     job.include_departments = include_departments if include_departments is not None else preset.include_departments
     job.include_anomalies = include_anomalies if include_anomalies is not None else preset.include_anomalies

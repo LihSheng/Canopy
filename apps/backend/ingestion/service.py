@@ -60,4 +60,4 @@ def process_upload(
         source_profile=source_profile,
         dataset_type=dataset_type,
     )
-    return repo.save_upload(record)
+    return repo.save_upload(record)  # type: ignore[no-any-return]

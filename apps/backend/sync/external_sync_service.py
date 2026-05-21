@@ -27,6 +27,8 @@ class ExternalDbSyncService:
     ``last_cursor_value`` for incremental cursor mode.
     """
 
+    _active_cdc_tasks: dict[str, tuple[object, object]] = {}
+
     def __init__(self, app_db: Session):
         self._app_db = app_db
         self._dataset_repo = DatasetRepository(app_db)
@@ -97,19 +99,17 @@ class ExternalDbSyncService:
 
                 storage_path = storage_root() / ds.id / f"{slugify(table_name)}.jsonl"
 
-                if not hasattr(self, "_active_cdc_tasks"):
-                    self.__class__._active_cdc_tasks = {}
                 if ds.id not in self._active_cdc_tasks:
                     if conn.source_type == "postgresql":
                         from sync.readers.pg_cdc_reader import PostgresCdcReader
 
-                        reader = PostgresCdcReader(config, ds.id, table_name)
+                        reader: object = PostgresCdcReader(config, ds.id, table_name)
                     else:
                         from sync.readers.mysql_cdc_reader import MysqlCdcReader
 
                         reader = MysqlCdcReader(config, ds.id, table_name)
 
-                    task = asyncio.create_task(reader.start_streaming(storage_path))
+                    task = asyncio.create_task(reader.start_streaming(storage_path))  # type: ignore[attr-defined]
                     self._active_cdc_tasks[ds.id] = (reader, task)
                 row_count = 0
                 if storage_path.exists():
@@ -127,7 +127,8 @@ class ExternalDbSyncService:
 
                 # Stream all rows via the dedicated batch method
                 all_rows: list[dict] = []
-                async for batch in adapter.fetch_table(config, table_name, cursor_column, cursor_value):
+                stream = await adapter.fetch_table(config, table_name, cursor_column, cursor_value)
+                async for batch in stream:
                     all_rows.extend(batch)
 
                 completed_at = utcnow()

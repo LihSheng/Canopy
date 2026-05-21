@@ -45,9 +45,8 @@ class RefreshRepository:
     def save_data_snapshot(self, snapshot: DataSnapshot) -> DataSnapshotModel:
         from datetime import datetime
 
-        created_at = snapshot.created_at
-        if isinstance(created_at, str):
-            created_at = datetime.fromisoformat(created_at) if created_at else utcnow()
+        raw_created = snapshot.created_at
+        created_at = datetime.fromisoformat(raw_created) if isinstance(raw_created, str) and raw_created else utcnow()
         model = DataSnapshotModel(
             id=snapshot.id,
             refresh_job_id=snapshot.refresh_job_id,

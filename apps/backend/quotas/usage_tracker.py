@@ -7,8 +7,8 @@ from quotas.domain import QuotaType
 class UsageTracker:
     def __init__(self):
         self._lock = threading.Lock()
-        self._counters: dict[str, dict[str, int]] = {}
-        self._rolling_windows: dict[str, dict[str, list[float]]] = {}
+        self._counters: dict[str, int] = {}
+        self._rolling_windows: dict[str, list[float]] = {}
 
     def _key(self, tenant_id: str, quota_type: QuotaType) -> str:
         return f"{tenant_id}:{quota_type.value}"

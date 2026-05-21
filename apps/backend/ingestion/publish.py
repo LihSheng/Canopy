@@ -71,5 +71,5 @@ def activate_publish(
         published_by=published_by,
     )
     if hasattr(repo, "save_publish_record"):
-        return repo.save_publish_record(record)
+        return repo.save_publish_record(record)  # type: ignore[no-any-return]
     return record

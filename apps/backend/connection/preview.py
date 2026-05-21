@@ -115,7 +115,7 @@ def _build_csv_profile(storage_path: Path) -> dict:
             "preview_rows": [],
         }
 
-    headers = normalize_header(rows[0], len(rows[0]))
+    headers = normalize_header(rows[0], len(rows[0]))  # type: ignore[arg-type]
     return {
         "sheet_name": storage_path.stem,
         "row_count": len(rows),
@@ -125,5 +125,5 @@ def _build_csv_profile(storage_path: Path) -> dict:
         "confidence": 1.0,
         "warnings": [],
         "preview_columns": headers,
-        "preview_rows": [normalize_preview_row(row, len(headers)) for row in rows[1:11]],
+        "preview_rows": [normalize_preview_row(row, len(headers)) for row in rows[1:11]],  # type: ignore[arg-type]
     }

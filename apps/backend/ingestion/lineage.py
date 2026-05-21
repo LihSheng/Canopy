@@ -77,7 +77,7 @@ def build_lineage_graph(
         cleaned_nodes[source_column] = cleaned_node
         graph.nodes.append(cleaned_node)
 
-        raw_node = raw_nodes.get(raw_source_column)
+        raw_node = raw_nodes.get(raw_source_column)  # type: ignore[assignment]
         if raw_node is not None:
             graph.edges.append(
                 LineageEdge(

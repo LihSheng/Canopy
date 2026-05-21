@@ -8,7 +8,8 @@ from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError, ValidationError
-from connection.importer import build_sheet_profiles, delete_uploaded_file, save_uploaded_file
+from connection.importer import build_sheet_profiles, save_uploaded_file
+from connection.preview import delete_uploaded_file
 from connection.repository import ConnectionRepository
 from connection.service import ConnectionService
 from control_plane.audit_service import AuditService

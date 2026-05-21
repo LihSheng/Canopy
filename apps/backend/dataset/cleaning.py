@@ -65,7 +65,7 @@ def _read_csv_rows(source_file_path: Path) -> list[dict]:
         rows = [row for row in reader if not is_empty_row(row)]
     if not rows:
         return []
-    headers = normalize_header(rows[0], len(rows[0]))
+    headers = normalize_header(rows[0], len(rows[0]))  # type: ignore[arg-type]
     return [
         {header: row[index] if index < len(row) else None for index, header in enumerate(headers)} for row in rows[1:]
     ]
@@ -171,7 +171,7 @@ def _infer_type_for_column(key: str, rows: list[dict]) -> str:
         type_counts[vtype] = type_counts.get(vtype, 0) + 1
     if not type_counts:
         return "text"
-    best = max(type_counts, key=type_counts.get)
+    best = max(type_counts, key=type_counts.get)  # type: ignore[arg-type]
     return best if type_counts[best] > 0 else "text"
 
 
