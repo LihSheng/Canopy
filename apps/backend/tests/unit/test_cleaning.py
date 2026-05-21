@@ -1,7 +1,5 @@
 import uuid
 
-import pytest
-
 from ingestion.cleaning import (
     validate_pipeline,
     validate_step_order,
@@ -11,7 +9,12 @@ from ingestion.cleaning import (
 from ingestion.domain import CleaningPipeline, CleaningStep, PipelineStatus
 
 
-def _step(step_type: str, order: int = 0, parameters: dict | None = None, description: str | None = None) -> CleaningStep:
+def _step(
+    step_type: str,
+    order: int = 0,
+    parameters: dict | None = None,
+    description: str | None = None,
+) -> CleaningStep:
     return CleaningStep(
         id=str(uuid.uuid4()),
         step_type=step_type,

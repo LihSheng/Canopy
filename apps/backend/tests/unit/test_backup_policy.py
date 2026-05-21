@@ -1,7 +1,5 @@
 import json
 
-import pytest
-
 from backup.domain import BackupPolicy, BackupType
 from backup.policy_manager import BackupPolicyManager
 from control_plane.config_repository import ConfigRepository
@@ -89,16 +87,10 @@ class TestSaveAndLoadPolicy:
 
 class TestPolicyValidation:
     def test_retention_days_must_be_positive(self, db_session):
-        repo = ConfigRepository(db_session)
-        manager = BackupPolicyManager(repo)
-
         policy = BackupPolicy(tenant_id="t-1", retention_days=30)
         assert policy.retention_days > 0
 
     def test_max_backups_must_be_positive(self, db_session):
-        repo = ConfigRepository(db_session)
-        manager = BackupPolicyManager(repo)
-
         policy = BackupPolicy(tenant_id="t-1", max_backups=10)
         assert policy.max_backups > 0
 

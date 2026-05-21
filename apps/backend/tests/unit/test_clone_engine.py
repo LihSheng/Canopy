@@ -1,13 +1,9 @@
 import time
 
-import pytest
-
-from backup.backup_engine import BackupEngine
 from backup.clone_engine import CloneEngine
 from backup.domain import BackupStatus
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
-from control_plane.schemas.config import TenantConfigModel
 from control_plane.schemas.tenants import TenantModel
 from control_plane.tenant_repository import TenantRepository
 
@@ -60,7 +56,7 @@ class TestCloneCreatesNewTenant:
 
 class TestCloneCopiesConfigs:
     def test_clone_copies_configs_from_source(self, db_session):
-        source = _seed_tenant(db_session, "t-source-cfg")
+        _seed_tenant(db_session, "t-source-cfg")
 
         config_repo = ConfigRepository(db_session)
         config_repo.set_config("t-source-cfg", "feature_flags", '{"flag_a": true}')
@@ -81,10 +77,10 @@ class TestCloneCopiesConfigs:
 
 class TestClonePreservesSource:
     def test_clone_preserves_source_tenant_unchanged(self, db_session):
-        source = _seed_tenant(db_session, "t-source-preserve")
+        _seed_tenant(db_session, "t-source-preserve")
         engine = _make_clone_engine(db_session)
 
-        run = engine.create_clone("t-source-preserve", "Cloned Preserved")
+        engine.create_clone("t-source-preserve", "Cloned Preserved")
         time.sleep(0.5)
 
         source_after = (
@@ -165,7 +161,7 @@ class TestCloneResult:
         _seed_tenant(db_session, "t-list-clone")
         engine = _make_clone_engine(db_session)
 
-        run = engine.create_clone("t-list-clone", "List Clone 1")
+        engine.create_clone("t-list-clone", "List Clone 1")
         time.sleep(0.5)
 
         clones = engine.list_clones(source_tenant_id="t-list-clone")
