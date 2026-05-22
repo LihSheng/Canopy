@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: read
-      pull-requests: read
-      issues: read
+      contents: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -30,4 +30,12 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          model: opencode/qwen3.6-plus-free
+          model: opencode/deepseek-v4-flash
+      
+      - name: Print OpenCode logs on failure
+        if: failure()
+        run: |
+          echo "=== OpenCode logs ==="
+          find ~/.local/share/opencode -type f -maxdepth 4 -print || true
+          cat ~/.local/share/opencode/log/*.log || true      
+      
