@@ -1,18 +1,17 @@
 # V1 Task Progress
 
-> V1 baseline is complete. Keep this tracker separate from the v2-v4
-> versioned trackers.
+> V1 baseline complete. All modules delivered.
 
-- [x] [Project Bootstrap Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/project-bootstrap.md)
-- [x] [Auth Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/auth.md)
-- [x] [Frontend Dashboard Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/frontend-dashboard.md)
-- [x] [API Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/api.md)
-- [x] [Source Sync Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/source-sync.md)
-- [x] [Ontology Mapping Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/ontology-mapping.md)
-- [x] [Analytics Aggregation Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/analytics-aggregation.md)
-- [x] [Anomaly Detection Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/anomaly-detection.md)
-- [x] [Insight Generation Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/insight-generation.md)
-- [x] [Refresh Orchestration Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/refresh-orchestration.md)
-- [x] [Reporting And Export Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/reporting-export.md)
-- [x] [Data Store Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/data-store.md)
-- [x] [Quality Gates And CI Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/quality-gates-ci.md)
+- [x] Project Bootstrap Module
+- [x] Auth Module
+- [x] Frontend Dashboard Module
+- [x] API Module
+- [x] Source Sync Module
+- [x] Ontology Mapping Module
+- [x] Analytics Aggregation Module
+- [x] Anomaly Detection Module
+- [x] Insight Generation Module
+- [x] Refresh Orchestration Module
+- [x] Reporting And Export Module
+- [x] Data Store Module
+- [x] Quality Gates And CI Module

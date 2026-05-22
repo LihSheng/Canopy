@@ -6,23 +6,25 @@ this file.
 
 ## Last Verified
 
-- Date: 2026-05-17
+- Date: 2026-05-22
 - Verified areas:
   - top-level repo layout
   - backend implemented routes and service areas
   - DB schema and migration presence
   - frontend page structure, API client surface, and canonical component folders
-  - task progress snapshot
+  - task progress snapshot (individual task files removed; progress.md kept)
+  - doc folder cleanup and path fixes
 - Confidence:
   - high for auth, sync, ontology, analytics, anomalies, exports, refresh, and dashboard shell areas
+  - high for v2-v6 extension modules (connection, ingestion, cleaning, multi-tenant, workbench)
   - medium for insight-generation depth without a deeper behavior review
   - high for progress docs
 
 ## Read This After
 
-1. [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md)
-2. [`QUICKSTART.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/QUICKSTART.md)
-3. [`doc/README.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/README.md)
+1. [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/Canopy/ARCHITECTURE.md)
+2. [`QUICKSTART.md`](C:/Users/Lih%20Sheng/Documents/Canopy/QUICKSTART.md)
+3. [`doc/README.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/README.md)
 
 `ARCHITECTURE.md` explains the architectural source of truth.
 This file explains what is currently built and where to look first.
@@ -39,29 +41,46 @@ Top-level folders:
 
 Top-level docs:
 
-- [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md): system source of truth
-- [`DESIGN.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/DESIGN.md): visual design source of truth
-- [`QUICKSTART.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/QUICKSTART.md): setup, run, test, lint
-- [`doc/README.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/README.md): docs index
-- [`doc/tasks/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/progress.md): task index for the versioned trackers
-- [`doc/v2/plan.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/plan.md): active post-v1 planning entrypoint
+- [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/Canopy/ARCHITECTURE.md): system source of truth
+- [`DESIGN.md`](C:/Users/Lih%20Sheng/Documents/Canopy/DESIGN.md): visual design source of truth
+- [`QUICKSTART.md`](C:/Users/Lih%20Sheng/Documents/Canopy/QUICKSTART.md): setup, run, test, lint
+- [`doc/README.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/README.md): docs index
+- [`doc/tasks/progress.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/tasks/progress.md): task index for the versioned trackers
+- [`doc/v2/plan.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v2/plan.md): v2 planning reference (delivered)
 
 ## Current Delivery State
 
-Implemented and verified:
+v1-v6 baseline delivered. All modules in production.
 
-- backend auth flow (login, logout, session, JWT/session handling)
-- backend health endpoint
-- backend source sync (6 entity readers, snapshot persistence, orchestration)
-- backend ontology mapping (domain types, 6 mappers, attribution resolver, persistence, orchestrator)
-- backend analytics aggregation and dashboard read-model queries
-- backend anomaly detection rules and persistence
-- backend export payload assembly and workbook generation
-- backend refresh trigger, job/status flow, and orchestration entrypoints
-- backend insight-generation entrypoints and service surface
-- frontend login flow
-- frontend dashboard UI shells, cards, tables, charts, and refresh widgets
-- frontend tests for auth/dashboard components and flows
+v1 (HerdHR intelligence baseline):
+- backend auth, source sync (6 entity readers), ontology mapping (domain types,
+  6 mappers), analytics aggregation, anomaly detection, export, refresh, insight
+  generation, API routes
+- frontend login flow, dashboard shells, cards, tables, charts, refresh widgets
+
+v2 (Dashboard shell and navigation):
+- analytics shell with sidebar, tenant switcher, page navigation
+- department detail, profile, reports views, API contract upgrades
+
+v3 (Ingestion and cleaning):
+- upload wizard, workbook profiling, mapping review grid
+- cleaning rule builder, cleaning engine, normalization, lineage graph
+- template library, publish review, Excel source adapter
+
+v4 (Workspace and dataset):
+- project workspace, source catalog, connection model
+- dataset workspace with preview grid and health panel
+- run progress, history, v3-to-v4 migration layer
+
+v5 (Multi-tenant platform):
+- tenant access context, data routing with RLS
+- control plane provisioning, object storage isolation
+- quotas, job queues, cache, backup, restore, cloning
+
+v6 (Data connection workbench):
+- source catalog (static file + MySQL), raw import capture
+- deterministic cleaning pipeline, immutable dataset versioning
+- lineage workspace integration, dataset workspace visualization
 
 Still worth checking for product depth, not for module existence:
 
@@ -73,52 +92,57 @@ Still worth checking for product depth, not for module existence:
 
 Practical summary:
 
-- backend has real auth, sync, ontology, analytics, anomaly, export, refresh, and API modules
-- insight generation is present and wired, but should still be reviewed for product depth when behavior changes
-- frontend and backend are both present as the completed v1 baseline
+- full stack deployed: FastAPI backend + Next.js frontend
+- v1-v6 baseline complete across auth, sync, ontology, analytics, anomaly,
+  export, refresh, insight, dashboard shell, ingestion, cleaning, workspace,
+  dataset, multi-tenant, and data connection workbench
+- insight generation is present and wired, but should still be reviewed for
+  product depth when behavior changes
+- individual task files removed from doc/tasks/vN; progress.md kept as
+  completion record
 
 ## Backend Map
 
 Entrypoint:
 
-- [`apps/backend/app.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/app.py): FastAPI app factory, middleware, exception handling, router registration
+- [`apps/backend/app.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/app.py): FastAPI app factory, middleware, exception handling, router registration
 
 Implemented backend areas:
 
-- [`apps/backend/common`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/common): config, DB wiring, error classes, clock, logging
-- [`apps/backend/auth`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/auth): domain, repository, password hashing, JWT/session service, ORM user model
-- [`apps/backend/api`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api): health/auth/dashboard/departments/claims/anomalies/exports/refresh routes, request/response schemas, auth dependency
-- [`apps/backend/ingestion`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ingestion): workbook profiling, cleaning, normalization, lineage, templates, publish, source adapters
-- [`apps/backend/project`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/project): project workspace domain, repository, service
-- [`apps/backend/source_type`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/source_type): source catalog domain, repository, service
-- [`apps/backend/connection`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/connection): connection setup, preview, materialization, repository, service
-- [`apps/backend/dataset`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/dataset): dataset domain, preview, repository, service
-- [`apps/backend/run`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/run): run domain, repository, service
-- [`apps/backend/analytics`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/analytics): aggregate reads, rankings, deltas, departments, repositories
-- [`apps/backend/anomalies`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/anomalies): anomaly rules, repository, list/detail mapping
-- [`apps/backend/insights`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/insights): domain, service, generation entrypoints
-- [`apps/backend/exports`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/exports): workbook build and export payload composition
-- [`apps/backend/refresh`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/refresh): trigger, status, job reads, orchestration entrypoints
-- [`apps/backend/control_plane`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/control_plane): tenant admin, provisioning, lifecycle, audit, config, membership, tenant repository
-- [`apps/backend/tenant_data`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tenant_data): tenant storage base, RLS, migration pipeline, router, schema bundles
-- [`apps/backend/object_storage`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/object_storage): object storage access guard, adapter layer, key generation, service
-- [`apps/backend/backup`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/backup): backup, restore, clone, policy, lifecycle validation
-- [`apps/backend/cache`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/cache): cache store, config cache, invalidation hooks, routing cache
-- [`apps/backend/quotas`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/quotas): quota registry, evaluator, enforcer, usage tracking
-- [`apps/backend/job_queue`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/job_queue): job registry and tenant queue scheduling
+- [`apps/backend/common`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/common): config, DB wiring, error classes, clock, logging
+- [`apps/backend/auth`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/auth): domain, repository, password hashing, JWT/session service, ORM user model
+- [`apps/backend/api`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/api): health/auth/dashboard/departments/claims/anomalies/exports/refresh routes, request/response schemas, auth dependency
+- [`apps/backend/ingestion`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/ingestion): workbook profiling, cleaning, normalization, lineage, templates, publish, source adapters
+- [`apps/backend/project`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/project): project workspace domain, repository, service
+- [`apps/backend/source_type`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/source_type): source catalog domain, repository, service
+- [`apps/backend/connection`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/connection): connection setup, preview, materialization, repository, service
+- [`apps/backend/dataset`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/dataset): dataset domain, preview, repository, service
+- [`apps/backend/run`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/run): run domain, repository, service
+- [`apps/backend/analytics`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/analytics): aggregate reads, rankings, deltas, departments, repositories
+- [`apps/backend/anomalies`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/anomalies): anomaly rules, repository, list/detail mapping
+- [`apps/backend/insights`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/insights): domain, service, generation entrypoints
+- [`apps/backend/exports`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/exports): workbook build and export payload composition
+- [`apps/backend/refresh`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/refresh): trigger, status, job reads, orchestration entrypoints
+- [`apps/backend/control_plane`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/control_plane): tenant admin, provisioning, lifecycle, audit, config, membership, tenant repository
+- [`apps/backend/tenant_data`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/tenant_data): tenant storage base, RLS, migration pipeline, router, schema bundles
+- [`apps/backend/object_storage`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/object_storage): object storage access guard, adapter layer, key generation, service
+- [`apps/backend/backup`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/backup): backup, restore, clone, policy, lifecycle validation
+- [`apps/backend/cache`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/cache): cache store, config cache, invalidation hooks, routing cache
+- [`apps/backend/quotas`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/quotas): quota registry, evaluator, enforcer, usage tracking
+- [`apps/backend/job_queue`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/job_queue): job registry and tenant queue scheduling
 
 Current DB models:
 
-- [`apps/backend/auth/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/auth/schema.py): `users`
-- [`apps/backend/sync/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/schema.py): source snapshot tables
-- [`apps/backend/ontology/schema.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/ontology/schema.py): ontology and unresolved mapping tables
-- [`apps/backend/control_plane/schemas`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/control_plane/schemas): tenant admin, audit, config, membership, and provisioning tables
-- [`apps/backend/tenant_data/schemas`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tenant_data/schemas): tenant data plane tables and schema bundles
+- [`apps/backend/auth/schema.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/auth/schema.py): `users`
+- [`apps/backend/sync/schema.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/sync/schema.py): source snapshot tables
+- [`apps/backend/ontology/schema.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/ontology/schema.py): ontology and unresolved mapping tables
+- [`apps/backend/control_plane/schemas`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/control_plane/schemas): tenant admin, audit, config, membership, and provisioning tables
+- [`apps/backend/tenant_data/schemas`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/tenant_data/schemas): tenant data plane tables and schema bundles
 - analytics, anomalies, refresh, and related modules have supporting persistence and repositories in their own areas
 
 Source-side models (separate read-only base):
 
-- [`apps/backend/sync/readers/_source_models.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/sync/readers/_source_models.py): `departments`, `employees`, `claims`, `payroll`, `cost_centers`, `budget_codes`
+- [`apps/backend/sync/readers/_source_models.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/sync/readers/_source_models.py): `departments`, `employees`, `claims`, `payroll`, `cost_centers`, `budget_codes`
 
 Migration system:
 
@@ -154,20 +178,20 @@ Implemented routes include:
 
 Main files:
 
-- [`apps/backend/api/routes/health.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/health.py)
-- [`apps/backend/api/routes/auth.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/auth.py)
-- [`apps/backend/api/routes/dashboard.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/dashboard.py)
-- [`apps/backend/api/routes/departments.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/departments.py)
-- [`apps/backend/api/routes/claims.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/claims.py)
-- [`apps/backend/api/routes/anomalies.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/anomalies.py)
-- [`apps/backend/api/routes/exports.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/exports.py)
-- [`apps/backend/api/routes/refresh.py`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/api/routes/refresh.py)
+- [`apps/backend/api/routes/health.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/api/routes/health.py)
+- [`apps/backend/api/routes/auth.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/api/routes/auth.py)
+- [`apps/backend/api/routes/dashboard.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/api/routes/dashboard.py)
+- [`apps/backend/api/routes/departments.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/api/routes/departments.py)
+- [`apps/backend/api/routes/claims.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/api/routes/claims.py)
+- [`apps/backend/api/routes/anomalies.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/api/routes/anomalies.py)
+- [`apps/backend/api/routes/exports.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/api/routes/exports.py)
+- [`apps/backend/api/routes/refresh.py`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/api/routes/refresh.py)
 
 ## Frontend Map
 
 Frontend app root:
 
-- [`apps/frontend/src/app`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/app)
+- [`apps/frontend/src/app`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/app)
 
 Main routes:
 
@@ -179,19 +203,19 @@ Main routes:
 
 First places to inspect:
 
-- [`apps/frontend/src/app/login/page.tsx`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/app/login/page.tsx)
-- [`apps/frontend/src/app/dashboard/page.tsx`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/app/dashboard/page.tsx)
-- [`apps/frontend/src/components/dashboard/dashboard-shell.tsx`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/components/dashboard/dashboard-shell.tsx)
-- [`apps/frontend/src/components/dashboard/anomalies-shell.tsx`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/components/dashboard/anomalies-shell.tsx)
-- [`apps/frontend/src/components/dashboard/department-detail-shell.tsx`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/components/dashboard/department-detail-shell.tsx)
+- [`apps/frontend/src/app/login/page.tsx`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/app/login/page.tsx)
+- [`apps/frontend/src/app/dashboard/page.tsx`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/app/dashboard/page.tsx)
+- [`apps/frontend/src/components/dashboard/dashboard-shell.tsx`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/components/dashboard/dashboard-shell.tsx)
+- [`apps/frontend/src/components/dashboard/anomalies-shell.tsx`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/components/dashboard/anomalies-shell.tsx)
+- [`apps/frontend/src/components/dashboard/department-detail-shell.tsx`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/components/dashboard/department-detail-shell.tsx)
 
 Supporting areas:
 
-- [`apps/frontend/src/components/auth`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/components/auth)
-- [`apps/frontend/src/components/shared`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/components/shared)
-- [`apps/frontend/src/lib/api`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/lib/api)
-- [`apps/frontend/src/lib/mappers.ts`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/lib/mappers.ts)
-- [`apps/frontend/src/lib/formatters.ts`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/lib/formatters.ts)
+- [`apps/frontend/src/components/auth`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/components/auth)
+- [`apps/frontend/src/components/shared`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/components/shared)
+- [`apps/frontend/src/lib/api`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/lib/api)
+- [`apps/frontend/src/lib/mappers.ts`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/lib/mappers.ts)
+- [`apps/frontend/src/lib/formatters.ts`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/lib/formatters.ts)
 
 ## Frontend-Backend Shape
 
@@ -204,38 +228,27 @@ Main current seam to verify before deeper work:
 
 Backend tests:
 
-- [`apps/backend/tests/unit`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/unit)
-- [`apps/backend/tests/integration`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/backend/tests/integration)
+- [`apps/backend/tests/unit`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/tests/unit)
+- [`apps/backend/tests/integration`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/tests/integration)
 
 Frontend tests:
 
-- [`apps/frontend/src/tests/unit`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/tests/unit)
-- [`apps/frontend/src/tests/integration`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/apps/frontend/src/tests/integration)
+- [`apps/frontend/src/tests/unit`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/tests/unit)
+- [`apps/frontend/src/tests/integration`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/frontend/src/tests/integration)
 
 ## Progress Snapshot
 
-From [`doc/tasks/v1/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v1/progress.md):
+All v1-v6 task modules delivered. Individual task files removed; progress.md
+files kept as completion records.
 
-- done: project bootstrap
-- done: auth
-- done: frontend dashboard
-- done: api
-- done: source sync
-- done: ontology mapping
-- done: analytics aggregation
-- done: anomaly detection
-- done: insight generation
-- done: refresh orchestration
-- done: reporting and export
-- done: data store
-- done: quality gates and CI
+Versioned progress trackers:
 
-Separate versioned trackers:
-
-- [`doc/tasks/v2/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/progress.md): v2 dashboard shell and navigation work
-- [`doc/tasks/v3/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v3/progress.md): v3 ingestion and cleaning work
-- [`doc/tasks/v4/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v4/progress.md): v4 workspace and dataset work
-- [`doc/tasks/v5/progress.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v5/progress.md): v5 multi-tenant platform and database architecture
+- [`doc/tasks/v1/progress.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/tasks/v1/progress.md): v1 baseline — 13/13 complete
+- [`doc/tasks/v2/progress.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/tasks/v2/progress.md): v2 dashboard shell — 10/11 complete (tenant-switching pending)
+- [`doc/tasks/v3/progress.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/tasks/v3/progress.md): v3 ingestion and cleaning — 11/11 complete
+- [`doc/tasks/v4/progress.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/tasks/v4/progress.md): v4 workspace and dataset — 10/10 complete
+- [`doc/tasks/v5/progress.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/tasks/v5/progress.md): v5 multi-tenant platform — 6/6 complete
+- [`doc/tasks/v6/progress.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/tasks/v6/progress.md): v6 data connection workbench — 10/10 complete
 
 ## Known Drift Hotspots
 
@@ -243,7 +256,7 @@ Verify these before trusting the snapshot:
 
 - route inventory under `apps/backend/api/routes/`
 - frontend API client expectations under `apps/frontend/src/lib/api/`
-- whether v2 planning assumptions still match the completed v1 code
+- whether current v2-v6 code matches the progress.md completion records
 - package versions
 
 ## Refresh Rules
@@ -252,8 +265,8 @@ Refresh this file when:
 
 - a new route group is added or removed
 - a major module changes status materially
-- a v2 scope decision changes the most important repo entrypoints
-- the task progress doc changes materially
+- a new version phase delivers and its progress.md records completion
+- the task progress docs change materially
 
 Do not update this file for small internal refactors that do not change
 navigation or module status.
