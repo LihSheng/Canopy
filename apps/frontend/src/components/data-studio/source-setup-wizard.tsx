@@ -12,7 +12,7 @@ import {
   createProject,
 } from "@/lib/api/data-source";
 import type { DiscoveredTable, StaticFilePreview } from "@/lib/api/types";
-import type { SyncPolicy } from "@/components/data-studio/sync-policy-editor";
+import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
 import { PreviewGrid } from "@/components/preview-grid";
 import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT } from "@/lib/constants";
 
@@ -197,7 +197,7 @@ export const SourceSetupWizard = () => {
     });
   }, [activeSheetName]);
 
-  const _handleStep2Next = useCallback(() => {
+  const handleStep2Next = useCallback(() => {
     if (isDb) {
       const policies: Record<string, SyncPolicy> = {};
       for (const name of selectedTables) {
@@ -303,6 +303,7 @@ export const SourceSetupWizard = () => {
   const totalCount = isDb ? tables.length : preview?.sheet_profiles.length ?? 0;
   const canProceedToStep2 = isDb ? (testSuccess && connectionId != null) : (preview != null);
   const _canProceedToStep3 = selectedCount > 0;
+  const maxStep: Step = isDb ? 3 : 2;
   const stepLabel = (s: Step) =>
     s === 1 ? (isDb ? "Authenticate" : "Upload") : s === 2 ? "Select Objects" : "Sync Policy";
 
@@ -319,7 +320,7 @@ export const SourceSetupWizard = () => {
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Step indicator */}
       <div className="flex items-center gap-2 text-sm">
-        {([1, 2, 3] as const).map((s) => (
+        {([1, 2, 3] as const).filter((s) => s <= maxStep).map((s) => (
           <div key={s} className="flex items-center gap-2">
             <div
               className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
@@ -335,7 +336,7 @@ export const SourceSetupWizard = () => {
             <span className={step === s ? "font-medium text-zinc-900" : "text-zinc-400"}>
               {stepLabel(s)}
             </span>
-            {s < 3 && <span className="text-zinc-300">→</span>}
+            {s < maxStep && <span className="text-zinc-300">→</span>}
           </div>
         ))}
       </div>
@@ -689,6 +690,100 @@ export const SourceSetupWizard = () => {
             >
               {UI_LABELS.back}
             </button>
+            {isDb ? (
+              <button
+                type="button"
+                onClick={() => handleStep2Next()}
+                disabled={selectedCount === 0}
+                className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {UI_LABELS.next} ({selectedCount})
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void handleFinish()}
+                disabled={deploying || selectedCount === 0}
+                className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deploying ? UI_LABELS.deploying : UI_LABELS.finishAndDeploy}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- Step 3: Configure Sync Policy --- */}
+      {step === 3 && isDb && (
+        <div className="rounded-lg border border-zinc-200 bg-white p-6">
+          <h3 className="mb-4 text-lg font-semibold text-zinc-900">Configure Sync Policy</h3>
+          <p className="mb-4 text-sm text-zinc-500">
+            Choose how each selected object should be synchronized.
+          </p>
+
+          <div className="space-y-4">
+            {isDb ? (
+              Array.from(selectedTables).map((tableName) => {
+                const table = tables.find((t) => t.table_name === tableName);
+                const policy = tablePolicies[tableName] ?? DEFAULT_POLICY;
+                return (
+                  <SyncPolicyEditor
+                    key={tableName}
+                    tableName={tableName}
+                    schemaColumns={table?.columns ?? []}
+                    detectedCursorColumn={table?.detected_cursor_column ?? null}
+                    supportsCdc={supportsCdc}
+                    sourceType={sourceType}
+                    value={policy}
+                    onChange={(p) => _updatePolicy(tableName, p)}
+                  />
+                );
+              })
+            ) : (
+              Array.from(selectedSheets).map((sheetName) => {
+                const policy = tablePolicies[sheetName] ?? DEFAULT_POLICY;
+                return (
+                  <SyncPolicyEditor
+                    key={sheetName}
+                    tableName={sheetName}
+                    schemaColumns={[]}
+                    detectedCursorColumn={null}
+                    supportsCdc={false}
+                    sourceType="static_file"
+                    value={policy}
+                    onChange={(p) => _updatePolicy(sheetName, p)}
+                  />
+                );
+              })
+            )}
+          </div>
+
+          {error && (
+            <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-6 rounded-lg bg-zinc-50 p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-500">
+                {selectedCount} object{selectedCount !== 1 ? "s" : ""} configured
+              </span>
+              <span className="text-zinc-400">
+                {isDb
+                  ? Array.from(selectedTables).map((name) => {
+                      const p = tablePolicies[name];
+                      return `${name} (${p?.syncMode ?? "batch"})`;
+                    }).join(", ")
+                  : Array.from(selectedSheets).map((name) => {
+                      const p = tablePolicies[name];
+                      return `${name} (${p?.syncMode ?? "batch"})`;
+                    }).join(", ")}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-between">
             <button
               type="button"
               onClick={() => setStep(2)}

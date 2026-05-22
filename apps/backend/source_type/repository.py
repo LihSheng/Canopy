@@ -10,10 +10,10 @@ class SourceTypeRepository:
 
     def save(self, domain: SourceType) -> SourceType:
         model = self._to_model(domain)
-        self._db.add(model)
+        merged = self._db.merge(model)
         self._db.commit()
-        self._db.refresh(model)
-        return self._to_domain(model)
+        self._db.refresh(merged)
+        return self._to_domain(merged)
 
     def list_all(self) -> list[SourceType]:
         models = self._db.query(SourceTypeModel).order_by(SourceTypeModel.key).all()

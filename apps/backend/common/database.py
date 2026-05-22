@@ -1,5 +1,6 @@
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Column, DefaultClause, Engine, create_engine, inspect, literal, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.schema import CreateColumn
 
 from common.config import settings
 
@@ -181,4 +182,49 @@ def init_db(engine_override: Engine | None = None):
     control_plane_eng = engine_override or control_plane_engine()
     tenant_data_eng = engine_override or tenant_data_engine()
     Base.metadata.create_all(bind=control_plane_eng)
+    _sync_missing_columns(control_plane_eng, Base.metadata)
     TenantDataBase.metadata.create_all(bind=tenant_data_eng)
+    _sync_missing_columns(tenant_data_eng, TenantDataBase.metadata)
+
+
+def _sync_missing_columns(engine: Engine, metadata) -> None:
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    if not existing_tables:
+        return
+
+    with engine.begin() as conn:
+        for table in metadata.sorted_tables:
+            if table.name not in existing_tables:
+                continue
+
+            existing_columns = {column["name"] for column in inspector.get_columns(table.name)}
+            missing_columns = [column for column in table.columns if column.name not in existing_columns]
+            for column in missing_columns:
+                add_column = Column(
+                    column.name,
+                    column.type,
+                    nullable=column.nullable,
+                    primary_key=column.primary_key,
+                    autoincrement=column.autoincrement,
+                    unique=column.unique,
+                    index=column.index,
+                    comment=column.comment,
+                    server_default=column.server_default,
+                )
+                if not add_column.nullable and add_column.server_default is None:
+                    default_value = None
+                    if column.default is not None and getattr(column.default, "is_scalar", False):
+                        default_value = column.default.arg
+
+                    if default_value is not None:
+                        default_sql = str(
+                            literal(default_value).compile(
+                                dialect=engine.dialect,
+                                compile_kwargs={"literal_binds": True},
+                            )
+                        )
+                        add_column.server_default = DefaultClause(text(default_sql))
+
+                column_sql = str(CreateColumn(add_column).compile(dialect=engine.dialect))
+                conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN {column_sql}'))

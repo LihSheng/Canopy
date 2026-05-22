@@ -73,10 +73,19 @@ class SourceTypeService:
 
     def ensure_seeded(self) -> None:
         existing = self._repo.list_all()
-        existing_keys = {st.key for st in existing}
+        existing_by_key = {st.key: st for st in existing}
         now = datetime.now(UTC)
         for entry in _SEED_TYPES:
-            if entry["key"] not in existing_keys:
+            if entry["key"] in existing_by_key:
+                existing_st = existing_by_key[entry["key"]]
+                # Update mutable fields from seed so stale flags don't persist
+                existing_st.label = entry["label"]
+                existing_st.category = entry["category"]
+                existing_st.enabled = entry["enabled"]
+                existing_st.tags = entry["tags"]
+                existing_st.description = entry["description"]
+                self._repo.save(existing_st)
+            else:
                 st = SourceType(
                     id=str(uuid.uuid4()),
                     key=entry["key"],
