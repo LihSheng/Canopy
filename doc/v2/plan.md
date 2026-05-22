@@ -21,10 +21,10 @@ As of May 16, 2026:
 
 Baseline references:
 
-- [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md)
-- [`doc/v1/high-level-design.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v1/high-level-design.md)
-- [`doc/v1/detailed-design.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v1/detailed-design.md)
-- [`doc/codebase-map.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/codebase-map.md)
+- [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/Canopy/ARCHITECTURE.md)
+- [`doc/v1/high-level-design.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v1/high-level-design.md)
+- [`doc/v1/detailed-design.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v1/detailed-design.md)
+- [`doc/codebase-map.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/codebase-map.md)
 
 ## What v2 should not do
 

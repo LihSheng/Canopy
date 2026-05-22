@@ -30,12 +30,52 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          model: opencode/deepseek-v4-flash
+          model: opencode-go/deepseek-v4-flash
+          use_github_token: true
       
-      - name: Print OpenCode logs on failure
+      - name: Debug opencode failure
         if: failure()
+        shell: bash
+        env:
+          MODEL_INPUT: opencode-go/deepseek-v4-flash
         run: |
-          echo "=== OpenCode logs ==="
-          find ~/.local/share/opencode -type f -maxdepth 4 -print || true
-          cat ~/.local/share/opencode/log/*.log || true      
+          echo "=== Model config ==="
+          echo "MODEL env (set by action): $MODEL"
+          echo "MODEL_INPUT (from workflow): $MODEL_INPUT"
+          echo "OPENCODE_API_KEY set: $([ -n \"$OPENCODE_API_KEY\" ] && echo 'YES' || echo 'NO')"
+          echo ""
+          echo "=== Find all opencode artifact paths ==="
+          for dir in ~/.local/share/opencode ~/.opencode ~/.config/opencode /home/runner/.opencode; do
+            if [ -d "$dir" ]; then
+              echo "--- $dir ---"
+              find "$dir" -type f -maxdepth 5 -print 2>/dev/null || true
+            fi
+          done
+          echo ""
+          echo "=== Log files ==="
+          for dir in ~/.local/share/opencode/log ~/.opencode/log ~/.config/opencode/log; do
+            if [ -d "$dir" ]; then
+              echo "--- $dir ---"
+              for f in "$dir"/*.log; do
+                [ -f "$f" ] || continue
+                echo ">>> $f (last 200 lines) <<<"
+                tail -n 200 "$f" 2>/dev/null || true
+                echo ""
+              done
+            fi
+          done
+          echo ""
+          echo "=== SQLite state (last 50 lines via strings) ==="
+          for db in ~/.local/share/opencode/*.db ~/.opencode/*.db /home/runner/.opencode/*.db; do
+            if [ -f "$db" ]; then
+              echo "--- $db ---"
+              strings "$db" | tail -n 50 || true
+            fi
+          done
+          echo ""
+          echo "=== opencode.json in workspace ==="
+          cat opencode.json 2>/dev/null || echo "(not found)"
+          echo ""
+          echo "=== Job env (names only, not values) ==="
+          env | cut -d= -f1 | sort || true
       

@@ -1,13 +1,15 @@
 # V2 Task Progress
 
-- [x] [Analytics Shell Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/analytics-shell.md)
-- [x] [Navigation State Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/navigation-state.md)
-- [x] [Dashboard V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/dashboard-v2.md)
-- [x] [Anomalies V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/anomalies-v2.md)
-- [x] [Departments V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/departments-v2.md)
-- [x] [Department Detail V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/department-detail-v2.md)
-- [x] [Reports V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/reports-v2.md)
-- [x] [Profile V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/profile-v2.md)
-- [x] [API Contracts V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/api-contracts-v2.md)
-- [x] [Quality Gates V2 Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/quality-gates-v2.md)
-- [ ] [Tenant Switching Module](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/v2/tenant-switching.md)
+> V2 dashboard shell and navigation. 10 of 11 modules complete.
+
+- [x] Analytics Shell Module
+- [x] Navigation State Module
+- [x] Dashboard V2 Module
+- [x] Anomalies V2 Module
+- [x] Departments V2 Module
+- [x] Department Detail V2 Module
+- [x] Reports V2 Module
+- [x] Profile V2 Module
+- [x] API Contracts V2 Module
+- [x] Quality Gates V2 Module
+- [ ] Tenant Switching Module

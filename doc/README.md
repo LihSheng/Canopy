@@ -4,43 +4,50 @@ Use the versioned folders for planning and design docs.
 
 ## Live References
 
-- [Codebase Map](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/codebase-map.md): current snapshot and navigation aid
-- [Task Index](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/tasks/progress.md): entrypoint to the versioned task trackers
+- [Codebase Map](C:/Users/Lih%20Sheng/Documents/Canopy/doc/codebase-map.md): current snapshot and navigation aid
+- [Task Index](C:/Users/Lih%20Sheng/Documents/Canopy/doc/tasks/progress.md): entrypoint to the versioned task trackers
 
 ## V1 Baseline
 
-- [Proposal](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v1/proposal.md)
-- [High-Level Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v1/high-level-design.md)
-- [Detailed Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v1/detailed-design.md)
-- [Quality Guardrails](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v1/quality-guardrails.md)
-- [Data Store Ownership](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v1/data-store-repository-ownership.md)
+- [Proposal](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v1/proposal.md)
+- [High-Level Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v1/high-level-design.md)
+- [Detailed Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v1/detailed-design.md)
+- [Quality Guardrails](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v1/quality-guardrails.md)
+- [Data Store Ownership](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v1/data-store-repository-ownership.md)
 
 ## V2 Planning
 
-- [Plan](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/plan.md)
-- [UI/UX Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/uiux-design.md)
-- [Detailed Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/detailed-design.md)
-- [Tenant Switching PRD](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v2/tenant-switching-prd.md)
+- [Plan](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v2/plan.md)
+- [UI/UX Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v2/uiux-design.md)
+- [Detailed Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v2/detailed-design.md)
+- [Tenant Switching PRD](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v2/tenant-switching-prd.md)
 
 ## V3 Planning
 
-- [Plan](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v3/plan.md)
-- [UI/UX Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v3/uiux-design.md)
-- [High-Level Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v3/high-level-design.md)
-- [Detailed Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v3/detailed-design.md)
+- [Plan](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v3/plan.md)
+- [UI/UX Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v3/uiux-design.md)
+- [High-Level Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v3/high-level-design.md)
+- [Detailed Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v3/detailed-design.md)
 
 ## V4 Planning
 
-- [Plan](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v4/plan.md)
-- [UI/UX Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v4/uiux-design.md)
-- [High-Level Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v4/high-level-design.md)
-- [Detailed Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v4/detailed-design.md)
+- [Plan](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v4/plan.md)
+- [UI/UX Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v4/uiux-design.md)
+- [High-Level Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v4/high-level-design.md)
+- [Detailed Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v4/detailed-design.md)
 
 ## V5 Planning
 
-- [PRD](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/prd.md)
-- [Plan](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/plan.md)
-- [High-Level Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/high-level-design.md)
-- [Detailed Design](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/detailed-design.md)
-- [Database Architecture](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/database-architecture.md)
-- [Ontology Todo](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/doc/v5/ontology-todo.md)
+- [PRD](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v5/prd.md)
+- [Plan](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v5/plan.md)
+- [High-Level Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v5/high-level-design.md)
+- [Detailed Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v5/detailed-design.md)
+- [Database Architecture](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v5/database-architecture.md)
+- [Ontology Todo](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v5/ontology-todo.md)
+
+## V6 Planning
+
+- [PRD](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v6/prd.md)
+- [High-Level Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v6/high-level-design.md)
+- [Detailed Design](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v6/detailed-design.md)
+- [Security Hardening PRD](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v6/security-hardening-prd.md)

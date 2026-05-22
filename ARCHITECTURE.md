@@ -49,13 +49,16 @@ Auth            Simple email/password authentication for v1
 
 ## Architectural style
 
-V1 is a modular monolith with asynchronous background jobs.
+The v1-v6 baseline is delivered as a modular monolith with asynchronous
+background jobs.
 
 Why:
 
 - simpler delivery than early microservices
 - clear internal boundaries around sync, ontology, analytics, anomaly logic,
-  AI summarization, and API delivery
+  AI summarization, API delivery, connection management, data studio,
+  ingestion pipelines, cleaning engines, multi-tenant isolation, and
+  dataset versioning
 - easier to evolve while requirements are still settling
 - enough structure to extract workers or services later if scale demands it
 
@@ -145,12 +148,10 @@ not ad hoc shared mutable state.
 
 This keeps refresh flow testable and prevents hidden coupling between stages.
 
-## V2 guardrails from the completed V1 baseline
+## Guardrails applied during v2-v6 delivery
 
-V1 is complete as a single-tenant product slice, but the codebase should not be
-trapped in a forever-single-tenant shape.
-
-These guardrails now apply to v2 planning and post-v1 changes.
+v1-v6 baseline delivered. The guardrails below were applied during v2-v6
+planning and implementation. They remain active for future extensions.
 
 ### Tenant-aware seam rule
 
@@ -215,9 +216,9 @@ Export, Data Store, and Quality Gates in v2:
 - keep refresh job sequencing owned by orchestration
 - keep export and AI outputs bound to the same snapshot basis as dashboard data
 
-These guardrails are architecture constraints, not a promise that every v2
-feature must land immediately. They exist to reduce rewrite cost when tenant
-isolation and connector expansion are introduced in later versions.
+These guardrails were applied during v2-v6 delivery. Multi-tenant isolation,
+connector expansion, and storage routing were implemented in v5 and v6.
+They remain architecture constraints for any future extension.
 
 ---
 
@@ -406,6 +407,37 @@ Logical zones:
 - insight cache zone
 - application metadata zone
 
+### 12. Extension modules delivered in v2-v6
+
+Beyond the v1 baseline, the following module groups were delivered:
+
+**V2 — Dashboard shell and navigation:**
+- analytics shell with tenant switcher, sidebar, and page navigation
+- department detail, profile, and reports views
+- navigation state management and API contract upgrades
+
+**V3 — Ingestion and cleaning:**
+- upload wizard with workbook profiling and preview
+- mapping review grid and cleaning rule builder
+- cleaning engine, normalization pipeline, and template library
+- lineage graph, publish review, and Excel source adapter
+
+**V4 — Workspace and dataset:**
+- project workspace, source catalog, connection model
+- dataset workspace with preview grid and health panel
+- run progress, history tracking, and v3-to-v4 migration layer
+
+**V5 — Multi-tenant platform:**
+- tenant access context with data routing and RLS
+- control plane provisioning and object storage isolation
+- tenant quotas, job queues, cache, backup, restore, and cloning
+
+**V6 — Data connection workbench:**
+- source catalog with static file and MySQL source types
+- raw import capture, deterministic cleaning pipeline
+- immutable dataset versioning, lineage workspace integration
+- dataset workspace visualization and test coverage verification
+
 ---
 
 ## Data flow
@@ -512,7 +544,7 @@ The backend sends facts, not raw operational data with open-ended prompts.
 
 ---
 
-## Phase 1 boundary
+## Current system boundary (post v1-v6)
 
 Not in scope. Do not build. Do not scaffold placeholders.
 
@@ -520,10 +552,17 @@ Not in scope. Do not build. Do not scaffold placeholders.
 - triggered approvals or operational actions
 - forecasting or predictive planning
 - chat assistant workflows
-- row-level or enterprise-grade access control
-- real-time or near-real-time synchronization
-- Excel import in the first production slice
-- multi-source import beyond the internal database
+- real-time or near-real-time synchronization (real_time sync mode defined,
+  CDC implementation deferred)
+
+Previously out-of-scope items now delivered:
+
+- Excel import (v3 ingestion pipeline, v6 static file import)
+- multi-source import beyond the internal database (v6 Connection Wizard,
+  PostgreSQL, MySQL, static file)
+- row-level and tenant-level access control (v5 multi-tenant platform,
+  RLS, tenant data routing)
+- connection wizard with sync policy configuration (v6 Data Studio)
 
 ---
 

@@ -12,7 +12,7 @@ Note:
 - tables, schemas, files, routes, and jobs should not be named `v5_*` or
   `v3_*`
 
-It stays aligned with [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/HERD%20Aggregator/ARCHITECTURE.md)
+It stays aligned with [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/Canopy/ARCHITECTURE.md)
 and the v5 planning docs. If it conflicts with `ARCHITECTURE.md`, the system
 source of truth wins.
 
