@@ -11,7 +11,10 @@
     "test": "vitest run",
     "test:unit": "vitest run src/tests/unit",
     "test:integration": "vitest run src/tests/integration",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
     "@glideapps/glide-data-grid": "^6.0.3",
@@ -25,6 +28,7 @@
     "recharts": "^3.8.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
