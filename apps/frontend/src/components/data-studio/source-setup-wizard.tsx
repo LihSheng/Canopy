@@ -462,6 +462,7 @@ export const SourceSetupWizard = () => {
               <input
                 ref={fileInputRef}
                 type="file"
+                data-testid="file-input"
                 className="hidden"
                 accept={FILE_ACCEPT}
                 onChange={(e) => {
