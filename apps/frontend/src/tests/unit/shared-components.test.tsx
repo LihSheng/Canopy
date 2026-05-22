@@ -4,6 +4,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { StaleIndicator } from "@/components/shared/stale-indicator";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 describe("LoadingSpinner", () => {
   it("renders default text", () => {
@@ -71,5 +72,116 @@ describe("StaleIndicator", () => {
   it("renders nothing when no date", () => {
     const { container } = render(<StaleIndicator lastUpdated={undefined} />);
     expect(container.firstChild).toBeNull();
+  });
+});
+
+describe("ConfirmDialog", () => {
+  it("renders when open", () => {
+    render(
+      <ConfirmDialog open title="Are you sure?" onConfirm={vi.fn()} onClose={vi.fn()} />,
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Are you sure?")).toBeInTheDocument();
+  });
+
+  it("does not render when closed", () => {
+    render(
+      <ConfirmDialog open={false} title="Hidden" onConfirm={vi.fn()} onClose={vi.fn()} />,
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("calls onConfirm when confirm button clicked", () => {
+    const onConfirm = vi.fn();
+    render(
+      <ConfirmDialog open title="Sure?" onConfirm={onConfirm} onClose={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    expect(onConfirm).toHaveBeenCalledOnce();
+  });
+
+  it("calls onClose when cancel button clicked", () => {
+    const onClose = vi.fn();
+    render(
+      <ConfirmDialog open title="Sure?" onConfirm={vi.fn()} onClose={onClose} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("calls onClose on backdrop click", () => {
+    const onClose = vi.fn();
+    render(
+      <ConfirmDialog open title="Sure?" onConfirm={vi.fn()} onClose={onClose} />,
+    );
+    // Click the backdrop (the outermost div with role="dialog")
+    fireEvent.click(screen.getByRole("dialog"));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("shows custom button labels", () => {
+    render(
+      <ConfirmDialog
+        open
+        title="Remove item?"
+        confirmLabel="Yes, remove"
+        cancelLabel="Go back"
+        onConfirm={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Yes, remove" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Go back" })).toBeInTheDocument();
+  });
+
+  it("disables buttons and shows Working... when busy", () => {
+    render(
+      <ConfirmDialog
+        open
+        title="Deleting..."
+        busy
+        onConfirm={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Working..." })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  });
+
+  it("renders description when provided", () => {
+    render(
+      <ConfirmDialog
+        open
+        title="Delete?"
+        description="Cannot be undone."
+        onConfirm={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Cannot be undone.")).toBeInTheDocument();
+  });
+
+  it("omits description element when not provided", () => {
+    const { container } = render(
+      <ConfirmDialog open title="Delete?" onConfirm={vi.fn()} onClose={vi.fn()} />,
+    );
+    expect(
+      container.querySelector("#confirm-dialog-description"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not call onClose on backdrop click when busy", () => {
+    const onClose = vi.fn();
+    render(
+      <ConfirmDialog
+        open
+        title="Sure?"
+        busy
+        onConfirm={vi.fn()}
+        onClose={onClose}
+      />,
+    );
+    fireEvent.click(screen.getByRole("dialog"));
+    expect(onClose).not.toHaveBeenCalled();
   });
 });
