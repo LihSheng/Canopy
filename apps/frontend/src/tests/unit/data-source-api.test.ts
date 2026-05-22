@@ -148,10 +148,10 @@ describe("data-source API", () => {
       const result = await previewStaticFile(file);
 
       expect(mockRequest).toHaveBeenCalledTimes(1);
-      const [url, opts] = mockRequest.mock.calls[0];
-      expect(url).toBe("/api/connections/preview");
-      expect(opts.method).toBe("POST");
-      expect(opts.body).toBeInstanceOf(FormData);
+      const callArgs = mockRequest.mock.calls[0] as [string, RequestInit | undefined];
+      expect(callArgs[0]).toBe("/api/connections/preview");
+      expect(callArgs[1]?.method).toBe("POST");
+      expect(callArgs[1]?.body).toBeInstanceOf(FormData);
       expect(result.source_file_path).toBe("/tmp/x.csv");
     });
 
