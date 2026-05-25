@@ -56,6 +56,15 @@ jobs:
       - name: Push changes
         run: git push origin sandcastle/opencode-${{ github.run_id }}
 
+      - name: Ensure automated label exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create automated \
+            --color "1d76db" \
+            --description "Automated Sandcastle/OpenCode PRs" \
+            || true
+
       - name: Create Pull Request
         env:
           GH_TOKEN: ${{ github.token }}
