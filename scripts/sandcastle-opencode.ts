@@ -8,6 +8,34 @@ const baseUrl = process.env.OPENCODE_BASE_URL;
 const model =
   process.env.OPENCODE_MODEL || "opencode-go/deepseek-v4-flash";
 
+function normalizeIssueNumber(input: string | undefined): string {
+  if (!input) {
+    return "";
+  }
+
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const urlMatch = trimmed.match(/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)/i);
+  if (urlMatch) {
+    return urlMatch[1];
+  }
+
+  const hashMatch = trimmed.match(/^#(\d+)$/);
+  if (hashMatch) {
+    return hashMatch[1];
+  }
+
+  const numericMatch = trimmed.match(/^(\d+)$/);
+  if (numericMatch) {
+    return numericMatch[1];
+  }
+
+  return "";
+}
+
 if (!task) {
   console.error("FATAL: SANDCASTLE_TASK environment variable is required.");
   process.exit(1);
@@ -22,6 +50,8 @@ const timestamp = Date.now();
 const branchName = `sandcastle/opencode-${timestamp}`;
 
 async function main() {
+  const resolvedIssueNumber = normalizeIssueNumber(issueNumber);
+
   console.log("=== Sandcastle OpenCode Agent ===");
   console.log("");
   console.log(`Task:   ${task}`);
@@ -38,7 +68,7 @@ async function main() {
     promptFile: ".sandcastle/prompt.md",
     promptArgs: {
       TASK: task,
-      ISSUE_NUMBER: issueNumber || "",
+      ISSUE_NUMBER: resolvedIssueNumber,
     },
     maxIterations: 3,
     completionSignal: "<promise>COMPLETE</promise>",
