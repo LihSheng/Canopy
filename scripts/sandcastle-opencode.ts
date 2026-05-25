@@ -1,8 +1,9 @@
 import { run, opencode } from "@ai-hero/sandcastle";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
 
-const task = process.env.SANDCASTLE_TASK;
-const apiKey = process.env.OPENCODE_API_KEY;
+const task = process.env.SANDCASTLE_TASK!;
+const issueNumber = process.env.SANDCASTLE_ISSUE_NUMBER;
+const apiKey = process.env.OPENCODE_API_KEY!;
 const baseUrl = process.env.OPENCODE_BASE_URL;
 const model =
   process.env.OPENCODE_MODEL || "opencode-go/deepseek-v4-flash";
@@ -36,6 +37,7 @@ const result = await run({
   promptFile: ".sandcastle/prompt.md",
   promptArgs: {
     TASK: task,
+    ISSUE_NUMBER: issueNumber || "",
   },
   maxIterations: 3,
   completionSignal: "<promise>COMPLETE</promise>",

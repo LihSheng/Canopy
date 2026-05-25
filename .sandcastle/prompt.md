@@ -2,6 +2,10 @@
 
 {{TASK}}
 
+# Issue context
+
+!`if [ -n "{{ISSUE_NUMBER}}" ]; then gh issue view {{ISSUE_NUMBER}} --json title,body,comments --jq '"Title: \(.title)\n\n\(.body)"'; else echo "No issue specified. Follow the task above directly."; fi`
+
 # Instructions
 
 You are an AI coding agent working on this repository.

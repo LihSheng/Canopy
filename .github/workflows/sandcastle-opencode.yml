@@ -7,6 +7,10 @@ on:
         description: "Task for the OpenCode agent"
         required: true
         type: string
+      issue_number:
+        description: "GitHub Issue number to work on (optional)"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -31,7 +35,6 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: npm
 
       - name: Install dependencies
         run: npm install
@@ -43,9 +46,12 @@ jobs:
         run: npx tsx scripts/sandcastle-opencode.ts
         env:
           SANDCASTLE_TASK: ${{ inputs.task }}
+          SANDCASTLE_ISSUE_NUMBER: ${{ inputs.issue_number }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           OPENCODE_BASE_URL: ${{ secrets.OPENCODE_BASE_URL }}
           OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Push changes
         run: git push origin sandcastle/opencode-${{ github.run_id }}
