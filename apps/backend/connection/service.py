@@ -4,13 +4,20 @@ from datetime import UTC, datetime
 from common.errors import NotFoundError, ValidationError
 from connection.domain import Connection, ConnectionStatus
 from connection.repository import ConnectionRepository
+from connection.secret_store import SecretStore, decrypt_secret_value
 from control_plane.audit_service import AuditService
 
 
 class ConnectionService:
-    def __init__(self, repo: ConnectionRepository, audit: AuditService | None = None):
+    def __init__(
+        self,
+        repo: ConnectionRepository,
+        audit: AuditService | None = None,
+        secret_store: SecretStore | None = None,
+    ):
         self._repo = repo
         self._audit = audit
+        self._secret_store = secret_store
 
     def create_connection(
         self,
@@ -20,13 +27,14 @@ class ConnectionService:
         config_json: dict | None = None,
     ) -> Connection:
         now = datetime.now(UTC)
+        config = self._encrypt_config(config_json or {})
         connection = Connection(
             id=str(uuid.uuid4()),
             project_id=project_id,
             source_type=source_type,
             name=name,
             status=ConnectionStatus.ACTIVE.value,
-            config_json=config_json or {},
+            config_json=config,
             created_at=now,
         )
         return self._repo.save(connection)
@@ -159,14 +167,27 @@ class ConnectionService:
                 f"{active_datasets} active dataset(s), {active_runs} queued/running run(s)"
             )
 
+    def _encrypt_config(self, config_json: dict) -> dict:
+        result = dict(config_json)
+        password = result.get("password")
+        if password and isinstance(password, str):
+            store = self._secret_store or self._build_default_store()
+            result["password"] = store.encrypt(password)
+        return result
+
     def _decrypt_config(self, connection: Connection) -> dict:
+        config = dict(connection.config_json or {})
+        password = config.get("password")
+        if password and isinstance(password, str):
+            store = self._secret_store or self._build_default_store()
+            config["password"] = decrypt_secret_value(password, store, allow_legacy_plaintext=True)
+        return config
+
+    @staticmethod
+    def _build_default_store() -> SecretStore:
         from connection.secret_store import AesGcmSecretStore
 
-        store = AesGcmSecretStore()
-        config = dict(connection.config_json or {})
-        if "password" in config:
-            config["password"] = store.decrypt(config["password"])
-        return config
+        return AesGcmSecretStore()
 
     async def test_connection(self, id: str) -> dict:
         connection = self._require_connection(id)

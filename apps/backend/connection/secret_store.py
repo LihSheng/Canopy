@@ -10,6 +10,9 @@ Usage:
 import os
 from abc import ABC, abstractmethod
 from base64 import b64decode, b64encode
+from binascii import Error as BinasciiError
+
+ENCRYPTED_VALUE_PREFIX = "enc:v1:"
 
 
 class EncryptionError(Exception):
@@ -28,10 +31,34 @@ class SecretStore(ABC):
         """Decrypt ciphertext back to the original plaintext."""
 
 
+def is_encrypted_value(value: object) -> bool:
+    """Return True when a value uses the versioned encrypted payload format."""
+    return isinstance(value, str) and value.startswith(ENCRYPTED_VALUE_PREFIX)
+
+
+def decrypt_secret_value(
+    value: object,
+    store: SecretStore,
+    *,
+    allow_legacy_plaintext: bool = False,
+) -> object:
+    """Decrypt a secret value or optionally pass through legacy plaintext.
+
+    Legacy plaintext is only allowed when the caller explicitly opts in.
+    """
+    if not isinstance(value, str) or not value:
+        return value
+    if not value.startswith(ENCRYPTED_VALUE_PREFIX):
+        if allow_legacy_plaintext:
+            return value
+        raise EncryptionError(f"Encrypted value must start with {ENCRYPTED_VALUE_PREFIX}")
+    return store.decrypt(value)
+
+
 class AesGcmSecretStore(SecretStore):
     """AES-256-GCM encryption backed by an application key.
 
-    The ciphertext format is: base64(nonce || ciphertext || tag)
+    The ciphertext format is: ``enc:v1:`` + base64(nonce || ciphertext || tag)
     where || denotes concatenation.
 
     Parameters
@@ -59,12 +86,19 @@ class AesGcmSecretStore(SecretStore):
         nonce = os.urandom(12)
         aesgcm = AESGCM(self._key)
         ciphertext = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), None)
-        return b64encode(nonce + ciphertext).decode("ascii")
+        return ENCRYPTED_VALUE_PREFIX + b64encode(nonce + ciphertext).decode("ascii")
 
     def decrypt(self, ciphertext: str) -> str:
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-        raw = b64decode(ciphertext)
+        if not ciphertext.startswith(ENCRYPTED_VALUE_PREFIX):
+            raise EncryptionError(f"Ciphertext must start with {ENCRYPTED_VALUE_PREFIX}")
+
+        encoded = ciphertext.removeprefix(ENCRYPTED_VALUE_PREFIX)
+        try:
+            raw = b64decode(encoded)
+        except (BinasciiError, ValueError) as exc:
+            raise EncryptionError(f"Invalid ciphertext encoding: {exc}") from exc
         nonce = raw[:12]
         ct_and_tag = raw[12:]
         if not ct_and_tag:

@@ -1,0 +1,11 @@
+{
+  "name": "canopy",
+  "private": true,
+  "scripts": {
+    "sandcastle": "tsx scripts/sandcastle-opencode.ts"
+  },
+  "devDependencies": {
+    "@ai-hero/sandcastle": "^0.5.11",
+    "tsx": "^4.19.0"
+  }
+}

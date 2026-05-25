@@ -12,6 +12,7 @@ import {
 import type { Connection, Dataset, Run } from "@/lib/api/types";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ROUTES, UI_LABELS, ERROR_MESSAGES } from "@/lib/constants";
 
 const ConnectionsHomeContent = () => {
@@ -22,6 +23,7 @@ const ConnectionsHomeContent = () => {
   const [deleting_id, setDeletingId] = useState<string | null>(null);
   const [action_error, setActionError] = useState<string | null>(null);
   const [connection_search, setConnectionSearch] = useState("");
+  const [delete_confirm_connection, setDeleteConfirmConnection] = useState<Connection | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,27 +45,46 @@ const ConnectionsHomeContent = () => {
   const handleDeleteConnection = async (connection: Connection) => {
     setActionError(null);
     setDeletingId(connection.id);
+
+    let dependencies;
     try {
-      const dependencies = await fetchConnectionDependencies(connection.id);
-      if (!dependencies.can_delete) {
-        setActionError(
-          `Cannot delete "${connection.name}" yet. It still has ${dependencies.active_dataset_count} active dataset(s) and ${dependencies.active_run_count} active run(s).`,
-        );
-        return;
-      }
+      dependencies = await fetchConnectionDependencies(connection.id);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : ERROR_MESSAGES.failedToDeleteConnection);
+      setDeletingId(null);
+      return;
+    }
 
-      const confirmed = window.confirm(`Delete connection "${connection.name}"?`);
-      if (!confirmed) {
-        return;
-      }
+    if (!dependencies.can_delete) {
+      setActionError(
+        `Cannot delete "${connection.name}" yet. It still has ${dependencies.active_dataset_count} active dataset(s) and ${dependencies.active_run_count} active run(s).`,
+      );
+      setDeletingId(null);
+      return;
+    }
 
-      await deleteConnection(connection.id);
+    // Clear deleting_id so dialog opens non-busy; row button re-enables
+    setDeletingId(null);
+    setDeleteConfirmConnection(connection);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!delete_confirm_connection) return;
+    setDeletingId(delete_confirm_connection.id);
+    try {
+      await deleteConnection(delete_confirm_connection.id);
+      setDeleteConfirmConnection(null);
       await load();
     } catch (error) {
-        setActionError(error instanceof Error ? error.message : ERROR_MESSAGES.failedToDeleteConnection);
+      setActionError(error instanceof Error ? error.message : ERROR_MESSAGES.failedToDeleteConnection);
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleCloseDialog = () => {
+    setDeleteConfirmConnection(null);
+    setDeletingId(null);
   };
 
   useEffect(() => {
@@ -215,6 +236,18 @@ const ConnectionsHomeContent = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={delete_confirm_connection !== null}
+        title={`Delete connection "${delete_confirm_connection?.name}"?`}
+        description="This action cannot be undone. All associated sync configurations will be permanently removed."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        confirmTone="danger"
+        busy={deleting_id === delete_confirm_connection?.id}
+        onConfirm={handleConfirmDelete}
+        onClose={handleCloseDialog}
+      />
     </div>
   );
 }

@@ -2,22 +2,42 @@
 
 ## Parent
 
-PRD: doc/prd/0001-connection-wizard-sync-modes.md
+PRD: [doc/prd/0001-connection-wizard-sync-modes.md](C:/Users/Lih%20Sheng/Documents/Canopy/doc/prd/0001-connection-wizard-sync-modes.md)
 
-## What to build
+## Scope
 
-Abstract SecretStore protocol with AES-256-GCM implementation using SECRET_KEY env var. Wired into ConnectionService so credentials in config_json are encrypted before write and decrypted on read.
+Provide a `SecretStore` abstraction with an AES-256-GCM implementation keyed by `SECRET_KEY`.
+Wire it into `ConnectionService` so `config_json.password` is encrypted before storage and
+decrypted on read.
+
+This issue only covers the `password` field. Other `config_json` fields remain readable.
+
+## Out of Scope
+
+- Encrypting the entire `config_json` blob
+- Automatic backfill or migration of legacy plaintext credentials
+- Other secret fields that may be added in future tickets
+- AWS Secrets Manager integration
 
 ## Acceptance Criteria
 
-- [ ] SecretStore abstract protocol defines `encrypt(plaintext: str) -> str` and `decrypt(ciphertext: str) -> str`
-- [ ] AES-256-GCM implementation reads key from environment variable SECRET_KEY
-- [ ] Nonce/IV generated per encryption call
-- [ ] Wrong key raises clear decryption error
-- [ ] ConnectionService encrypts credentials before storing
-- [ ] ConnectionService decrypts credentials on read
-- [ ] Unit tests: encrypt/decrypt round-trip, different keys produce different ciphertext, wrong key fails
+- [ ] `SecretStore` defines `encrypt(plaintext: str) -> str` and `decrypt(ciphertext: str) -> str`
+- [ ] AES-256-GCM implementation reads its key from `SECRET_KEY`
+- [ ] A fresh nonce/IV is generated on every encryption call
+- [ ] Wrong key raises a clear decryption error
+- [ ] `ConnectionService` encrypts `config_json.password` before storing
+- [ ] `ConnectionService` decrypts `config_json.password` on read
+- [ ] Existing plaintext credentials are not silently changed by this issue
+- [ ] Unit tests cover round-trip encryption, different keys producing different ciphertext, and wrong-key failure
 
-## Blocked by
+## Test Notes
 
-None - can start immediately (independent of Slice 1)
+- Verify round-trip encryption and decryption with a known plaintext
+- Verify ciphertext differs when the key differs
+- Verify a wrong key fails with a clear error
+- Verify `ConnectionService` only encrypts/decrypts the password field
+- Verify existing plaintext rows are not auto-migrated by this ticket
+
+## Blocked By
+
+None. This slice can start independently.

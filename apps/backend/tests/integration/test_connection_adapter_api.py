@@ -1,8 +1,11 @@
 """Integration tests for database connection test and table discovery endpoints."""
 
+from base64 import b64decode
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
+from connection.secret_store import ENCRYPTED_VALUE_PREFIX
 
 # Patch at the module where get_adapter is defined
 _ADAPTER_PATCH = "connection.database_adapter.get_adapter"
@@ -17,6 +20,77 @@ def _set_secret_key(monkeypatch):
 
 
 pytestmark = pytest.mark.api_schema
+
+
+class TestPasswordEncryptionAtRest:
+    """Verify config_json.password is encrypted before storage."""
+
+    def test_create_connection_stores_encrypted_password(self, client, auth_headers):
+        plaintext = "my-s3cret-pass"
+        conn_resp = client.post(
+            "/api/connections/",
+            json={
+                "project_id": "p-1",
+                "source_type": "postgresql",
+                "name": "Encrypted PG",
+                "config_json": {
+                    "host": "localhost",
+                    "port": 5432,
+                    "database": "enc_test",
+                    "username": "app",
+                    "password": plaintext,
+                },
+            },
+            headers=auth_headers,
+        )
+        assert conn_resp.status_code == 201
+        conn_id = conn_resp.json()["id"]
+
+        # GET the connection — the password in the API response should be encrypted
+        get_resp = client.get(f"/api/connections/{conn_id}", headers=auth_headers)
+        assert get_resp.status_code == 200
+        data = get_resp.json()
+        stored_password = data["config_json"].get("password")
+
+        # Password must exist and not be the original plaintext
+        assert stored_password is not None
+        assert stored_password != plaintext
+        assert stored_password.startswith(ENCRYPTED_VALUE_PREFIX)
+
+        # It should look like base64 (valid encrypted blob)
+        try:
+            raw = b64decode(stored_password.removeprefix(ENCRYPTED_VALUE_PREFIX))
+            # AES-GCM: 12-byte nonce + at least 16 bytes ciphertext+tag
+            assert len(raw) >= 28
+        except Exception:
+            pytest.fail("Stored password is not valid base64 — encryption may not have run")
+
+        # Non-secret fields are readable
+        assert data["config_json"]["host"] == "localhost"
+        assert data["config_json"]["port"] == 5432
+        assert data["config_json"]["database"] == "enc_test"
+        assert data["config_json"]["username"] == "app"
+
+    def test_connection_without_password_is_stored_as_is(self, client, auth_headers):
+        conn_resp = client.post(
+            "/api/connections/",
+            json={
+                "project_id": "p-1",
+                "source_type": "postgresql",
+                "name": "NoPassword PG",
+                "config_json": {"host": "localhost", "port": 5432, "database": "noauth"},
+            },
+            headers=auth_headers,
+        )
+        assert conn_resp.status_code == 201
+        conn_id = conn_resp.json()["id"]
+
+        get_resp = client.get(f"/api/connections/{conn_id}", headers=auth_headers)
+        assert get_resp.status_code == 200
+        data = get_resp.json()
+
+        assert "password" not in data["config_json"]
+        assert data["config_json"]["database"] == "noauth"
 
 
 class TestConnectionTestEndpoint:
