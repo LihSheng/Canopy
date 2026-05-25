@@ -1,6 +1,7 @@
 {
   "name": "canopy",
   "private": true,
+  "type": "module",
   "scripts": {
     "sandcastle": "tsx scripts/sandcastle-opencode.ts"
   },
