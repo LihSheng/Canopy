@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import shutil
 import uuid
 from datetime import UTC, datetime
@@ -5,13 +7,17 @@ from pathlib import Path
 
 from common.errors import NotFoundError, ValidationError
 from connection._shared import storage_root
+from connection.database_adapter import get_adapter
 from connection.materialization import materialize_dataset_version
 from connection.preview import build_sheet_profiles
 from connection.repository import ConnectionRepository
+from connection.secret_store import AesGcmSecretStore, decrypt_secret_value
 from dataset.cleaning import clean_source_file
 from dataset.domain import Dataset, DatasetStatus, DatasetVersion, DatasetVersionStatus
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from run.repository import RunRepository
+
+logger = logging.getLogger(__name__)
 
 
 class DatasetService:
@@ -20,6 +26,30 @@ class DatasetService:
         self._version_repo = version_repo
 
     def create_dataset(
+        self,
+        project_id: str,
+        connection_id: str,
+        name: str,
+        source_object_name: str = "",
+        sync_mode: str | None = None,
+        batch_strategy: str | None = None,
+        real_time_strategy: str | None = None,
+        cursor_column: str | None = None,
+    ) -> Dataset:
+        return asyncio.run(
+            self.create_dataset_async(
+                project_id=project_id,
+                connection_id=connection_id,
+                name=name,
+                source_object_name=source_object_name,
+                sync_mode=sync_mode,
+                batch_strategy=batch_strategy,
+                real_time_strategy=real_time_strategy,
+                cursor_column=cursor_column,
+            )
+        )
+
+    async def create_dataset_async(
         self,
         project_id: str,
         connection_id: str,
@@ -46,30 +76,62 @@ class DatasetService:
         )
         dataset = self._repo.save(dataset)
 
-        connection = ConnectionRepository(self._repo._db).get(connection_id)
-        if connection is not None:
-            source_file_path = ConnectionRepository(self._repo._db).resolve_static_source_file_path(connection)
-            if connection.source_type == "static_file" and source_file_path:
-                result = clean_source_file(
-                    source_file_path=Path(source_file_path),
-                    sheet_name=source_object_name or name,
-                    dataset_id=dataset.id,
-                )
-                version = self._version_repo.save(
-                    DatasetVersion(
-                        id=str(uuid.uuid4()),
+        try:
+            connection_repo = ConnectionRepository(self._repo._db)
+            connection = connection_repo.get(connection_id)
+            if connection is not None:
+                source_file_path = connection_repo.resolve_static_source_file_path(connection)
+                if connection.source_type == "static_file" and source_file_path:
+                    result = clean_source_file(
+                        source_file_path=Path(source_file_path),
+                        sheet_name=source_object_name or name,
                         dataset_id=dataset.id,
-                        run_id=None,
-                        version_number=1,
-                        status=DatasetVersionStatus.READY.value,
-                        row_count=result["row_count"],
-                        column_count=result["column_count"],
-                        storage_path=result["cleaned_path"],
-                        raw_storage_path=result["raw_path"],
-                        cleaning_issues=result["cleaning_issues"],
-                    ),
-                )
-                dataset = self._repo.update_active_version(dataset.id, version.id) or dataset
+                    )
+                    version = self._version_repo.save(
+                        DatasetVersion(
+                            id=str(uuid.uuid4()),
+                            dataset_id=dataset.id,
+                            run_id=None,
+                            version_number=1,
+                            status=DatasetVersionStatus.READY.value,
+                            row_count=result["row_count"],
+                            column_count=result["column_count"],
+                            storage_path=result["cleaned_path"],
+                            raw_storage_path=result["raw_path"],
+                            cleaning_issues=result["cleaning_issues"],
+                        ),
+                    )
+                    dataset = self._repo.update_active_version(dataset.id, version.id) or dataset
+                elif connection.source_type in {"postgresql", "mysql"}:
+                    try:
+                        version = await self._materialize_database_dataset_version_async(
+                            connection=connection,
+                            dataset=dataset,
+                            source_object_name=source_object_name or name,
+                        )
+                        dataset = self._repo.update_active_version(dataset.id, version.id) or dataset
+                    except Exception:
+                        logger.exception(
+                            "Failed to materialize dataset version",
+                            extra={
+                                "dataset_id": dataset.id,
+                                "connection_id": connection.id,
+                                "source_type": connection.source_type,
+                                "source_object_name": source_object_name or name,
+                            },
+                        )
+                        raise
+        except Exception:
+            logger.exception(
+                "Failed during dataset post-save setup",
+                extra={
+                    "dataset_id": dataset.id,
+                    "connection_id": connection_id,
+                    "source_type": connection.source_type if connection is not None else None,
+                    "source_object_name": source_object_name or name,
+                },
+            )
+            raise
 
         return dataset
 
@@ -123,6 +185,8 @@ class DatasetService:
         dataset = self._repo.get(dataset_id)
         if dataset is None:
             return {}
+
+        dataset = self._hydrate_dataset_version(dataset)
 
         from run.repository import RunRepository
 
@@ -194,12 +258,20 @@ class DatasetService:
         if latest_version is not None:
             return self._repo.update_active_version(dataset.id, latest_version.id) or dataset
 
-        connection = ConnectionRepository(self._repo._db).get(dataset.connection_id)
+        connection_repo = ConnectionRepository(self._repo._db)
+        connection = connection_repo.get(dataset.connection_id)
         if connection is None:
             return dataset
 
-        source_file_path = ConnectionRepository(self._repo._db).resolve_static_source_file_path(connection)
+        source_file_path = connection_repo.resolve_static_source_file_path(connection)
         if connection.source_type != "static_file" or not source_file_path:
+            if connection.source_type in {"postgresql", "mysql"}:
+                version = self._materialize_database_dataset_version(
+                    connection=connection,
+                    dataset=dataset,
+                    source_object_name=dataset.source_object_name or dataset.name,
+                )
+                return self._repo.update_active_version(dataset.id, version.id) or dataset
             return dataset
 
         result = clean_source_file(
@@ -226,6 +298,62 @@ class DatasetService:
             ),
         )
         return self._repo.update_active_version(dataset.id, version.id) or dataset
+
+    def _materialize_database_dataset_version(
+        self,
+        connection,
+        dataset: Dataset,
+        source_object_name: str,
+    ) -> DatasetVersion:
+        return asyncio.run(
+            self._materialize_database_dataset_version_async(
+                connection=connection,
+                dataset=dataset,
+                source_object_name=source_object_name,
+            )
+        )
+
+    async def _materialize_database_dataset_version_async(
+        self,
+        connection,
+        dataset: Dataset,
+        source_object_name: str,
+    ) -> DatasetVersion:
+        config = self._decrypt_connection_config(connection)
+        adapter = get_adapter(connection.source_type)
+
+        storage_path, row_count, column_count = await _materialize_database_dataset_version(
+            adapter=adapter,
+            config=config,
+            table_name=source_object_name,
+            dataset_id=dataset.id,
+            cursor_column=dataset.cursor_column if dataset.batch_strategy == "incremental_cursor" else None,
+            cursor_value=dataset.last_cursor_value if dataset.batch_strategy == "incremental_cursor" else None,
+        )
+
+        version_number = self._version_repo.count_by_dataset(dataset.id) + 1
+        return self._version_repo.save(
+            DatasetVersion(
+                id=str(uuid.uuid4()),
+                dataset_id=dataset.id,
+                run_id=None,
+                version_number=version_number,
+                status=DatasetVersionStatus.READY.value,
+                row_count=row_count,
+                column_count=column_count,
+                storage_path=str(storage_path),
+                raw_storage_path=str(storage_path),
+                cleaning_issues=[],
+            ),
+        )
+
+    def _decrypt_connection_config(self, connection) -> dict:
+        config = dict(connection.config_json or {})
+        password = config.get("password")
+        if password and isinstance(password, str):
+            store = AesGcmSecretStore()
+            config["password"] = decrypt_secret_value(password, store, allow_legacy_plaintext=True)
+        return config
 
     def preview_dataset(
         self,
@@ -306,6 +434,27 @@ class DatasetService:
             edges.append({"from": f"run_{r.id}", "to": f"dataset_{id}", "type": "produces"})
 
         return {"nodes": nodes, "edges": edges}
+
+
+async def _materialize_database_dataset_version(
+    adapter,
+    config: dict,
+    table_name: str,
+    dataset_id: str,
+    cursor_column: str | None = None,
+    cursor_value: str | None = None,
+) -> tuple[Path, int, int]:
+    from connection._shared import write_jsonl_version
+
+    all_rows: list[dict] = []
+    stream = await adapter.fetch_table(config, table_name, cursor_column, cursor_value)
+    async for batch in stream:
+        all_rows.extend(batch)
+
+    storage_path = write_jsonl_version(all_rows, dataset_id, table_name)
+    row_count = len(all_rows)
+    column_count = len(all_rows[0]) if all_rows else 0
+    return storage_path, row_count, column_count
 
 
 class DatasetVersionService:

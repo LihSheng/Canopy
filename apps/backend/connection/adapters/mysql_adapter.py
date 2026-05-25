@@ -11,14 +11,33 @@ from connection.database_adapter import DatabaseAdapter
 class MysqlAdapter(DatabaseAdapter):
     """Connect to and introspect a MySQL database."""
 
+    def _connect(self, config: dict, *, dict_cursor: bool = False):
+        import pymysql
+        from pymysql.cursors import DictCursor
+
+        host = config.get("host", "localhost")
+        port = config.get("port", 3306)
+        database = config.get("database", "")
+        username = config.get("username") or config.get("user", "")
+        password = config.get("password", "")
+
+        connect_kwargs = dict(
+            host=host,
+            port=port,
+            user=username,
+            password=password,
+            database=database,
+            connect_timeout=5,
+        )
+        if dict_cursor:
+            connect_kwargs["cursorclass"] = DictCursor
+        return pymysql.connect(**connect_kwargs)
+
     async def test_connection(self, config: dict) -> dict:
         try:
-            # We dynamically try to import pymysql to check connection
             try:
-                import pymysql
+                import pymysql  # noqa: F401
             except ImportError:
-                # If pymysql is not installed and we are in the mock
-                # localhost/testdb path, return a simulated success.
                 if config.get("host") == "localhost" and config.get("database") == "testdb":
                     return {
                         "success": True,
@@ -30,20 +49,7 @@ class MysqlAdapter(DatabaseAdapter):
                     "message": "MySQL driver (pymysql) not installed. Please install pymysql.",
                 }
 
-            host = config.get("host", "localhost")
-            port = config.get("port", 3306)
-            database = config.get("database", "")
-            username = config.get("username") or config.get("user", "")
-            password = config.get("password", "")
-
-            conn = pymysql.connect(
-                host=host,
-                port=port,
-                user=username,
-                password=password,
-                database=database,
-                connect_timeout=5,
-            )
+            conn = self._connect(config)
             try:
                 with conn.cursor() as cur:
                     cur.execute("SHOW VARIABLES LIKE 'log_bin';")
@@ -73,10 +79,84 @@ class MysqlAdapter(DatabaseAdapter):
             return {"success": False, "message": str(e)}
 
     async def discover_tables(self, config: dict) -> list[dict]:
-        return []
+        try:
+            conn = self._connect(config, dict_cursor=True)
+        except ImportError:
+            return []
+
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT TABLE_NAME, TABLE_ROWS
+                    FROM information_schema.TABLES
+                    WHERE TABLE_SCHEMA = %s
+                      AND TABLE_TYPE = 'BASE TABLE'
+                    ORDER BY TABLE_NAME
+                    """,
+                    (config.get("database", ""),),
+                )
+                tables = cur.fetchall() or []
+
+                results: list[dict] = []
+                for table in tables:
+                    table_name = table["TABLE_NAME"]
+                    row_count_estimate = int(table.get("TABLE_ROWS") or 0)
+
+                    cur.execute(
+                        """
+                        SELECT COLUMN_NAME, DATA_TYPE
+                        FROM information_schema.COLUMNS
+                        WHERE TABLE_SCHEMA = %s
+                          AND TABLE_NAME = %s
+                        ORDER BY ORDINAL_POSITION
+                        """,
+                        (config.get("database", ""), table_name),
+                    )
+                    columns = cur.fetchall() or []
+                    results.append(
+                        {
+                            "table_name": table_name,
+                            "row_count_estimate": row_count_estimate,
+                            "columns": [
+                                {"name": column["COLUMN_NAME"], "data_type": column["DATA_TYPE"]}
+                                for column in columns
+                            ],
+                        }
+                    )
+
+                return results
+        finally:
+            conn.close()
 
     async def preview_table(self, config: dict, table: str, limit: int = 10) -> dict:
-        return {"columns": [], "rows": []}
+        try:
+            conn = self._connect(config, dict_cursor=True)
+        except ImportError:
+            return {"columns": [], "rows": []}
+
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COLUMN_NAME, DATA_TYPE
+                    FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = %s
+                      AND TABLE_NAME = %s
+                    ORDER BY ORDINAL_POSITION
+                    """,
+                    (config.get("database", ""), table),
+                )
+                columns = cur.fetchall() or []
+
+                cur.execute(f"SELECT * FROM `{table}` LIMIT %s", (limit,))
+                rows = cur.fetchall() or []
+
+                ordered_columns = [{"name": column["COLUMN_NAME"], "data_type": column["DATA_TYPE"]} for column in columns]
+                ordered_rows = [[row[column["COLUMN_NAME"]] for column in columns] for row in rows]
+                return {"columns": ordered_columns, "rows": ordered_rows}
+        finally:
+            conn.close()
 
     async def fetch_table(
         self,
@@ -85,8 +165,33 @@ class MysqlAdapter(DatabaseAdapter):
         cursor_column: str | None = None,
         cursor_value: str | None = None,
     ) -> AsyncIterator[list[dict]]:
-        async def empty_generator():
-            if False:
-                yield []
+        try:
+            conn = self._connect(config, dict_cursor=True)
+        except ImportError:
+            async def empty_generator():
+                if False:
+                    yield []
 
-        return empty_generator()  # type: ignore[no-any-return]
+            return empty_generator()  # type: ignore[no-any-return]
+
+        async def generator():
+            try:
+                with conn.cursor() as cur:
+                    query = f"SELECT * FROM `{table}`"
+                    params: list[object] = []
+                    if cursor_column:
+                        if cursor_value is not None:
+                            query += f" WHERE `{cursor_column}` > %s"
+                            params.append(cursor_value)
+                        query += f" ORDER BY `{cursor_column}`"
+
+                    cur.execute(query, tuple(params))
+                    while True:
+                        batch = cur.fetchmany(500)
+                        if not batch:
+                            break
+                        yield [dict(row) for row in batch]
+            finally:
+                conn.close()
+
+        return generator()

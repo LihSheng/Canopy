@@ -71,11 +71,11 @@ def list_datasets(
 
 
 @router.post("/", status_code=201)
-def create_dataset(
+async def create_dataset(
     body: CreateDatasetRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)
 ):
     service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
-    return service.create_dataset(
+    return await service.create_dataset_async(
         project_id=body.project_id,
         connection_id=body.connection_id,
         name=body.name,

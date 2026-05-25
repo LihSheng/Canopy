@@ -27,8 +27,11 @@ const RootLayout = ({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="h-full overflow-hidden bg-white">{children}</body>
+      <body className="h-full overflow-hidden bg-white" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 };
