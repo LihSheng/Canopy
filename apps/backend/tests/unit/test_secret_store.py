@@ -4,7 +4,12 @@ from base64 import b64decode, b64encode
 
 import pytest
 
-from connection.secret_store import AesGcmSecretStore, EncryptionError
+from connection.secret_store import (
+    ENCRYPTED_VALUE_PREFIX,
+    AesGcmSecretStore,
+    EncryptionError,
+    decrypt_secret_value,
+)
 
 # 32 bytes for AES-256
 _TEST_KEY = bytes(range(32))
@@ -17,6 +22,7 @@ class TestAesGcmSecretStore:
         store = AesGcmSecretStore(key=_TEST_KEY)
         plaintext = "hello world"
         ciphertext = store.encrypt(plaintext)
+        assert ciphertext.startswith(ENCRYPTED_VALUE_PREFIX)
         decrypted = store.decrypt(ciphertext)
         assert decrypted == plaintext
 
@@ -39,9 +45,9 @@ class TestAesGcmSecretStore:
         store = AesGcmSecretStore(key=_TEST_KEY)
         ciphertext = store.encrypt("hello")
         # Decode base64, flip a byte in the binary, re-encode
-        raw = bytearray(b64decode(ciphertext))
+        raw = bytearray(b64decode(ciphertext.removeprefix(ENCRYPTED_VALUE_PREFIX)))
         raw[len(raw) // 2] ^= 1
-        tampered = b64encode(bytes(raw)).decode("ascii")
+        tampered = ENCRYPTED_VALUE_PREFIX + b64encode(bytes(raw)).decode("ascii")
         with pytest.raises(EncryptionError, match="Decryption failed"):
             store.decrypt(tampered)
 
@@ -55,3 +61,12 @@ class TestAesGcmSecretStore:
         store = AesGcmSecretStore(key=_TEST_KEY)
         results = {store.encrypt("same data") for _ in range(10)}
         assert len(results) == 10
+
+    def test_legacy_plaintext_helper_can_pass_through(self):
+        store = AesGcmSecretStore(key=_TEST_KEY)
+        assert decrypt_secret_value("legacy-plain", store, allow_legacy_plaintext=True) == "legacy-plain"
+
+    def test_plaintext_rejected_without_legacy_flag(self):
+        store = AesGcmSecretStore(key=_TEST_KEY)
+        with pytest.raises(EncryptionError, match="enc:v1:"):
+            decrypt_secret_value("legacy-plain", store, allow_legacy_plaintext=False)

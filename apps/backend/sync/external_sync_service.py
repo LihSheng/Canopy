@@ -11,7 +11,7 @@ from common.clock import utcnow
 from common.errors import NotFoundError
 from connection._shared import slugify, storage_root
 from connection.database_adapter import get_adapter
-from connection.secret_store import AesGcmSecretStore
+from connection.secret_store import AesGcmSecretStore, decrypt_secret_value
 from dataset.domain import Dataset, DatasetVersion, DatasetVersionStatus
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from sync.domain import EntitySnapshot, SyncResult
@@ -93,7 +93,11 @@ class ExternalDbSyncService:
 
             config = dict(conn.config_json or {})
             if "password" in config:
-                config["password"] = self._secret_store.decrypt(config["password"])
+                config["password"] = decrypt_secret_value(
+                    config["password"],
+                    self._secret_store,
+                    allow_legacy_plaintext=True,
+                )
 
             adapter = get_adapter(conn.source_type)
             table_name = ds.source_object_name or ds.name
