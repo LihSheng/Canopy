@@ -4,7 +4,7 @@
 
 # Issue context
 
-!`if [ -n "{{ISSUE_NUMBER}}" ]; then gh issue view {{ISSUE_NUMBER}} --json title,body,comments --jq '"Title: \(.title)\n\n\(.body)"'; else echo "No issue specified. Follow the task above directly."; fi`
+!`if [ -n "{{ISSUE_NUMBER}}" ]; then gh issue view {{ISSUE_NUMBER}} --json title,body,comments --jq '"Title: \(.title)\n\n\(.body)"' || echo "Issue #{{ISSUE_NUMBER}} not found. Follow the task above directly."; else echo "No issue specified. Follow the task above directly."; fi`
 
 # Instructions
 
