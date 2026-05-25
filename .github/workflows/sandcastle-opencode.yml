@@ -69,6 +69,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          DEFAULT_BRANCH="$(gh repo view "${{ github.repository }}" --json defaultBranchRef --jq '.defaultBranchRef.name')"
           echo "## Sandcastle OpenCode Agent Run" > /tmp/pr-body.md
           echo "" >> /tmp/pr-body.md
           echo "**Task:** ${{ inputs.task }}" >> /tmp/pr-body.md
@@ -84,7 +85,8 @@ jobs:
           echo "**Note:** Please review all changes before merging." >> /tmp/pr-body.md
 
           gh pr create \
-            --base main \
+            --repo "${{ github.repository }}" \
+            --base "$DEFAULT_BRANCH" \
             --head "sandcastle/opencode-${{ github.run_id }}" \
             --title "Sandcastle OpenCode: ${{ inputs.task }}" \
             --body-file /tmp/pr-body.md \
