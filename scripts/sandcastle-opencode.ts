@@ -21,43 +21,50 @@ if (!apiKey) {
 const timestamp = Date.now();
 const branchName = `sandcastle/opencode-${timestamp}`;
 
-console.log("=== Sandcastle OpenCode Agent ===");
-console.log("");
-console.log(`Task:   ${task}`);
-console.log(`Model:  ${model}`);
-console.log(`Branch: ${branchName}`);
-console.log(`Base URL: ${baseUrl || "(default)"}`);
-console.log("");
-
-const result = await run({
-  agent: opencode(model, {
-    variant: "high",
-  }),
-  sandbox: noSandbox(),
-  promptFile: ".sandcastle/prompt.md",
-  promptArgs: {
-    TASK: task,
-    ISSUE_NUMBER: issueNumber || "",
-  },
-  maxIterations: 3,
-  completionSignal: "<promise>COMPLETE</promise>",
-  logging: { type: "stdout" },
-  idleTimeoutSeconds: 600,
-});
-
-console.log("");
-console.log("=== Results ===");
-console.log(`Branch:     ${result.branch}`);
-console.log(`Commits:    ${result.commits.length}`);
-console.log(`Iterations: ${result.iterations.length}`);
-
-if (result.commits.length > 0) {
+async function main() {
+  console.log("=== Sandcastle OpenCode Agent ===");
   console.log("");
-  console.log("Commits:");
-  for (const commit of result.commits) {
-    console.log(`  ${commit.sha}`);
+  console.log(`Task:   ${task}`);
+  console.log(`Model:  ${model}`);
+  console.log(`Branch: ${branchName}`);
+  console.log(`Base URL: ${baseUrl || "(default)"}`);
+  console.log("");
+
+  const result = await run({
+    agent: opencode(model, {
+      variant: "high",
+    }),
+    sandbox: noSandbox(),
+    promptFile: ".sandcastle/prompt.md",
+    promptArgs: {
+      TASK: task,
+      ISSUE_NUMBER: issueNumber || "",
+    },
+    maxIterations: 3,
+    completionSignal: "<promise>COMPLETE</promise>",
+    logging: { type: "stdout" },
+    idleTimeoutSeconds: 600,
+  });
+
+  console.log("");
+  console.log("=== Results ===");
+  console.log(`Branch:     ${result.branch}`);
+  console.log(`Commits:    ${result.commits.length}`);
+  console.log(`Iterations: ${result.iterations.length}`);
+
+  if (result.commits.length > 0) {
+    console.log("");
+    console.log("Commits:");
+    for (const commit of result.commits) {
+      console.log(`  ${commit.sha}`);
+    }
+  } else {
+    console.log("");
+    console.log("No commits created. Check agent output above.");
   }
-} else {
-  console.log("");
-  console.log("No commits created. Check agent output above.");
 }
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
