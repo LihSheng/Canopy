@@ -54,7 +54,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Push changes
-        run: git push origin sandcastle/opencode-${{ github.run_id }}
+        run: git push --force-with-lease origin sandcastle/opencode-${{ github.run_id }}
 
       - name: Ensure automated label exists
         env:
@@ -89,3 +89,10 @@ jobs:
             --title "Sandcastle OpenCode: ${{ inputs.task }}" \
             --body-file /tmp/pr-body.md \
             --label "automated"
+
+      - name: Clean up failed branch
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X DELETE repos/${{ github.repository }}/git/refs/heads/sandcastle/opencode-${{ github.run_id }} || true
