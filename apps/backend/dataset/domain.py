@@ -39,6 +39,7 @@ class Dataset:
     real_time_strategy: str | None = None
     cursor_column: str | None = None
     last_cursor_value: str | None = None
+    frequency_minutes: int | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = None
 

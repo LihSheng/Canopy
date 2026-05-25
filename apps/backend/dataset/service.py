@@ -183,6 +183,9 @@ class DatasetService:
             # Changing cursor column resets last_cursor_value
             dataset.last_cursor_value = None
 
+        if frequency_minutes is not None:
+            dataset.frequency_minutes = frequency_minutes
+
         dataset.updated_at = datetime.now(UTC)
         return self._repo.save(dataset)
 

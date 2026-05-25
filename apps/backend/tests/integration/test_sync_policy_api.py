@@ -126,6 +126,41 @@ class TestSyncPolicyEndpoint:
         )
         assert resp.status_code == 400
 
+    def test_frequency_minutes_is_stored(self, client, auth_headers):
+        proj_resp = client.post("/api/projects/", json={"name": "Freq", "description": ""}, headers=auth_headers)
+        assert proj_resp.status_code == 201
+        project_id = proj_resp.json()["id"]
+
+        conn_resp = client.post(
+            "/api/connections/",
+            json={"project_id": project_id, "source_type": "postgresql", "name": "Freq PG"},
+            headers=auth_headers,
+        )
+        assert conn_resp.status_code == 201
+        conn_id = conn_resp.json()["id"]
+
+        ds_resp = client.post(
+            "/api/datasets/",
+            json={"project_id": project_id, "connection_id": conn_id, "name": "freq_check"},
+            headers=auth_headers,
+        )
+        assert ds_resp.status_code == 201
+        ds_id = ds_resp.json()["id"]
+
+        # Set frequency_minutes via sync policy
+        patch_resp = client.patch(
+            f"/api/datasets/{ds_id}/sync-policy",
+            json={"frequency_minutes": 120},
+            headers=auth_headers,
+        )
+        assert patch_resp.status_code == 200
+        assert patch_resp.json()["frequency_minutes"] == 120
+
+        # Verify GET reflects the change
+        get_resp = client.get(f"/api/datasets/{ds_id}", headers=auth_headers)
+        assert get_resp.status_code == 200
+        assert get_resp.json()["frequency_minutes"] == 120
+
     def test_create_dataset_persists_real_time_strategy(self, client, auth_headers):
         proj_resp = client.post("/api/projects/", json={"name": "CDC", "description": ""}, headers=auth_headers)
         assert proj_resp.status_code == 201

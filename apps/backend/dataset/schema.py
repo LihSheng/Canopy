@@ -22,6 +22,7 @@ class DatasetModel(Base):
     real_time_strategy: Mapped[str | None] = mapped_column(String(50), nullable=True)
     cursor_column: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_cursor_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    frequency_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
