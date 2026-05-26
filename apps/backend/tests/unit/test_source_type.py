@@ -2,28 +2,21 @@ import uuid
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from common.database import Base
 from source_type.domain import SourceType, SourceTypeCategory
 from source_type.repository import SourceTypeRepository
 from source_type.service import _SEED_TYPES, SourceTypeService
+from tests.unit.postgres_test_db import make_postgres_session
 
 
 @pytest.fixture(autouse=True)
 def _setup_db():
-    """Override conftest._setup_db to avoid PostgreSQL dependency."""
+    """Keep the module isolated; sessions manage their own Postgres database."""
     yield
 
 
-def _make_sqlite_session():
-    engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
-    import source_type.schema  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)
-    session_local = sessionmaker(bind=engine)
-    return session_local()
+def _make_postgres_session():
+    return make_postgres_session(("source_type.schema",))
 
 
 class TestSeedTypes:
@@ -69,7 +62,7 @@ class TestSeedTypes:
 
 class TestSourceTypeService:
     def test_ensure_seeded_populates_all_types(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = SourceTypeRepository(session)
             service = SourceTypeService(repo)
@@ -80,7 +73,7 @@ class TestSourceTypeService:
             session.close()
 
     def test_ensure_seeded_is_idempotent(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = SourceTypeRepository(session)
             service = SourceTypeService(repo)
@@ -93,7 +86,7 @@ class TestSourceTypeService:
             session.close()
 
     def test_list_source_types_returns_all_keys(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = SourceTypeRepository(session)
             service = SourceTypeService(repo)
@@ -105,7 +98,7 @@ class TestSourceTypeService:
             session.close()
 
     def test_get_enabled_returns_database_types(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = SourceTypeRepository(session)
             service = SourceTypeService(repo)
@@ -117,7 +110,7 @@ class TestSourceTypeService:
             session.close()
 
     def test_get_enabled_excludes_disabled_types(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = SourceTypeRepository(session)
             service = SourceTypeService(repo)
@@ -154,7 +147,7 @@ class TestSourceTypeService:
 
 class TestSourceTypeRepository:
     def test_get_by_key_finds_existing_type(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = SourceTypeRepository(session)
             service = SourceTypeService(repo)
@@ -168,7 +161,7 @@ class TestSourceTypeRepository:
             session.close()
 
     def test_get_by_key_returns_none_for_missing_key(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = SourceTypeRepository(session)
             result = repo.get_by_key("nonexistent_key")
@@ -177,7 +170,7 @@ class TestSourceTypeRepository:
             session.close()
 
     def test_get_by_key_returns_none_for_nonexistent_key(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = SourceTypeRepository(session)
             service = SourceTypeService(repo)
@@ -188,7 +181,7 @@ class TestSourceTypeRepository:
             session.close()
 
     def test_list_all_returns_all_seeded_types(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = SourceTypeRepository(session)
             service = SourceTypeService(repo)
@@ -199,7 +192,7 @@ class TestSourceTypeRepository:
             session.close()
 
     def test_save_persists_source_type(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = SourceTypeRepository(session)
             st = SourceType(
@@ -220,3 +213,4 @@ class TestSourceTypeRepository:
             assert fetched.label == "Test Label"
         finally:
             session.close()
+

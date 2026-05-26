@@ -17,6 +17,7 @@ from sync.readers.cost_centers import CostCenterReader
 from sync.readers.departments import DepartmentReader
 from sync.readers.employees import EmployeeReader
 from sync.readers.payroll import PayrollReader
+from tests.unit.postgres_test_db import make_postgres_session
 
 pytestmark = pytest.mark.business_rule
 
@@ -225,14 +226,15 @@ class TestSourceDatabaseManager:
 
     def test_set_source_engine(self):
         """lines 35-39: set_source_engine replaces engine."""
-        from sqlalchemy import create_engine
-
         from sync.source_db import _SourceDatabaseManager
 
         mgr = _SourceDatabaseManager()
-        eng = create_engine("sqlite://")
-        mgr.set_source_engine(eng)
-        assert mgr.source_engine() is eng
+        handle = make_postgres_session(())
+        try:
+            mgr.set_source_engine(handle.engine)
+            assert mgr.source_engine() is handle.engine
+        finally:
+            handle.close()
 
     def test_reset_source_engine(self):
         """lines 41-43: reset clears cache."""
@@ -261,12 +263,13 @@ class TestSourceDatabaseManager:
 
     def test_public_set_source_engine(self):
         """line 60-61: set_source_engine() public function."""
-        from sqlalchemy import create_engine
-
         from sync.source_db import set_source_engine
 
-        eng = create_engine("sqlite://")
-        set_source_engine(eng)
+        handle = make_postgres_session(())
+        try:
+            set_source_engine(handle.engine)
+        finally:
+            handle.close()
 
     def test_public_reset_source_engine(self):
         """line 64-65: reset_source_engine() public function."""

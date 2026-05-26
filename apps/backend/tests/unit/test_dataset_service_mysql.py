@@ -3,15 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from common.config import settings
-from common.database import Base
 from connection.domain import Connection
 from connection.repository import ConnectionRepository
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from dataset.service import DatasetService
+from tests.unit.postgres_test_db import make_postgres_session
 
 
 class _MockMySqlAdapter:
@@ -26,13 +23,7 @@ class _MockMySqlAdapter:
 
 
 def _make_session():
-    engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
-    import connection.schema  # noqa: F401
-    import dataset.schema  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)
-    session_local = sessionmaker(bind=engine)
-    return session_local()
+    return make_postgres_session(("connection.schema", "dataset.schema"))
 
 
 def test_create_mysql_dataset_materializes_initial_version(tmp_path, monkeypatch):

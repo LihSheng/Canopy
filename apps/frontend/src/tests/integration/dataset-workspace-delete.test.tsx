@@ -21,6 +21,9 @@ vi.mock("@/lib/api/data-source", () => ({
   deleteDataset: vi.fn(),
   deleteDatasetVersion: vi.fn(),
   fetchConnection: vi.fn(),
+  previewStaticFile: vi.fn(),
+  reimportDatasetVersion: vi.fn(),
+  refreshDatasetVersion: vi.fn(),
 }));
 
 const mock_toast = {
@@ -123,6 +126,20 @@ describe("Dataset workspace delete actions", () => {
     });
   }
 
+  function mockStaticWorkspaceData() {
+    mockWorkspaceData();
+    vi.mocked(api.fetchConnection).mockResolvedValue({
+      id: "conn-1",
+      project_id: "proj-1",
+      source_type: "static_file",
+      name: "My File",
+      status: "connected",
+      config_json: { source_file_path: "/tmp/source.xlsx" },
+      created_at: "2026-05-18T00:00:00Z",
+      updated_at: "2026-05-18T00:00:00Z",
+    });
+  }
+
   it("shows delete dataset in the header and routes after delete", async () => {
     mockWorkspaceData();
     vi.mocked(api.deleteDataset).mockResolvedValue({ deleted: true, id: "dataset-1" });
@@ -208,5 +225,56 @@ describe("Dataset workspace delete actions", () => {
         "v2 was removed from Leave Application Report.",
       );
     });
+  });
+
+  it("refreshes the latest version with the same button for database sources", async () => {
+    mockWorkspaceData();
+    mock_search_params = new URLSearchParams("tab=Versions");
+    vi.mocked(api.refreshDatasetVersion).mockResolvedValue({
+      id: "version-3",
+      dataset_id: "dataset-1",
+      run_id: "run-3",
+      version_number: 3,
+      status: "ready",
+      row_count: 11,
+      column_count: 12,
+      storage_path: "/data/v3",
+      cleaning_issues: [],
+      created_at: "2026-05-19T00:00:00Z",
+    });
+
+    render(<DatasetWorkspaceContent datasetId="dataset-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Refresh Latest" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh Latest" }));
+
+    await waitFor(() => {
+      expect(api.refreshDatasetVersion).toHaveBeenCalledWith("dataset-1");
+      expect(mock_toast.success).toHaveBeenCalledWith(
+        "Latest data refreshed",
+        "v3 is now active.",
+      );
+    });
+  });
+
+  it("opens file picker with the same button for static file sources", async () => {
+    mockStaticWorkspaceData();
+    mock_search_params = new URLSearchParams("tab=Versions");
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
+
+    render(<DatasetWorkspaceContent datasetId="dataset-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Refresh Latest" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh Latest" }));
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(api.refreshDatasetVersion).not.toHaveBeenCalled();
+    clickSpy.mockRestore();
   });
 });

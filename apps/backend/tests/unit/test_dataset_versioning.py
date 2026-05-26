@@ -1,33 +1,26 @@
 import uuid
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from common.database import Base
 from dataset.domain import Dataset, DatasetVersion
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from dataset.service import DatasetVersionService
+from tests.unit.postgres_test_db import make_postgres_session
 
 
 @pytest.fixture(autouse=True)
 def _setup_db():
-    """Override conftest._setup_db to avoid PostgreSQL dependency."""
+    """Keep the module isolated; sessions manage their own Postgres database."""
     yield
 
 
-def _make_sqlite_session():
-    engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
-    import dataset.schema  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)
-    session_local = sessionmaker(bind=engine)
-    return session_local()
+def _make_postgres_session():
+    return make_postgres_session(("dataset.schema",))
 
 
 class TestDatasetVersionService:
     def test_create_version_when_none_exist_returns_1(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -39,7 +32,7 @@ class TestDatasetVersionService:
             session.close()
 
     def test_create_version_increments_version_number(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -54,7 +47,7 @@ class TestDatasetVersionService:
             session.close()
 
     def test_create_version_preserves_run_id(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -66,7 +59,7 @@ class TestDatasetVersionService:
             session.close()
 
     def test_create_version_default_status_is_pending(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -77,7 +70,7 @@ class TestDatasetVersionService:
             session.close()
 
     def test_list_versions_returns_versions_from_repo(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -90,7 +83,7 @@ class TestDatasetVersionService:
             session.close()
 
     def test_get_version_returns_version_by_id(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -104,7 +97,7 @@ class TestDatasetVersionService:
             session.close()
 
     def test_get_version_returns_none_for_missing(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -117,7 +110,7 @@ class TestDatasetVersionService:
 
 class TestDatasetVersionRepository:
     def test_list_by_dataset_returns_desc_order(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = DatasetVersionRepository(session)
             ds_id = str(uuid.uuid4())
@@ -137,7 +130,7 @@ class TestDatasetVersionRepository:
             session.close()
 
     def test_get_latest_by_dataset_returns_highest_version(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = DatasetVersionRepository(session)
             ds_id = str(uuid.uuid4())
@@ -151,7 +144,7 @@ class TestDatasetVersionRepository:
             session.close()
 
     def test_get_latest_by_dataset_returns_none_for_empty(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = DatasetVersionRepository(session)
             result = repo.get_latest_by_dataset("no-such-dataset")
@@ -160,7 +153,7 @@ class TestDatasetVersionRepository:
             session.close()
 
     def test_list_by_dataset_returns_empty_for_no_versions(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = DatasetVersionRepository(session)
             result = repo.list_by_dataset("no-such-dataset")
@@ -169,7 +162,7 @@ class TestDatasetVersionRepository:
             session.close()
 
     def test_get_active_version_returns_matching_version(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = DatasetVersionRepository(session)
             ds_id = str(uuid.uuid4())
@@ -182,7 +175,7 @@ class TestDatasetVersionRepository:
             session.close()
 
     def test_get_active_version_returns_none_for_mismatch(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = DatasetVersionRepository(session)
             ds_id = str(uuid.uuid4())
@@ -196,7 +189,7 @@ class TestDatasetVersionRepository:
 
 class TestDatasetRepository:
     def test_update_active_version_sets_version_id(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = DatasetRepository(session)
             dataset = Dataset(
@@ -215,7 +208,7 @@ class TestDatasetRepository:
             session.close()
 
     def test_update_active_version_returns_none_for_missing_dataset(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = DatasetRepository(session)
             result = repo.update_active_version("no-such-id", "ver-1")
@@ -224,7 +217,7 @@ class TestDatasetRepository:
             session.close()
 
     def test_update_active_version_overwrites_previous(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             repo = DatasetRepository(session)
             dataset = Dataset(
@@ -240,3 +233,4 @@ class TestDatasetRepository:
             assert updated.active_version_id == "new-ver"
         finally:
             session.close()
+

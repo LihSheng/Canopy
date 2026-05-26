@@ -150,6 +150,16 @@ def reimport_dataset_version(
     )
 
 
+@router.post("/{id}/refresh", status_code=201)
+def refresh_dataset_version(
+    id: str,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
+    return service.refresh_dataset_version(dataset_id=id)
+
+
 @router.delete("/{id}")
 def delete_dataset(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
     version_repo = DatasetVersionRepository(db)

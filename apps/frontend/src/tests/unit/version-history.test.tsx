@@ -160,6 +160,22 @@ describe("VersionHistory", () => {
     expect(onDeleteVersion).toHaveBeenCalledWith(mockVersions[0]);
   });
 
+  it("renders a single refresh action when provided", () => {
+    const onRefreshLatest = vi.fn();
+
+    render(
+      <VersionHistory
+        versions={mockVersions}
+        activeVersionId="v2"
+        onRefreshLatest={onRefreshLatest}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Refresh Latest" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh Latest" }));
+    expect(onRefreshLatest).toHaveBeenCalledTimes(1);
+  });
+
   it("shows locked message when delete actions are enabled", () => {
     render(
       <VersionHistory

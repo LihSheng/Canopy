@@ -5,7 +5,7 @@ from dataset.cleaning import clean_rows
 
 @pytest.fixture(autouse=True)
 def _setup_db():
-    """Override conftest._setup_db to avoid PostgreSQL dependency."""
+    """Module isolation only; no database setup needed here."""
     yield
 
 

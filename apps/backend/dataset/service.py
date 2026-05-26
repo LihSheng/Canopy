@@ -250,6 +250,31 @@ class DatasetService:
         dataset.updated_at = datetime.now(UTC)
         return self._repo.save(dataset)
 
+    def refresh_dataset_version(self, dataset_id: str) -> DatasetVersion:
+        dataset = self._repo.get(dataset_id)
+        if dataset is None:
+            raise NotFoundError("Dataset not found")
+
+        connection_repo = ConnectionRepository(self._repo._db)
+        connection = connection_repo.get(dataset.connection_id)
+        if connection is None:
+            raise NotFoundError("Connection not found")
+
+        if connection.source_type == "static_file":
+            raise ValidationError("Static file datasets must be refreshed by uploading a new file")
+
+        if connection.source_type not in {"postgresql", "mysql"}:
+            raise ValidationError(f"Unsupported source type for refresh: {connection.source_type}")
+
+        source_object_name = dataset.source_object_name or dataset.name
+        version = self._materialize_database_dataset_version(
+            connection=connection,
+            dataset=dataset,
+            source_object_name=source_object_name,
+        )
+        self._repo.update_active_version(dataset_id, version.id)
+        return version
+
     def _hydrate_dataset_version(self, dataset: Dataset) -> Dataset:
         if dataset.active_version_id:
             return dataset
@@ -559,6 +584,10 @@ class DatasetVersionService:
         saved = self._repo.save(new_version)
         self._dataset_repo.update_active_version(dataset_id, saved.id)
         return saved
+
+    def refresh_latest_version(self, dataset_id: str) -> DatasetVersion:
+        dataset_service = DatasetService(self._dataset_repo, self._repo)
+        return dataset_service.refresh_dataset_version(dataset_id)
 
     def _resolve_reimport_sheet_name(
         self,

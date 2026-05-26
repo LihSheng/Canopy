@@ -59,8 +59,6 @@ def pytest_collection_modifyitems(config, items):
 
 
 def _ensure_database_exists(database_url: str) -> None:
-    if "sqlite" in database_url:
-        return
     url = make_url(database_url)
     admin_url = url.set(database="postgres")
     admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")

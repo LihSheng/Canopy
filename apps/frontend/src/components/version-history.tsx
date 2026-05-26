@@ -6,7 +6,7 @@ type Props = {
   activeVersionId: string | null | undefined;
   onDeleteVersion?: (version: DatasetVersion) => void | Promise<void>;
   deletingVersionId?: string | null;
-  onUploadVersion?: () => void;
+  onRefreshLatest?: () => void | Promise<void>;
 };
 
 const statusStyles: Record<string, string> = {
@@ -21,7 +21,7 @@ export const VersionHistory = ({
   activeVersionId,
   onDeleteVersion,
   deletingVersionId = null,
-  onUploadVersion,
+  onRefreshLatest,
 }: Props) => {
   if (!versions || versions.length === 0) {
     return (
@@ -39,13 +39,13 @@ export const VersionHistory = ({
             Active version is locked. Use Delete Version only for non-active snapshots.
           </div>
         )}
-        {onUploadVersion && (
+        {onRefreshLatest && (
           <button
             type="button"
-            onClick={onUploadVersion}
+            onClick={onRefreshLatest}
             className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           >
-            Upload New Version
+            Refresh Latest
           </button>
         )}
       </div>

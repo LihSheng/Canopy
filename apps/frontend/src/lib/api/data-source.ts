@@ -196,6 +196,12 @@ export const reimportDatasetVersion = (
   });
 }
 
+export const refreshDatasetVersion = (datasetId: string): Promise<DatasetVersion> => {
+  return request<DatasetVersion>(`/api/datasets/${datasetId}/refresh`, {
+    method: "POST",
+  });
+}
+
 export const fetchRun = (id: string): Promise<Run> => {
   return request<Run>(`/api/runs/${id}`);
 }

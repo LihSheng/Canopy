@@ -4,13 +4,11 @@ import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from common.database import Base
 from dataset.domain import Dataset, DatasetStatus, SyncMode
 from dataset.repository import DatasetRepository
 from sync.external_sync_service import ExternalDbSyncService
+from tests.unit.postgres_test_db import make_postgres_session
 
 
 @pytest.fixture(autouse=True)
@@ -19,13 +17,7 @@ def _setup_db():
 
 
 def _make_session():
-    engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
-    import connection.schema  # noqa: F401
-    import dataset.schema  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)
-    session_local = sessionmaker(bind=engine)
-    return session_local()
+    return make_postgres_session(("connection.schema", "dataset.schema"))
 
 
 class MockCursorHelper:

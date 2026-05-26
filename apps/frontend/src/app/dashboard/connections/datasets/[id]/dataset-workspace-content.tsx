@@ -13,6 +13,7 @@ import {
   deleteDatasetVersion,
   fetchRuns,
   reimportDatasetVersion,
+  refreshDatasetVersion,
   previewStaticFile,
   updateSyncPolicy,
   fetchConnection,
@@ -85,7 +86,7 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
   const [deletingVersionId, setDeletingVersionId] = useState<string | null>(null);
   const [deleteDialogKind, setDeleteDialogKind] = useState<"dataset" | "version" | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<DatasetVersion | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [refreshingLatest, setRefreshingLatest] = useState(false);
   const [editingSyncPolicy, setEditingSyncPolicy] = useState(false);
   const [savingSyncPolicy, setSavingSyncPolicy] = useState(false);
   const toast = useToast();
@@ -97,16 +98,12 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
         ? "cdc"
         : "polling";
 
-  const handleUploadVersion = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
 
-    setUploading(true);
+    setRefreshingLatest(true);
     setActionError(null);
     try {
       const staticPreview = await previewStaticFile(file, "static_file");
@@ -123,7 +120,7 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
         firstSheet.sheet_name,
       );
       toast.success(
-        "New version uploaded",
+        "Latest data refreshed",
         `v${newVersion.version_number} is now active.`,
       );
       await load();
@@ -131,9 +128,34 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
     } catch (err) {
       const message = err instanceof Error ? err.message : ERROR_MESSAGES.uploadFailed;
       setActionError(message);
-      toast.danger("Upload failed", message);
+      toast.danger("Refresh failed", message);
     } finally {
-      setUploading(false);
+      setRefreshingLatest(false);
+    }
+  };
+
+  const handleRefreshLatest = async () => {
+    if (connection?.source_type === "static_file") {
+      fileInputRef.current?.click();
+      return;
+    }
+
+    setRefreshingLatest(true);
+    setActionError(null);
+    try {
+      const newVersion = await refreshDatasetVersion(datasetId);
+      toast.success(
+        "Latest data refreshed",
+        `v${newVersion.version_number} is now active.`,
+      );
+      await load();
+      await loadPreview();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : ERROR_MESSAGES.failedToRefreshDataset;
+      setActionError(message);
+      toast.danger("Refresh failed", message);
+    } finally {
+      setRefreshingLatest(false);
     }
   };
 
@@ -435,12 +457,12 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
         )}
 
         {activeTab === "Versions" && (
-          <VersionHistory
+            <VersionHistory
             versions={versions}
             activeVersionId={dataset!.active_version_id}
             onDeleteVersion={handleDeleteVersion}
             deletingVersionId={deletingVersionId}
-            onUploadVersion={handleUploadVersion}
+            onRefreshLatest={handleRefreshLatest}
           />
         )}
 
@@ -591,10 +613,10 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
       accept={FILE_ACCEPT}
       onChange={handleFileSelected}
     />
-    {uploading && (
+    {refreshingLatest && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
         <div className="rounded-lg bg-white px-6 py-4 shadow-lg">
-          <LoadingSpinner text="Uploading new version..." />
+          <LoadingSpinner text="Refreshing latest data..." />
         </div>
       </div>
     )}

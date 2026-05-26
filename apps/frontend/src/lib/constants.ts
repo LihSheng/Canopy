@@ -150,6 +150,7 @@ export const ERROR_MESSAGES = {
   failedToDiscoverTables: "Failed to discover tables",
   failedToCreateDatasets: "Failed to create datasets",
   failedToSaveSyncPolicy: "Failed to save sync policy",
+  failedToRefreshDataset: "Failed to refresh dataset",
   failedToDeleteDataset: "Failed to delete dataset",
   failedToDeleteVersion: "Failed to delete version",
   failedToDeleteConnection: "Failed to delete connection",

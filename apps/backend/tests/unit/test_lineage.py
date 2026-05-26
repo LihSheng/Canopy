@@ -1,6 +1,4 @@
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from common.database import Base
 from connection.domain import Connection
@@ -16,25 +14,19 @@ from ingestion.domain import (
 from ingestion.lineage import build_lineage_graph
 from run.domain import Run
 from run.repository import RunRepository
+from tests.unit.postgres_test_db import make_postgres_session
 
 pytestmark = pytest.mark.unit
 
 
 @pytest.fixture(autouse=True)
 def _setup_db():
-    """Override conftest._setup_db to avoid PostgreSQL dependency."""
+    """Keep this module isolated; sessions manage their own Postgres database."""
     yield
 
 
-def _make_lineage_sqlite_session():
-    engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
-    import connection.schema  # noqa: F401
-    import dataset.schema  # noqa: F401
-    import run.schema  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)
-    session_local = sessionmaker(bind=engine)
-    return session_local()
+def _make_lineage_postgres_session():
+    return make_postgres_session(("connection.schema", "dataset.schema", "run.schema"))
 
 
 _UPLOAD_ID = "test-upload-1"
@@ -323,7 +315,7 @@ class TestBuildLineageGraph:
 
 class TestDatasetLineageHandler:
     def test_includes_source_object_and_connection_nodes(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
@@ -343,7 +335,7 @@ class TestDatasetLineageHandler:
             session.close()
 
     def test_source_object_node_has_correct_label(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
@@ -361,7 +353,7 @@ class TestDatasetLineageHandler:
             session.close()
 
     def test_no_source_object_node_when_name_empty(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
@@ -379,7 +371,7 @@ class TestDatasetLineageHandler:
             session.close()
 
     def test_lineage_has_correct_node_types(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
@@ -405,7 +397,7 @@ class TestDatasetLineageHandler:
             session.close()
 
     def test_source_object_to_connection_edge_exists(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
@@ -426,7 +418,7 @@ class TestDatasetLineageHandler:
             session.close()
 
     def test_connection_to_dataset_edge_exists(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
@@ -445,7 +437,7 @@ class TestDatasetLineageHandler:
             session.close()
 
     def test_version_to_dataset_edge_exists(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
@@ -469,7 +461,7 @@ class TestDatasetLineageHandler:
             session.close()
 
     def test_run_to_dataset_edge_exists(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
@@ -510,7 +502,7 @@ class TestDatasetLineageHandler:
             session.close()
 
     def test_version_node_label_includes_version_number(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             conn = Connection(id="conn-1", project_id="proj-1", source_type="static_file", name="MyConn")
             ConnectionRepository(session).save(conn)
@@ -530,7 +522,7 @@ class TestDatasetLineageHandler:
             session.close()
 
     def test_dataset_not_found_raises_error(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             from common.errors import NotFoundError
 
@@ -540,7 +532,7 @@ class TestDatasetLineageHandler:
             session.close()
 
     def test_no_connection_edges_when_connection_missing(self):
-        session = _make_lineage_sqlite_session()
+        session = _make_lineage_postgres_session()
         try:
             dataset = Dataset(
                 id="ds-1", project_id="proj-1", connection_id="bad-conn", name="MyDs", source_object_name="tbl"

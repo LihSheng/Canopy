@@ -9,6 +9,7 @@ from dataset.domain import (
     Dataset,
     SyncMode,
 )
+from tests.unit.postgres_test_db import make_postgres_session
 
 
 class TestSyncMode:
@@ -90,72 +91,60 @@ class TestConnectionTestFields:
 
 class TestDatasetRepositorySyncFields:
     def test_save_and_retrieve_sync_fields(self):
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import sessionmaker
-
-        import dataset.schema  # noqa: F401
-        from common.database import Base
         from dataset.repository import DatasetRepository
 
-        engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
-        Base.metadata.create_all(bind=engine)
-        session = sessionmaker(bind=engine)()
-        repo = DatasetRepository(session)
+        handle = make_postgres_session(("dataset.schema", "connection.schema"))
+        try:
+            repo = DatasetRepository(handle)
 
-        ds = Dataset(
-            id="ds-1",
-            project_id="p-1",
-            connection_id="c-1",
-            name="test_table",
-            sync_mode=SyncMode.BATCH,
-            batch_strategy=BatchStrategy.INCREMENTAL_CURSOR,
-            cursor_column="updated_at",
-        )
-        saved = repo.save(ds)
-        assert saved.sync_mode == "batch"
-        assert saved.batch_strategy == "incremental_cursor"
-        assert saved.cursor_column == "updated_at"
+            ds = Dataset(
+                id="ds-1",
+                project_id="p-1",
+                connection_id="c-1",
+                name="test_table",
+                sync_mode=SyncMode.BATCH,
+                batch_strategy=BatchStrategy.INCREMENTAL_CURSOR,
+                cursor_column="updated_at",
+            )
+            saved = repo.save(ds)
+            assert saved.sync_mode == "batch"
+            assert saved.batch_strategy == "incremental_cursor"
+            assert saved.cursor_column == "updated_at"
 
-        retrieved = repo.get("ds-1")
-        assert retrieved is not None
-        assert retrieved.sync_mode == "batch"
-        assert retrieved.batch_strategy == "incremental_cursor"
-        assert retrieved.cursor_column == "updated_at"
-
-        session.close()
+            retrieved = repo.get("ds-1")
+            assert retrieved is not None
+            assert retrieved.sync_mode == "batch"
+            assert retrieved.batch_strategy == "incremental_cursor"
+            assert retrieved.cursor_column == "updated_at"
+        finally:
+            handle.close()
 
 
 class TestConnectionRepositoryTestFields:
     def test_save_and_retrieve_test_status(self):
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import sessionmaker
-
-        import connection.schema  # noqa: F401
-        from common.database import Base
         from connection.domain import Connection
         from connection.repository import ConnectionRepository
 
-        engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
-        Base.metadata.create_all(bind=engine)
-        session = sessionmaker(bind=engine)()
-        repo = ConnectionRepository(session)
+        handle = make_postgres_session(("connection.schema",))
+        try:
+            repo = ConnectionRepository(handle)
 
-        conn = Connection(
-            id="c-1",
-            project_id="p-1",
-            source_type="postgresql",
-            name="test",
-            test_status="success",
-            last_tested_at=datetime.now(UTC),
-        )
-        saved = repo.save(conn)
-        assert saved.test_status == "success"
+            conn = Connection(
+                id="c-1",
+                project_id="p-1",
+                source_type="postgresql",
+                name="test",
+                test_status="success",
+                last_tested_at=datetime.now(UTC),
+            )
+            saved = repo.save(conn)
+            assert saved.test_status == "success"
 
-        retrieved = repo.get("c-1")
-        assert retrieved is not None
-        assert retrieved.test_status == "success"
-
-        session.close()
+            retrieved = repo.get("c-1")
+            assert retrieved is not None
+            assert retrieved.test_status == "success"
+        finally:
+            handle.close()
 
 
 class TestSourceTypeSeed:

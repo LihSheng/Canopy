@@ -2,6 +2,8 @@
 
 import pytest
 
+from tests.unit.postgres_test_db import make_postgres_session
+
 pytestmark = pytest.mark.unit
 
 
@@ -85,14 +87,15 @@ class TestDatabaseManager:
 
     def test_set_engine_rebuilds_factories(self):
         """Lines 76-84: set_engine replaces engines and factories."""
-        from sqlalchemy import create_engine
-
         from common.database import _DatabaseManager
 
         mgr = _DatabaseManager()
-        eng = create_engine("sqlite://", pool_pre_ping=True)
-        mgr.set_engine(eng)
-        assert mgr.engine() is eng
+        handle = make_postgres_session(())
+        try:
+            mgr.set_engine(handle.engine)
+            assert mgr.engine() is handle.engine
+        finally:
+            handle.close()
 
     def test_reset_engine_clears(self):
         """Lines 86-90: reset_engine clears cached engines."""
@@ -155,12 +158,13 @@ class TestDatabaseManager:
 
     def test_set_engine_function(self):
         """Line 138-139."""
-        from sqlalchemy import create_engine
-
         from common.database import set_engine
 
-        eng = create_engine("sqlite://", pool_pre_ping=True)
-        set_engine(eng)
+        handle = make_postgres_session(())
+        try:
+            set_engine(handle.engine)
+        finally:
+            handle.close()
 
     def test_reset_engine_function(self):
         """Line 142-143."""
@@ -174,29 +178,33 @@ class TestMakeSession:
 
     def test_make_session_from_sessionmaker(self):
         """line 124-128: sessionmaker input returns a Session."""
-        from sqlalchemy import create_engine
         from sqlalchemy.orm import Session, sessionmaker
 
         from common.database import make_session
 
-        engine = create_engine("sqlite://")
-        factory = sessionmaker(bind=engine)
-        session = make_session(factory)
-        assert isinstance(session, Session)
-        session.close()
+        handle = make_postgres_session(())
+        try:
+            factory = sessionmaker(bind=handle.engine)
+            session = make_session(factory)
+            assert isinstance(session, Session)
+            session.close()
+        finally:
+            handle.close()
 
     def test_make_session_direct_session_instance(self):
         """line 130: direct Session instance."""
-        from sqlalchemy import create_engine
         from sqlalchemy.orm import Session
 
         from common.database import make_session
 
-        engine = create_engine("sqlite://")
-        session = Session(bind=engine)
-        result = make_session(session)
-        assert isinstance(result, Session)
-        result.close()
+        handle = make_postgres_session(())
+        try:
+            session = Session(bind=handle.engine)
+            result = make_session(session)
+            assert isinstance(result, Session)
+            result.close()
+        finally:
+            handle.close()
 
     def test_make_session_type_error_non_session(self):
         """line 131-132: TypeError when input is not a Session."""

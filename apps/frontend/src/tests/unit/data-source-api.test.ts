@@ -37,6 +37,7 @@ import {
   fetchTableDiscovery,
   fetchTablePreview,
   updateSyncPolicy,
+  refreshDatasetVersion,
 } from "@/lib/api/data-source";
 
 const mockRequest = vi.mocked(request);
@@ -316,6 +317,15 @@ describe("data-source API", () => {
       expect(mockRequest).toHaveBeenCalledWith("/api/datasets/ds-1/reimport", {
         method: "POST",
         body: JSON.stringify({ data_path: "/data/v1", columns: ["col1"] }),
+      });
+      expect(result.id).toBe("v2");
+    });
+
+    it("refreshDatasetVersion calls POST /api/datasets/:id/refresh", async () => {
+      mockRequest.mockResolvedValue({ id: "v2", status: "processing" });
+      const result = await refreshDatasetVersion("ds-1");
+      expect(mockRequest).toHaveBeenCalledWith("/api/datasets/ds-1/refresh", {
+        method: "POST",
       });
       expect(result.id).toBe("v2");
     });

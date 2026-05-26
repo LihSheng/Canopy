@@ -4,14 +4,12 @@ from pathlib import Path
 
 import openpyxl
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from common.database import Base
 from dataset.domain import Dataset, DatasetStatus, DatasetVersion, DatasetVersionStatus
 from dataset.preview_service import read_dataset_preview
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from dataset.service import DatasetVersionService
+from tests.unit.postgres_test_db import make_postgres_session
 
 
 @pytest.fixture(autouse=True)
@@ -19,19 +17,14 @@ def _setup_db():
     yield
 
 
-def _make_sqlite_session():
-    engine = create_engine("sqlite:///", connect_args={"check_same_thread": False})
-    import dataset.schema  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)
-    session_local = sessionmaker(bind=engine)
-    return session_local()
+def _make_postgres_session():
+    return make_postgres_session(("dataset.schema",))
 
 
 class TestDatasetReimportService:
     def test_reimport_valid_data_creates_new_active_version(self, tmp_path):
         # Setup: Existing dataset with v1 active
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -73,7 +66,7 @@ class TestDatasetReimportService:
             session.close()
 
     def test_reimport_materializes_previewable_storage(self, tmp_path):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -113,7 +106,7 @@ class TestDatasetReimportService:
             session.close()
 
     def test_reimport_uses_explicit_sheet_name_for_workbooks(self, tmp_path):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -161,7 +154,7 @@ class TestDatasetReimportService:
             session.close()
 
     def test_reimport_falls_back_when_requested_sheet_is_missing(self, tmp_path):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -209,7 +202,7 @@ class TestDatasetReimportService:
             session.close()
 
     def test_mark_version_failed_sets_status_and_reason(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
@@ -231,7 +224,7 @@ class TestDatasetReimportService:
             session.close()
 
     def test_mark_version_failed_returns_none_for_missing(self):
-        session = _make_sqlite_session()
+        session = _make_postgres_session()
         try:
             version_repo = DatasetVersionRepository(session)
             dataset_repo = DatasetRepository(session)
