@@ -119,8 +119,7 @@ class MysqlAdapter(DatabaseAdapter):
                             "table_name": table_name,
                             "row_count_estimate": row_count_estimate,
                             "columns": [
-                                {"name": column["COLUMN_NAME"], "data_type": column["DATA_TYPE"]}
-                                for column in columns
+                                {"name": column["COLUMN_NAME"], "data_type": column["DATA_TYPE"]} for column in columns
                             ],
                         }
                     )
@@ -152,7 +151,9 @@ class MysqlAdapter(DatabaseAdapter):
                 cur.execute(f"SELECT * FROM `{table}` LIMIT %s", (limit,))
                 rows = cur.fetchall() or []
 
-                ordered_columns = [{"name": column["COLUMN_NAME"], "data_type": column["DATA_TYPE"]} for column in columns]
+                ordered_columns = [
+                    {"name": column["COLUMN_NAME"], "data_type": column["DATA_TYPE"]} for column in columns
+                ]
                 ordered_rows = [[row[column["COLUMN_NAME"]] for column in columns] for row in rows]
                 return {"columns": ordered_columns, "rows": ordered_rows}
         finally:
@@ -168,6 +169,7 @@ class MysqlAdapter(DatabaseAdapter):
         try:
             conn = self._connect(config, dict_cursor=True)
         except ImportError:
+
             async def empty_generator():
                 if False:
                     yield []

@@ -3,7 +3,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
-
 _BACKEND_ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 load_dotenv(_BACKEND_ENV_FILE, override=False)
 
