@@ -1,4 +1,11 @@
+from pathlib import Path
+
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+
+
+_BACKEND_ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
+load_dotenv(_BACKEND_ENV_FILE, override=False)
 
 
 class Settings(BaseSettings):
@@ -10,7 +17,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     export_storage_dir: str = ""
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": _BACKEND_ENV_FILE, "env_file_encoding": "utf-8"}
 
     @property
     def resolved_control_plane_database_url(self) -> str:

@@ -65,6 +65,13 @@ export const SourceSetupWizard = () => {
   const [tables, setTables] = useState<DiscoveredTable[]>([]);
   const [loadingTables, setLoadingTables] = useState(false);
   const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set());
+  const [tableSearch, setTableSearch] = useState("");
+
+  const filteredTables = tables.filter((table) => {
+    const query = tableSearch.trim().toLowerCase();
+    if (!query) return true;
+    return table.table_name.toLowerCase().includes(query);
+  });
 
   // --- Sync policy (Step 3) ---
   const [tablePolicies, setTablePolicies] = useState<Record<string, SyncPolicy>>({});
@@ -114,6 +121,7 @@ export const SourceSetupWizard = () => {
     try {
       const discovered = await fetchTableDiscovery(connectionId);
       setTables(discovered);
+      setTableSearch("");
       setStep(2);
     } catch {
       setError(ERROR_MESSAGES.failedToDiscoverTables);
@@ -170,10 +178,14 @@ export const SourceSetupWizard = () => {
 
   const toggleSelectAll = useCallback(() => {
     if (isDb) {
-      if (selectedTables.size === tables.length) {
+      if (filteredTables.length > 0 && filteredTables.every((table) => selectedTables.has(table.table_name))) {
         setSelectedTables(new Set());
       } else {
-        setSelectedTables(new Set(tables.map((t) => t.table_name)));
+        setSelectedTables((prev) => {
+          const next = new Set(prev);
+          filteredTables.forEach((table) => next.add(table.table_name));
+          return next;
+        });
       }
     } else if (preview) {
       if (selectedSheets.size === preview.sheet_profiles.length) {
@@ -182,7 +194,7 @@ export const SourceSetupWizard = () => {
         setSelectedSheets(new Set(preview.sheet_profiles.map((s) => s.sheet_name)));
       }
     }
-  }, [isDb, tables, selectedTables, preview, selectedSheets]);
+  }, [isDb, filteredTables, selectedTables, preview, selectedSheets]);
 
   // Sheet toggling for static files
   const toggleSheet = useCallback((name: string) => {
@@ -560,6 +572,18 @@ export const SourceSetupWizard = () => {
             {isDb ? "Select Tables" : "Select Sheets"}
           </h3>
 
+          {isDb && (
+            <div className="mb-4 max-w-md">
+              <label className="block text-xs font-medium text-zinc-500">Search tables</label>
+              <input
+                value={tableSearch}
+                onChange={(e) => setTableSearch(e.target.value)}
+                placeholder="Filter table name"
+                className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
+              />
+            </div>
+          )}
+
           <div className="flex flex-col gap-4 lg:flex-row">
             {/* Left: object list */}
             <div className="min-w-0 flex-1">
@@ -567,7 +591,12 @@ export const SourceSetupWizard = () => {
                 <label className="flex items-center gap-2 text-sm text-zinc-700">
                   <input
                     type="checkbox"
-                    checked={selectedCount === totalCount && totalCount > 0}
+                    checked={
+                      isDb
+                        ? filteredTables.length > 0 &&
+                          filteredTables.every((table) => selectedTables.has(table.table_name))
+                        : selectedCount === totalCount && totalCount > 0
+                    }
                     onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-zinc-300"
                   />
@@ -580,7 +609,7 @@ export const SourceSetupWizard = () => {
 
               <ul className="max-h-80 space-y-1 overflow-y-auto">
                 {isDb ? (
-                  tables.map((table) => (
+                  filteredTables.map((table) => (
                     <li key={table.table_name}>
                       <label className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-zinc-50">
                         <input
@@ -626,6 +655,10 @@ export const SourceSetupWizard = () => {
                   ))
                 )}
               </ul>
+
+              {isDb && filteredTables.length === 0 && (
+                <div className="py-8 text-sm text-zinc-500">No tables match your search.</div>
+              )}
             </div>
 
             {/* Right: preview pane */}

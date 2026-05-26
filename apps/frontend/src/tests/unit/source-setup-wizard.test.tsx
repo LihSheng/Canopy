@@ -48,6 +48,12 @@ describe("SourceSetupWizard — DB source (postgresql)", () => {
         columns: [{ name: "id", data_type: "bigint" }],
         detected_cursor_column: "updated_at",
       },
+      {
+        table_name: "org_leave_type",
+        row_count_estimate: 25,
+        columns: [{ name: "id", data_type: "bigint" }],
+        detected_cursor_column: "updated_at",
+      },
     ]);
     mockCreateDataset.mockResolvedValue({ id: "ds-1" });
   });
@@ -155,6 +161,21 @@ describe("SourceSetupWizard — DB source (postgresql)", () => {
     expect(checkbox).not.toBeChecked();
     fireEvent.click(checkbox);
     expect(checkbox).toBeChecked();
+  });
+
+  it("filters tables in step 2 by search text", async () => {
+    render(<SourceSetupWizard />);
+    fireEvent.change(screen.getByPlaceholderText("localhost"), { target: { value: "host" } });
+    fireEvent.change(screen.getByPlaceholderText("mydb"), { target: { value: "db" } });
+    fireEvent.click(screen.getByText("Test Connection"));
+    await waitFor(() => expect(screen.getByText("Connection successful")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Next"));
+    await waitFor(() => expect(screen.getByText("users")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByPlaceholderText("Filter table name"), { target: { value: "leave" } });
+
+    expect(screen.queryByText("users")).not.toBeInTheDocument();
+    expect(screen.getByText("org_leave_type")).toBeInTheDocument();
   });
 
   it("shows error when fetchTableDiscovery throws", async () => {
