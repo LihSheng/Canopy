@@ -293,7 +293,7 @@ def _seed_upload(repo: IngestionRepository) -> UploadRecord:
         storage_path="/tmp/test.csv",
         checksum="abc123",
         status=UploadStatus.uploaded,
-        source_profile="herdhr",
+        source_profile="canopy",
         dataset_type="payroll",
     )
     return repo.save_upload(record)

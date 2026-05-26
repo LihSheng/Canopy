@@ -41,7 +41,7 @@ V1 originally included:
 
 V1 originally did not include:
 
-- Write-back into HerdHR or any operational source system
+- Write-back into Canopy Intelligence or any operational source system
 - Triggering approvals or actions
 - Forecasting or predictive planning
 - Chat assistant workflows
@@ -96,7 +96,7 @@ Planned v1 outputs:
 
 ### Notes On Source Mapping
 
-The ontology is informed by the current HerdHR data model and should avoid forcing generic labels that do not match the real schema.
+The ontology is informed by the current Canopy Intelligence data model and should avoid forcing generic labels that do not match the real schema.
 
 Recommended source mapping:
 

@@ -25,7 +25,7 @@ def _make_upload(dataset_type: str = "payroll") -> UploadRecord:
         storage_path="/tmp/test.csv",
         checksum="abc123",
         status=UploadStatus.uploaded,
-        source_profile="herdhr",
+        source_profile="canopy",
         dataset_type=dataset_type,
     )
 

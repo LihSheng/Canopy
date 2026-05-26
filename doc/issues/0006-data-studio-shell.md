@@ -16,7 +16,7 @@ Add "Data Studio" to sidebar navigation. Create /dashboard/data-studio/connectio
 - [ ] "+ New Connection" button navigates to wizard
 - [ ] /dashboard/data-studio/connections/[id] page renders child datasets
 - [ ] Each dataset card shows name, sync mode badge, last sync time, row count
-- [ ] Follows Cal.com design tokens (herd- css variables)
+- [ ] Follows Cal.com design tokens (canopy- css variables)
 
 ## Blocked by
 

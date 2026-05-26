@@ -17,7 +17,7 @@ Visual design source of truth: `DESIGN.md`
 
 **1. The application never writes back to the source system.**
 The internal database is read-only input for v1. No approvals, no mutations,
-no operational callbacks, no side effects into HerdHR or any upstream system.
+no operational callbacks, no side effects into Canopy Intelligence or any upstream system.
 
 **2. Deterministic analytics decide. The LLM narrates.**
 Monthly totals, anomaly detection, rankings, and contributing-driver logic are
@@ -548,7 +548,7 @@ The backend sends facts, not raw operational data with open-ended prompts.
 
 Not in scope. Do not build. Do not scaffold placeholders.
 
-- write-back into HerdHR or any operational source system
+- write-back into Canopy Intelligence or any operational source system
 - triggered approvals or operational actions
 - forecasting or predictive planning
 - chat assistant workflows

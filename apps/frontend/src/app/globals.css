@@ -6,27 +6,27 @@
   --foreground: #171717;
 
   /* DESIGN.md tokens — Canopy Intelligence executive dashboard */
-  --herd-canvas: #ffffff;
-  --herd-primary: #111111;
-  --herd-primary-active: #242424;
-  --herd-surface-soft: #f8f9fa;
-  --herd-surface-card: #f5f5f5;
-  --herd-surface-strong: #e5e7eb;
-  --herd-surface-dark: #101010;
-  --herd-surface-dark-elevated: #1a1a1a;
-  --herd-hairline: #e5e7eb;
-  --herd-hairline-soft: #f3f4f6;
-  --herd-ink: #111111;
-  --herd-body: #374151;
-  --herd-muted: #6b7280;
-  --herd-muted-soft: #898989;
-  --herd-on-primary: #ffffff;
-  --herd-on-dark: #ffffff;
-  --herd-on-dark-soft: #a1a1aa;
-  --herd-success: #10b981;
-  --herd-warning: #f59e0b;
-  --herd-error: #ef4444;
-  --herd-brand-accent: #3b82f6;
+  --canopy-canvas: #ffffff;
+  --canopy-primary: #111111;
+  --canopy-primary-active: #242424;
+  --canopy-surface-soft: #f8f9fa;
+  --canopy-surface-card: #f5f5f5;
+  --canopy-surface-strong: #e5e7eb;
+  --canopy-surface-dark: #101010;
+  --canopy-surface-dark-elevated: #1a1a1a;
+  --canopy-hairline: #e5e7eb;
+  --canopy-hairline-soft: #f3f4f6;
+  --canopy-ink: #111111;
+  --canopy-body: #374151;
+  --canopy-muted: #6b7280;
+  --canopy-muted-soft: #898989;
+  --canopy-on-primary: #ffffff;
+  --canopy-on-dark: #ffffff;
+  --canopy-on-dark-soft: #a1a1aa;
+  --canopy-success: #10b981;
+  --canopy-warning: #f59e0b;
+  --canopy-error: #ef4444;
+  --canopy-brand-accent: #3b82f6;
 }
 
 @theme inline {
@@ -34,18 +34,18 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --color-herd-canvas: var(--herd-canvas);
-  --color-herd-primary: var(--herd-primary);
-  --color-herd-surface-soft: var(--herd-surface-soft);
-  --color-herd-surface-card: var(--herd-surface-card);
-  --color-herd-surface-dark: var(--herd-surface-dark);
-  --color-herd-ink: var(--herd-ink);
-  --color-herd-body: var(--herd-body);
-  --color-herd-muted: var(--herd-muted);
-  --color-herd-success: var(--herd-success);
-  --color-herd-warning: var(--herd-warning);
-  --color-herd-error: var(--herd-error);
-  --color-herd-brand-accent: var(--herd-brand-accent);
+  --color-canopy-canvas: var(--canopy-canvas);
+  --color-canopy-primary: var(--canopy-primary);
+  --color-canopy-surface-soft: var(--canopy-surface-soft);
+  --color-canopy-surface-card: var(--canopy-surface-card);
+  --color-canopy-surface-dark: var(--canopy-surface-dark);
+  --color-canopy-ink: var(--canopy-ink);
+  --color-canopy-body: var(--canopy-body);
+  --color-canopy-muted: var(--canopy-muted);
+  --color-canopy-success: var(--canopy-success);
+  --color-canopy-warning: var(--canopy-warning);
+  --color-canopy-error: var(--canopy-error);
+  --color-canopy-brand-accent: var(--canopy-brand-accent);
 }
 
 body {

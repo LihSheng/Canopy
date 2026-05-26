@@ -80,7 +80,7 @@ export const QUERY_PARAMS = {
 
 // ─── LocalStorage Keys ───
 export const LOCAL_STORAGE_KEYS = {
-  sidebarCollapsed: "herd-analytics-sidebar-collapsed",
+  sidebarCollapsed: "canopy-analytics-sidebar-collapsed",
 } as const;
 
 // ─── Source Detail Source Values ───

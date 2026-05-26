@@ -52,7 +52,7 @@ Top-level docs:
 
 v1-v6 baseline delivered. All modules in production.
 
-v1 (HerdHR intelligence baseline):
+v1 (Canopy Intelligence intelligence baseline):
 - backend auth, source sync (6 entity readers), ontology mapping (domain types,
   6 mappers), analytics aggregation, anomaly detection, export, refresh, insight
   generation, API routes

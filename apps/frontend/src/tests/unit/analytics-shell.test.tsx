@@ -534,11 +534,11 @@ describe("AnalyticsShell - localstorage persistence", () => {
     const toggle = screen.getByLabelText("Collapse sidebar");
     fireEvent.click(toggle);
 
-    expect(storage["herd-analytics-sidebar-collapsed"]).toBe("true");
+    expect(storage["canopy-analytics-sidebar-collapsed"]).toBe("true");
   });
 
   it("persists expand preference to localStorage", () => {
-    storage["herd-analytics-sidebar-collapsed"] = "true";
+    storage["canopy-analytics-sidebar-collapsed"] = "true";
 
     render(
       <Wrapper>
@@ -551,7 +551,7 @@ describe("AnalyticsShell - localstorage persistence", () => {
     const toggle = screen.getByLabelText("Expand sidebar");
     fireEvent.click(toggle);
 
-    expect(storage["herd-analytics-sidebar-collapsed"]).toBe("false");
+    expect(storage["canopy-analytics-sidebar-collapsed"]).toBe("false");
   });
 });
 
@@ -561,7 +561,7 @@ describe("AnalyticsSidebarTenantSwitcher", () => {
     vi.clearAllMocks();
     // Clear localStorage to ensure sidebar starts expanded
     try {
-      localStorage.removeItem("herd-analytics-sidebar-collapsed");
+      localStorage.removeItem("canopy-analytics-sidebar-collapsed");
     } catch {
       // ignore
     }

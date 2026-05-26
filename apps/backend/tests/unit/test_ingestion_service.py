@@ -16,7 +16,7 @@ class TestProcessUpload:
                 repo=mock_repo,
                 file_bytes=b"dummy",
                 file_name="data.pdf",
-                source_profile="herdhr",
+                source_profile="canopy",
                 dataset_type="payroll",
             )
         mock_repo.save_upload.assert_not_called()
@@ -29,7 +29,7 @@ class TestProcessUpload:
                 repo=mock_repo,
                 file_bytes=large,
                 file_name="data.xlsx",
-                source_profile="herdhr",
+                source_profile="canopy",
                 dataset_type="payroll",
             )
         mock_repo.save_upload.assert_not_called()
@@ -47,7 +47,7 @@ class TestProcessUpload:
             repo=mock_repo,
             file_bytes=b"hello,world",
             file_name="data.csv",
-            source_profile="herdhr",
+            source_profile="canopy",
             dataset_type="payroll",
         )
 
@@ -77,7 +77,7 @@ class TestProcessUpload:
                         repo=mock_repo,
                         file_bytes=b"test",
                         file_name=f"data{ext}",
-                        source_profile="herdhr",
+                        source_profile="canopy",
                         dataset_type="payroll",
                     )
                     assert result.status == UploadStatus.uploaded

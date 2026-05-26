@@ -17,7 +17,7 @@ def _family(status: str = TemplateFamilyStatus.active.value) -> TemplateFamily:
     return TemplateFamily(
         id=str(uuid.uuid4()),
         dataset_type="payroll",
-        source_profile="herdhr",
+        source_profile="canopy",
         name="Payroll Standard",
         description="Standard payroll cleaning template",
         status=status,
@@ -135,7 +135,7 @@ class TestTemplateFamilyDomain:
         family = _family()
         assert family.status == TemplateFamilyStatus.active.value
         assert family.dataset_type == "payroll"
-        assert family.source_profile == "herdhr"
+        assert family.source_profile == "canopy"
 
     def test_archived_status(self):
         family = _family(status=TemplateFamilyStatus.archived.value)
