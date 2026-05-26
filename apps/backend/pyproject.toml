@@ -1,5 +1,5 @@
 [project]
-name = "herd-aggregator-backend"
+name = "canopy-backend"
 version = "0.1.0"
 description = "Canopy Intelligence backend API"
 requires-python = ">=3.11"

@@ -26,7 +26,7 @@ class TestAuthRepository:
         repo = AuthRepository(db_session)
         found = repo.find_by_id("test-user-1")
         assert found is not None
-        assert found.email == "admin@herd.example"
+        assert found.email == "admin@canopy.dev"
 
     def test_find_by_id_returns_none(self, db_session):
         repo = AuthRepository(db_session)

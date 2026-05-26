@@ -97,7 +97,7 @@ jobs:
       run:
         working-directory: apps/backend
     env:
-      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
+      CANOPY_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -128,7 +128,7 @@ jobs:
       run:
         working-directory: apps/backend
     env:
-      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
+      CANOPY_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -161,7 +161,7 @@ jobs:
       run:
         working-directory: apps/backend
     env:
-      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
+      CANOPY_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -241,7 +241,7 @@ jobs:
       run:
         working-directory: apps/backend
     env:
-      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
+      CANOPY_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -272,7 +272,7 @@ jobs:
       run:
         working-directory: apps/backend
     env:
-      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
+      CANOPY_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -313,7 +313,7 @@ jobs:
       run:
         working-directory: apps/backend
     env:
-      HERD_AGGREGATOR_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
+      CANOPY_TEST_SERVER_URL: postgresql+psycopg://postgres:postgres@localhost:5432
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6

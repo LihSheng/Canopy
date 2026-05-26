@@ -5,20 +5,20 @@ class TestLoginEndpoint:
     def test_login_success(self, client: TestClient, seed_user):
         response = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["user"]["email"] == "admin@herd.example"
+        assert data["user"]["email"] == "admin@canopy.dev"
         assert data["user"]["display_name"] == "Admin User"
         assert "token" in data
         assert "expires_at" in data
-        assert "herd_token" in response.cookies
+        assert "session_token" in response.cookies
 
     def test_login_wrong_password(self, client: TestClient, seed_user):
         response = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "wrong"},
+            json={"email": "admin@canopy.dev", "password": "wrong"},
         )
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid email or password"
@@ -49,14 +49,14 @@ class TestLogoutEndpoint:
         data = response.json()
         assert data["message"] == "Logged out"
         cookie = response.headers.get("set-cookie", "")
-        assert 'herd_token=""' in cookie or "herd_token=;" in cookie
+        assert 'session_token=""' in cookie or "session_token=;" in cookie
 
 
 class TestSessionEndpoint:
     def test_session_authenticated(self, client: TestClient, seed_user):
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         token = login_resp.json()["token"]
 
@@ -67,7 +67,7 @@ class TestSessionEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["authenticated"] is True
-        assert data["user"]["email"] == "admin@herd.example"
+        assert data["user"]["email"] == "admin@canopy.dev"
 
     def test_session_unauthenticated(self, client: TestClient):
         response = client.get("/api/auth/session")
@@ -83,7 +83,7 @@ class TestSessionEndpoint:
     def test_session_via_cookie(self, client: TestClient, seed_user):
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
 
         response = client.get(

@@ -24,7 +24,7 @@ def _default_export_dir() -> str:
         if app_data_dir:
             return str(Path(app_data_dir) / "Canopy Intelligence" / "exports")
 
-    return str(Path.home() / ".herd-aggregator" / "exports")
+    return str(Path.home() / ".canopy-intelligence" / "exports")
 
 
 EXPORT_DIR = _default_export_dir()

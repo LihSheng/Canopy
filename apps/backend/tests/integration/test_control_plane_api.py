@@ -10,7 +10,7 @@ from control_plane.schemas.tenants import TenantModel
 def admin_user(db_session):
     admin = UserModel(
         id="admin-user-1",
-        email="admin@herd.example",
+        email="admin@canopy.dev",
         password_hash=hash_password("admin123"),
         display_name="Platform Admin",
         is_active=True,
@@ -37,7 +37,7 @@ def admin_client():
 def admin_headers(admin_client, admin_user):
     response = admin_client.post(
         "/api/auth/login",
-        json={"email": "admin@herd.example", "password": "admin123"},
+        json={"email": "admin@canopy.dev", "password": "admin123"},
     )
     token = response.json()["token"]
     return {"Authorization": f"Bearer {token}"}
@@ -258,7 +258,7 @@ class TestNonAdminAccessDenied:
 
         response = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         if response.status_code != 200:
             return

@@ -24,6 +24,7 @@ from context.tenant_context import (
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+_SESSION_COOKIE_NAME = "session_token"
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -31,7 +32,7 @@ def login(body: LoginRequest, response: Response, db: Session = Depends(get_db))
     service = AuthService(db)
     result = service.login(LoginInput(email=body.email, password=body.password))
     response.set_cookie(
-        key="herd_token",
+        key=_SESSION_COOKIE_NAME,
         value=result.token,
         httponly=True,
         secure=False,
@@ -48,7 +49,7 @@ def login(body: LoginRequest, response: Response, db: Session = Depends(get_db))
 
 @router.post("/logout", response_model=LogoutResponse)
 def logout(response: Response) -> LogoutResponse:
-    response.delete_cookie(key="herd_token")
+    response.delete_cookie(key=_SESSION_COOKIE_NAME)
     return LogoutResponse(message="Logged out")
 
 
@@ -81,7 +82,7 @@ def switch_tenant(
     service = AuthService(db)
     new_token = service.switch_tenant(current_user.id, body.tenant_id)
     response.set_cookie(
-        key="herd_token",
+        key=_SESSION_COOKIE_NAME,
         value=new_token,
         httponly=True,
         secure=False,

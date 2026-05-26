@@ -12,7 +12,7 @@
 
 ```bash
 # 1. Clone the repo
-git clone <repo-url> && cd "HERD Aggregator"
+git clone <repo-url> && cd "Canopy"
 
 # 2. Install frontend dependencies
 cd apps/frontend && npm install && cd ../..
@@ -34,20 +34,20 @@ cp apps/backend/.env.example apps/backend/.env
 ### Start PostgreSQL
 
 ```bash
-docker run -d --name herd-aggregator-postgres \
+docker run -d --name canopy-postgres \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=postgres \
   -p 5432:5432 \
   postgres:16
 
-docker exec herd-aggregator-postgres psql -U postgres -d postgres -c "CREATE DATABASE herd_aggregator_control_plane;"
-docker exec herd-aggregator-postgres psql -U postgres -d postgres -c "CREATE DATABASE herd_aggregator_tenant_data;"
-docker exec herd-aggregator-postgres psql -U postgres -d postgres -c "CREATE DATABASE source_staging;"
+docker exec canopy-postgres psql -U postgres -d postgres -c "CREATE DATABASE canopy_control_plane;"
+docker exec canopy-postgres psql -U postgres -d postgres -c "CREATE DATABASE canopy_tenant_data;"
+docker exec canopy-postgres psql -U postgres -d postgres -c "CREATE DATABASE source_staging;"
 ```
 
-The backend test harness will create the `herd_aggregator_test_control_plane`,
-`herd_aggregator_test_tenant_data`, and `source_staging_test` databases
+The backend test harness will create the `canopy_test_control_plane`,
+`canopy_test_tenant_data`, and `source_staging_test` databases
 automatically if they do not exist.
 
 ## Run

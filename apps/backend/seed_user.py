@@ -12,7 +12,7 @@ from auth.hashing import hash_password
 from auth.schema import UserModel
 from common.database import control_plane_session_factory, init_db
 
-EMAIL = "admin@herd.example"
+EMAIL = "admin@canopy.dev"
 PASSWORD = "admin123"
 DISPLAY_NAME = "Admin User"
 

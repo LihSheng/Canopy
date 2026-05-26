@@ -2,7 +2,7 @@ from auth.hashing import hash_password
 from auth.repository import AuthRepository
 from common.database import init_db, session_factory
 
-DEFAULT_EMAIL = "admin@herd.example"
+DEFAULT_EMAIL = "admin@canopy.dev"
 DEFAULT_PASSWORD = "admin123"
 DEFAULT_DISPLAY_NAME = "Admin User"
 

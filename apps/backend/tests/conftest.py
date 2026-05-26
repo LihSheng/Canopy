@@ -19,19 +19,19 @@ from ontology.schema import (
 from tenant_data.base import TenantDataBase
 
 _TEST_SERVER_URL = os.environ.get(
-    "HERD_AGGREGATOR_TEST_SERVER_URL",
+    "CANOPY_TEST_SERVER_URL",
     "postgresql+psycopg://postgres:postgres@127.0.0.1:5432",
 )
 _TEST_CONTROL_PLANE_DATABASE_NAME = os.environ.get(
-    "HERD_AGGREGATOR_TEST_CONTROL_PLANE_DATABASE_NAME",
-    "herd_aggregator_test_control_plane",
+    "CANOPY_TEST_CONTROL_PLANE_DATABASE_NAME",
+    "canopy_test_control_plane",
 )
 _TEST_TENANT_DATA_DATABASE_NAME = os.environ.get(
-    "HERD_AGGREGATOR_TEST_TENANT_DATA_DATABASE_NAME",
-    "herd_aggregator_test_tenant_data",
+    "CANOPY_TEST_TENANT_DATA_DATABASE_NAME",
+    "canopy_test_tenant_data",
 )
 _TEST_SOURCE_DATABASE_NAME = os.environ.get(
-    "HERD_AGGREGATOR_TEST_SOURCE_DATABASE_NAME",
+    "CANOPY_TEST_SOURCE_DATABASE_NAME",
     "source_staging_test",
 )
 
@@ -139,7 +139,7 @@ def client():
 def seed_user(db_session):
     user = UserModel(
         id="test-user-1",
-        email="admin@herd.example",
+        email="admin@canopy.dev",
         password_hash=hash_password("admin123"),
         display_name="Admin User",
         is_active=True,
@@ -154,7 +154,7 @@ def seed_user(db_session):
 def auth_headers(client, seed_user):
     response = client.post(
         "/api/auth/login",
-        json={"email": "admin@herd.example", "password": "admin123"},
+        json={"email": "admin@canopy.dev", "password": "admin123"},
     )
     token = response.json()["token"]
     return {"Authorization": f"Bearer {token}"}

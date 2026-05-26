@@ -65,7 +65,7 @@ class TestLoginReturnsTenantList:
     def test_login_includes_tenants(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         response = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         assert response.status_code == 200
         data = response.json()
@@ -110,7 +110,7 @@ class TestTenantListOrdering:
 
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         data = login_resp.json()
         tenant_names = [t["name"] for t in data["tenants"]]
@@ -121,7 +121,7 @@ class TestSwitchTenant:
     def test_switch_tenant_issues_new_jwt(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         token = login_resp.json()["token"]
         cookies = login_resp.cookies
@@ -138,14 +138,14 @@ class TestSwitchTenant:
         assert data["tenant"] is not None
         assert data["tenant"]["tenant_id"] == "tenant-1"
         assert data["tenant"]["role"] == "admin"
-        assert "herd_token" in response.cookies
+        assert "session_token" in response.cookies
 
     def test_subsequent_request_resolves_tenant_context(
         self, client: TestClient, seed_user, seed_tenants, seed_memberships
     ):
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         token = login_resp.json()["token"]
 
@@ -154,7 +154,7 @@ class TestSwitchTenant:
             json={"tenant_id": "tenant-2"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        new_token = switch_resp.json().get("token") or switch_resp.cookies.get("herd_token")
+        new_token = switch_resp.json().get("token") or switch_resp.cookies.get("session_token")
 
         session_resp = client.get(
             "/api/auth/session",
@@ -170,7 +170,7 @@ class TestSwitchTenant:
     def test_switch_to_unoccupied_tenant_denied(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         token = login_resp.json()["token"]
 
@@ -184,7 +184,7 @@ class TestSwitchTenant:
     def test_switch_to_suspended_tenant_denied(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         token = login_resp.json()["token"]
 
@@ -198,7 +198,7 @@ class TestSwitchTenant:
     def test_multiple_tenant_switching(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         token = login_resp.json()["token"]
         cookies = login_resp.cookies
@@ -229,7 +229,7 @@ class TestSessionAfterLogin:
     ):
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         token = login_resp.json()["token"]
 
@@ -251,7 +251,7 @@ class TestSessionAfterLogin:
     def test_session_with_active_tenant(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         token = login_resp.json()["token"]
 
@@ -276,7 +276,7 @@ class TestAccessDeniedScenarios:
     def test_user_with_no_membership_gets_empty_tenant_list(self, client: TestClient, seed_tenants):
         response = client.post(
             "/api/auth/login",
-            json={"email": "lonely@herd.example", "password": "pass123"},
+            json={"email": "lonely@canopy.dev", "password": "pass123"},
         )
         if response.status_code == 200:
             data = response.json()
@@ -285,7 +285,7 @@ class TestAccessDeniedScenarios:
     def test_stale_membership_blocked(self, client: TestClient, seed_user, seed_tenants, seed_memberships):
         login_resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@herd.example", "password": "admin123"},
+            json={"email": "admin@canopy.dev", "password": "admin123"},
         )
         token = login_resp.json()["token"]
 

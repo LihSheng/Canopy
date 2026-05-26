@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+psycopg://postgres:postgres@127.0.0.1:5432/herd_aggregator"
+    database_url: str = "postgresql+psycopg://postgres:postgres@127.0.0.1:5432/canopy"
     control_plane_database_url: str | None = None
     tenant_data_database_url: str | None = None
     source_database_url: str = "postgresql+psycopg://postgres:postgres@127.0.0.1:5432/source_staging"
