@@ -406,7 +406,6 @@ class TestMysqlCdcReader:
 
     async def test_run_simulation_cancelled_error(self):
         """Cover lines 149-150: CancelledError caught, loop exits."""
-        import json
         import tempfile
         from pathlib import Path
         from unittest.mock import MagicMock, patch
@@ -431,7 +430,6 @@ class TestMysqlCdcReader:
 
     async def test_run_simulation_generic_error(self):
         """Cover lines 151-152: generic exception caught, loop continues."""
-        import json
         import tempfile
         from pathlib import Path
         from unittest.mock import MagicMock, patch
@@ -604,7 +602,6 @@ class TestPostgresCdcReader:
 
     async def test_run_simulation_cancelled_error(self):
         """Cover lines 149-150: CancelledError caught, loop exits."""
-        import json
         import tempfile
         from pathlib import Path
         from unittest.mock import MagicMock, patch
@@ -629,7 +626,6 @@ class TestPostgresCdcReader:
 
     async def test_run_simulation_generic_error(self):
         """Cover lines 151-152: generic exception caught, loop continues."""
-        import json
         import tempfile
         from pathlib import Path
         from unittest.mock import MagicMock, patch
