@@ -276,3 +276,111 @@ class TestSourceDatabaseManager:
         from sync.source_db import reset_source_engine
 
         reset_source_engine()
+
+
+class TestBuildSourceEngine:
+    """Cover _build_source_engine edge cases (source_db.py line 20)."""
+
+    def test_memory_url_uses_static_pool(self):
+        """line 20: SQLite :memory: URL uses StaticPool."""
+        from sqlalchemy.pool import StaticPool
+
+        from common.config import settings
+        from sync.source_db import _SourceDatabaseManager
+
+        original_url = settings.source_database_url
+        try:
+            settings.source_database_url = "sqlite:///:memory:"
+            mgr = _SourceDatabaseManager()
+            # Reset internal state so _build_source_engine is called fresh
+            mgr._source_engine = None
+            eng = mgr.source_engine()
+            assert isinstance(eng.pool, StaticPool)
+        finally:
+            settings.source_database_url = original_url
+
+
+@pytest.mark.asyncio
+class TestMysqlCdcReader:
+    """Cover mysql_cdc_reader.py basic methods."""
+
+    async def test_init_sets_attributes(self):
+        """lines 21-24: __init__ sets attributes."""
+        from sync.readers.mysql_cdc_reader import MysqlCdcReader
+
+        reader = MysqlCdcReader({"host": "localhost"}, "ds-1", "test_table")
+        assert reader.config == {"host": "localhost"}
+        assert reader.dataset_id == "ds-1"
+        assert reader.table_name == "test_table"
+        assert reader.running is False
+
+    async def test_stop_sets_running_false(self):
+        """line 156: stop sets running to False."""
+        from sync.readers.mysql_cdc_reader import MysqlCdcReader
+
+        reader = MysqlCdcReader({}, "ds-1", "tbl")
+        reader.running = True
+        reader.stop()
+        assert reader.running is False
+
+    async def test_run_simulation_writes_initial_event(self):
+        """lines 114-128: _run_simulation writes initial event."""
+        from pathlib import Path
+        from unittest.mock import MagicMock, patch
+
+        from sync.readers.mysql_cdc_reader import MysqlCdcReader
+
+        reader = MysqlCdcReader({}, "ds-1", "tbl")
+        reader.running = False  # prevent infinite loop
+
+        mock_on_event = MagicMock()
+        mock_file = MagicMock()
+
+        with patch("builtins.open", return_value=mock_file):
+            await reader._run_simulation(Path("/tmp/test.jsonl"), mock_on_event)
+
+        assert mock_file.__enter__.return_value.write.called
+        assert mock_on_event.called
+
+
+@pytest.mark.asyncio
+class TestPostgresCdcReader:
+    """Cover pg_cdc_reader.py basic methods."""
+
+    async def test_init_sets_attributes(self):
+        """lines 23-26: __init__ sets attributes."""
+        from sync.readers.pg_cdc_reader import PostgresCdcReader
+
+        reader = PostgresCdcReader({"host": "localhost"}, "ds-1", "test_table")
+        assert reader.config == {"host": "localhost"}
+        assert reader.dataset_id == "ds-1"
+        assert reader.table_name == "test_table"
+        assert reader.running is False
+
+    async def test_stop_sets_running_false(self):
+        """line 156: stop sets running to False."""
+        from sync.readers.pg_cdc_reader import PostgresCdcReader
+
+        reader = PostgresCdcReader({}, "ds-1", "tbl")
+        reader.running = True
+        reader.stop()
+        assert reader.running is False
+
+    async def test_run_simulation_writes_initial_event(self):
+        """lines 114-128: _run_simulation writes initial event."""
+        from pathlib import Path
+        from unittest.mock import MagicMock, patch
+
+        from sync.readers.pg_cdc_reader import PostgresCdcReader
+
+        reader = PostgresCdcReader({}, "ds-1", "tbl")
+        reader.running = False  # prevent infinite loop
+
+        mock_on_event = MagicMock()
+        mock_file = MagicMock()
+
+        with patch("builtins.open", return_value=mock_file):
+            await reader._run_simulation(Path("/tmp/test.jsonl"), mock_on_event)
+
+        assert mock_file.__enter__.return_value.write.called
+        assert mock_on_event.called

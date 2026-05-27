@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from exports.payload import _collect_departments, _collect_trends, build_payload
@@ -100,6 +102,48 @@ class TestExportServiceFallback:
             assert payload.period_label == ""
 
 
+class TestGetSnapshotId:
+    """Cover _get_snapshot_id exception path (payload.py lines 67-70)."""
+
+    def test_get_snapshot_id_exception_returns_none(self):
+        from unittest.mock import MagicMock, patch
+
+        from exports.payload import _get_snapshot_id
+
+        with patch("exports.payload.get_snapshot_id_from_aggregates", side_effect=RuntimeError("DB error")):
+            result = _get_snapshot_id(MagicMock())
+            assert result is None
+
+
+class TestCollectTrendsFiltered:
+    """Cover _collect_trends month filtering (payload.py line 152)."""
+
+    def test_collect_trends_filters_by_allowed_months(self):
+        from unittest.mock import MagicMock, patch
+
+        from exports.payload import _collect_trends
+
+        mock_spend_1 = MagicMock()
+        mock_spend_1.month = "2026-05"
+        mock_spend_1.payroll_total = 1000.0
+        mock_spend_1.claims_total = 200.0
+
+        mock_spend_2 = MagicMock()
+        mock_spend_2.month = "2026-04"
+        mock_spend_2.payroll_total = 900.0
+        mock_spend_2.claims_total = 100.0
+
+        with (
+            patch("exports.payload.get_all_monthly_spends", return_value=[mock_spend_1, mock_spend_2]),
+            patch("exports.payload.get_snapshot_id_from_aggregates", return_value="snap-1"),
+            patch("exports.payload.get_distinct_months", return_value=["2026-05"]),
+        ):
+            trends = _collect_trends(MagicMock(), time_range="this_month")
+            assert len(trends) == 1
+            assert trends[0].month == "2026-05"
+            assert trends[0].total == 1200.0
+
+
 class TestExportServiceGenerateExport:
     def test_generate_export_returns_valid_xlsx(self, db_session, seed_analytics_data):
         from exports.service import generate_export
@@ -193,3 +237,74 @@ class TestRerunExport:
             mock_get.return_value = None
             result = rerun_export("nonexistent")
             assert result is None
+
+
+class TestDefaultExportDir:
+    """Cover _default_export_dir (service.py lines 20, 27)."""
+
+    def test_with_setting_returns_setting(self):
+        """line 20: settings.export_storage_dir is set."""
+        with patch("exports.service.settings") as mock_s:
+            mock_s.export_storage_dir = "/custom/path"
+            from exports.service import _default_export_dir
+
+            assert _default_export_dir() == "/custom/path"
+
+    def test_posix_fallback(self):
+        """line 27: fallback on posix when no setting."""
+        import pathlib
+
+        with (
+            patch("exports.service.os.name", "posix"),
+            patch("exports.service.settings") as mock_s,
+            patch.object(pathlib.Path, "home", return_value=pathlib.PurePosixPath("/home/testuser")),
+        ):
+            mock_s.export_storage_dir = None
+            from exports.service import _default_export_dir
+
+            result = _default_export_dir()
+            assert result == "/home/testuser/.canopy-intelligence/exports"
+
+
+class TestRunExportEdgeCases:
+    """Cover _run_export edge cases (service.py lines 131, 161-166)."""
+
+    @patch("exports.service.session_factory")
+    def test_run_export_model_not_found_returns_early(self, mock_factory):
+        """line 131: model is None -> early return."""
+        from exports.service import _run_export
+
+        mock_db = MagicMock()
+        mock_factory.return_value = lambda: mock_db
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+
+        # Should not raise
+        _run_export("nonexistent-job")
+
+    @patch("exports.service.session_factory")
+    def test_run_export_exception_sets_failed_status(self, mock_factory):
+        """lines 161-166: exception during export sets failed status."""
+        from exports.service import _run_export
+
+        mock_db = MagicMock()
+        mock_factory.return_value = lambda: mock_db
+        mock_model = MagicMock()
+        mock_model.id = "job-1"
+        mock_model.status = "running"
+        mock_model.snapshot_id = "snap-1"
+        mock_model.time_range = "this_month"
+        mock_model.include_departments = True
+        mock_model.include_anomalies = True
+        mock_model.file_path = None
+        mock_model.file_size_bytes = None
+        mock_model.started_at = None
+        mock_model.finished_at = None
+        mock_model.error_message = None
+        mock_model.preset_name = "executive_summary"
+        mock_model.requested_by_user_id = "user-1"
+        mock_model.snapshot_timestamp = None
+        mock_db.query.return_value.filter.return_value.first.return_value = mock_model
+
+        with patch("exports.service.build_workbook", side_effect=RuntimeError("build failed")):
+            # Should not raise
+            _run_export("job-1")

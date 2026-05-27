@@ -27,16 +27,39 @@ class TestRefreshService:
 
     @patch("refresh.service.session_factory")
     @patch("refresh.service.source_session_factory")
+    def test_get_current_status_completed(self, mock_source_factory, mock_factory):
+        """line 55: completed job with finished_at sets last_refresh."""
+        from datetime import UTC, datetime
+
+        from refresh.service import get_current_status
+
+        mock_db = MagicMock()
+        mock_factory.return_value = lambda: mock_db
+
+        mock_job = MagicMock()
+        mock_job.status = "completed"
+        mock_job.started_at = None
+        mock_job.finished_at = datetime(2026, 5, 27, 12, 0, 0, tzinfo=UTC)
+        mock_job.error_message = None
+        mock_db.query.return_value.order_by.return_value.first.return_value = mock_job
+
+        result = get_current_status()
+        assert result.status == "completed"
+        assert result.last_refresh == "2026-05-27T12:00:00+00:00"
+
+    @patch("refresh.service.session_factory")
+    @patch("refresh.service.source_session_factory")
     def test_run_refresh_job_not_found(self, mock_source_factory, mock_factory):
-        """line 96-97: job_model is None -> early return."""
+        """line 96: job_model is None -> early return."""
         from refresh.service import _run_refresh
 
         mock_db = MagicMock()
-        mock_factory.return_value = mock_db
+        # session_factory()() -> db
+        mock_factory.return_value = lambda: mock_db
         mock_db.query.return_value.filter.return_value.first.return_value = None
 
         source_db = MagicMock()
-        mock_source_factory.return_value = source_db
+        mock_source_factory.return_value = lambda: source_db
 
         # Should not raise
         _run_refresh("nonexistent")
@@ -137,13 +160,69 @@ class TestRefreshOrchestratorEdgeCases:
         # Should not raise
         orch._safe_update_job(MagicMock())
 
+    def test_safe_update_job_swallows_exception(self):
+        """lines 198-199: _safe_update_job swallows repo exceptions."""
+        from unittest.mock import patch
+
+        from refresh.orchestration.service import RefreshOrchestrator
+
+        with patch("refresh.repository.RefreshRepository.update_job", side_effect=RuntimeError("update failed")):
+            app_db = MagicMock()
+            orch = RefreshOrchestrator(app_db=app_db, source_db=MagicMock())
+
+            # Should not raise
+            orch._safe_update_job(MagicMock())
+
+    def test_collect_source_rows_none_result(self):
+        """line 149: _collect_source_rows returns empty dict when result is None."""
+        from refresh.orchestration.service import RefreshOrchestrator
+
+        orch = RefreshOrchestrator(app_db=MagicMock(), source_db=MagicMock())
+        result = orch._collect_source_rows()
+        assert result == {}
+
+    def test_resolve_months_no_months_from_db(self):
+        """lines 176-178: fallback when no months from DB uses current datetime."""
+        from datetime import datetime
+
+        from refresh.orchestration.service import RefreshOrchestrator
+
+        app_db = MagicMock()
+        app_db.query.return_value.distinct.return_value.filter.return_value.order_by.return_value.all.return_value = []
+        orch = RefreshOrchestrator(app_db=app_db, source_db=MagicMock())
+        orch._snapshot_id = "snap-1"
+
+        current, previous = orch._resolve_months()
+        now = datetime.now()
+        expected_current = now.strftime("%Y-%m")
+        expected_previous = orch._previous_month(expected_current)
+        assert current == expected_current
+        assert previous == expected_previous
+
     def test_resolve_months_from_db(self):
-        """lines 154-174: _resolve_months queries PayrollExpenseModel."""
+        """lines 154-172: _resolve_months with 2+ months returns first two."""
 
         from refresh.orchestration.service import RefreshOrchestrator
 
         app_db = MagicMock()
         query_result = [("2026-05",), ("2026-04",)]
+        app_db.query.return_value.distinct.return_value.filter.return_value.order_by.return_value.all.return_value = (
+            query_result
+        )
+
+        orch = RefreshOrchestrator(app_db=app_db, source_db=MagicMock())
+        orch._snapshot_id = "snap-1"
+
+        current, previous = orch._resolve_months()
+        assert current == "2026-05"
+        assert previous == "2026-04"
+
+    def test_resolve_months_single_month(self):
+        """lines 174-175: single month from DB uses _previous_month."""
+        from refresh.orchestration.service import RefreshOrchestrator
+
+        app_db = MagicMock()
+        query_result = [("2026-05",)]
         app_db.query.return_value.distinct.return_value.filter.return_value.order_by.return_value.all.return_value = (
             query_result
         )

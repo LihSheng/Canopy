@@ -14,7 +14,7 @@ class TestConfigSettings:
         """config.py line 17: control_plane_database_url is None -> database_url."""
         from common.config import Settings
 
-        s = Settings(database_url="postgresql:///primary")
+        s = Settings(database_url="postgresql:///primary", control_plane_database_url=None)
         assert s.resolved_control_plane_database_url == "postgresql:///primary"
 
     def test_resolved_control_plane_url_uses_override(self):
@@ -29,7 +29,7 @@ class TestConfigSettings:
     def test_resolved_tenant_data_url_falls_back(self):
         from common.config import Settings
 
-        s = Settings(database_url="postgresql:///primary")
+        s = Settings(database_url="postgresql:///primary", tenant_data_database_url=None)
         assert s.resolved_tenant_data_database_url == "postgresql:///primary"
 
     def test_resolved_tenant_data_url_uses_override(self):
@@ -174,7 +174,7 @@ class TestDatabaseManager:
 
 
 class TestMakeSession:
-    """Cover make_session edge cases (lines 122-135)."""
+    """Cover make_session edge cases (lines 118-132)."""
 
     def test_make_session_from_sessionmaker(self):
         """line 124-128: sessionmaker input returns a Session."""
@@ -222,6 +222,83 @@ class TestMakeSession:
         factory = sessionmaker()
         with pytest.raises(RuntimeError, match="does not have an engine bind"):
             make_session(factory)
+
+    def test_make_session_sessionmaker_type_error(self):
+        """line 122: sessionmaker-like that produces non-Session raises TypeError."""
+        from unittest.mock import MagicMock
+
+        from common.database import make_session
+
+        fake_factory = MagicMock()
+        fake_factory.class_ = object
+        fake_factory.kw = {}
+        fake_factory.return_value = "not-a-session"
+        with pytest.raises(TypeError, match="Expected a SQLAlchemy Session from sessionmaker"):
+            make_session(fake_factory)
+
+    def test_make_session_callable_no_bind(self):
+        """line 131: callable returning Session with no bind raises RuntimeError."""
+        from sqlalchemy.orm import Session
+
+        from common.database import make_session
+
+        session = Session()
+        with pytest.raises(RuntimeError, match="does not have an engine bind"):
+            make_session(lambda: session)
+
+
+class TestSyncMissingColumns:
+    """Cover _sync_missing_columns edge cases (lines 190-230)."""
+
+    def test_no_existing_tables_returns_early(self):
+        """line 194: early return when no existing tables."""
+        from sqlalchemy import MetaData, create_engine
+
+        from common.database import _sync_missing_columns
+
+        engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+        metadata = MetaData()
+        # Should not raise
+        _sync_missing_columns(engine, metadata)
+        engine.dispose()
+
+    def test_skips_nonexistent_table(self):
+        """line 199: skip table not in existing_tables."""
+        from sqlalchemy import Column, Integer, MetaData, Table, create_engine, text
+
+        from common.database import _sync_missing_columns
+
+        engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+        with engine.begin() as conn:
+            conn.execute(text("CREATE TABLE existing_tbl (id INTEGER PRIMARY KEY)"))
+        metadata = MetaData()
+        Table("nonexistent_tbl", metadata, Column("id", Integer, primary_key=True))
+        Table("existing_tbl", metadata, Column("id", Integer, primary_key=True), Column("name", Integer))
+        # Should skip nonexistent_tbl and process existing_tbl
+        _sync_missing_columns(engine, metadata)
+        engine.dispose()
+
+    def test_scalar_default_backfill(self):
+        """lines 218, 221-227: NOT NULL column with scalar default gets server_default."""
+        from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine, inspect, text
+
+        from common.database import _sync_missing_columns
+
+        engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+        with engine.begin() as conn:
+            conn.execute(text("CREATE TABLE test_tbl (id INTEGER PRIMARY KEY)"))
+        metadata = MetaData()
+        Table(
+            "test_tbl",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("status", String(50), nullable=False, default="active"),
+        )
+        _sync_missing_columns(engine, metadata)
+        inspector = inspect(engine)
+        cols = {c["name"]: c for c in inspector.get_columns("test_tbl")}
+        assert "status" in cols
+        engine.dispose()
 
 
 class TestLogging:

@@ -88,6 +88,18 @@ class TestInsightPersistence:
         assert result is not None
         assert result.id == "i-2"
 
+    def test_find_by_snapshot_not_found_returns_none(self, db_session):
+        """line 57: find_by_snapshot returns None when no match."""
+        repo = InsightRepository(db_session)
+        result = repo.find_by_snapshot("nonexistent-snapshot")
+        assert result is None
+
+    def test_find_by_month_not_found_returns_none(self, db_session):
+        """line 68: find_by_month returns None when no match."""
+        repo = InsightRepository(db_session)
+        result = repo.find_by_month("2099-01")
+        assert result is None
+
     def test_clear_snapshot(self, db_session):
         repo = InsightRepository(db_session)
         repo.save(

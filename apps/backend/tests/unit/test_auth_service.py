@@ -140,3 +140,59 @@ class TestLogout:
         service = AuthService(MagicMock())
         # Should not raise
         service.logout("some-token")
+
+
+class TestValidateSessionTenantError:
+    """Cover auth/service.py lines 138-139: AuthError clears tenant_id."""
+
+    def test_validate_token_with_invalid_tenant_returns_none_tenant_id(self):
+        from unittest.mock import MagicMock, patch
+
+        from auth.domain import LoginInput
+        from auth.hashing import hash_password
+        from auth.service import AuthService
+        from common.errors import AuthError
+
+        mock_db = MagicMock()
+        mock_user = MagicMock()
+        mock_user.id = "u1"
+        mock_user.email = "test@example.com"
+        mock_user.display_name = "Test User"
+        mock_user.password_hash = hash_password("pass123")
+        mock_user.is_active = True
+
+        # Set up memberships.mock_tenant_membership and mock_tenant for get_user_tenants
+        mock_membership = MagicMock()
+        mock_membership.tenant_id = "tenant-1"
+        mock_membership.role = "admin"
+
+        mock_tenant = MagicMock()
+        mock_tenant.id = "tenant-1"
+        mock_tenant.name = "Test Tenant"
+
+        # login: first query is find_by_email via filter().first()
+        # then get_user_tenants uses filter().all() for memberships
+        # and filter().order_by().all() for tenants
+        filter_mock = mock_db.query.return_value.filter.return_value
+        filter_mock.first.return_value = mock_user
+        filter_mock.all.return_value = [mock_membership]
+        filter_mock.order_by.return_value.all.return_value = [mock_tenant]
+
+        service = AuthService(mock_db)
+        login_result = service.login(LoginInput(email="test@example.com", password="pass123"))
+
+        # Reset for validate_session: user found but tenant validation fails
+        filter_mock.first.return_value = mock_user
+        filter_mock.all.return_value = [mock_membership]
+        filter_mock.order_by.return_value.all.return_value = [mock_tenant]
+
+        with patch("auth.service.MembershipValidator") as mock_validator_cls:
+            mock_validator = MagicMock()
+            mock_validator_cls.return_value = mock_validator
+            mock_validator.validate_membership.side_effect = AuthError("No membership")
+
+            session = service.validate_session(login_result.token)
+
+            assert session.authenticated is True
+            assert session.tenant_id is None
+            assert session.tenant_role is None

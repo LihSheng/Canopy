@@ -46,6 +46,6 @@ def test_init_db_backfills_missing_connection_columns(tmp_path):
         assert saved.id
         assert saved.test_status is None
     finally:
+        session_handle.close()
         Base.metadata.drop_all(bind=engine)
         reset_engine()
-        session_handle.close()

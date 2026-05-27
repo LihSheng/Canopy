@@ -40,13 +40,13 @@ def _create_database(database_name: str) -> None:
 
 
 def _reset_database(database_name: str) -> None:
-    engine = create_engine(_database_url(database_name))
+    admin_engine = _admin_engine()
     try:
-        with engine.begin() as conn:
-            conn.execute(text(f'DROP SCHEMA IF EXISTS public CASCADE'))
-            conn.execute(text('CREATE SCHEMA public'))
+        with admin_engine.connect() as conn:
+            conn.execute(text(f'DROP DATABASE IF EXISTS "{database_name}" WITH (FORCE)'))
+            conn.execute(text(f'CREATE DATABASE "{database_name}"'))
     finally:
-        engine.dispose()
+        admin_engine.dispose()
 
 
 def _database_name(schema_modules: Iterable[str]) -> str:
@@ -78,11 +78,9 @@ def make_postgres_session(schema_modules: Iterable[str]) -> PostgresSessionHandl
         importlib.import_module(module_name)
 
     database_name = _database_name(schema_modules)
-    _create_database(database_name)
-
+    _reset_database(database_name)
     database_url = _database_url(database_name)
     engine = create_engine(database_url)
-    _reset_database(database_name)
     Base.metadata.create_all(bind=engine)
     session = sessionmaker(autocommit=False, autoflush=False, bind=engine)()
     return PostgresSessionHandle(session=session, engine=engine, database_name=database_name)

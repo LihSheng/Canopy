@@ -249,10 +249,11 @@ class TestExternalDbSyncService:
             session.close()
 
     @pytest.mark.asyncio
+    @patch("sync.external_sync_service.ExternalDbSyncService._write_rows_to_storage")
     @patch("sync.external_sync_service.get_adapter")
     @patch("sync.external_sync_service.AesGcmSecretStore")
-    async def test_partial_failure_sets_status(self, mock_store, mock_get_adapter):
-        """lines 60-63: partial failure -> status='partial'."""
+    async def test_partial_failure_sets_partial_status(self, mock_store, mock_get_adapter, mock_write):
+        """line 74: some succeed, some fail -> status='partial'."""
         from connection.domain import Connection
         from connection.repository import ConnectionRepository
 
@@ -260,15 +261,15 @@ class TestExternalDbSyncService:
         try:
             conn_repo = ConnectionRepository(session)
             conn_repo.save(
-                Connection(id="c-1", project_id="p-1", source_type="postgresql", name="test", config_json={})
+                Connection(id="c-partial", project_id="p-1", source_type="postgresql", name="test", config_json={})
             )
 
             repo = DatasetRepository(session)
             repo.save(
                 Dataset(
-                    id="ds-1",
+                    id="ds-good",
                     project_id="p-1",
-                    connection_id="c-1",
+                    connection_id="c-partial",
                     name="good",
                     status=DatasetStatus.ACTIVE.value,
                     sync_mode=SyncMode.BATCH,
@@ -277,9 +278,9 @@ class TestExternalDbSyncService:
             )
             repo.save(
                 Dataset(
-                    id="ds-2",
+                    id="ds-bad",
                     project_id="p-1",
-                    connection_id="c-1",
+                    connection_id="c-partial",
                     name="bad",
                     status=DatasetStatus.ACTIVE.value,
                     sync_mode=SyncMode.BATCH,
@@ -287,9 +288,11 @@ class TestExternalDbSyncService:
                 )
             )
 
-            # Make one dataset fail
-            async def _fail(*args, **kwargs):
-                raise RuntimeError("conn refused")
+            mock_adapter = AsyncMock()
+            rows_batch = [{"id": 1, "name": "Alice"}]
+            mock_adapter.fetch_table = MockCursorHelper.fetch_table_callback(rows_batch)
+            mock_get_adapter.return_value = mock_adapter
+            mock_write.return_value = "/mock/storage/good.jsonl"
 
             from sync.external_sync_service import ExternalDbSyncService
 
@@ -304,10 +307,193 @@ class TestExternalDbSyncService:
                 service = ExternalDbSyncService(session)
                 result = await service.run_async()
 
-            # Only partial if some succeeded and some failed
-            # With our patch, both datasets will actually error because
-            # the mocked adapter doesn't have fetch_table, so status will be 'failed'
-            assert result.status in ("failed", "partial")
+            assert result.status == "partial"
+        finally:
+            session.close()
+
+    @pytest.mark.asyncio
+    @patch("sync.readers.mysql_cdc_reader.MysqlCdcReader")
+    @patch("sync.external_sync_service.get_adapter")
+    @patch("sync.external_sync_service.AesGcmSecretStore")
+    async def test_cdc_dataset_uses_mysql_reader(
+        self,
+        mock_store,
+        mock_get_adapter,
+        mock_reader_cls,
+    ):
+        """lines 121-123: MySQL CDC reader for MySQL source type."""
+        from connection.domain import Connection
+        from connection.repository import ConnectionRepository
+
+        session = _make_session()
+        try:
+            conn_repo = ConnectionRepository(session)
+            conn_repo.save(
+                Connection(
+                    id="c-mysql",
+                    project_id="p-1",
+                    source_type="mysql",
+                    name="mysql-cdc",
+                    config_json={"host": "localhost", "supports_cdc": True},
+                )
+            )
+
+            repo = DatasetRepository(session)
+            repo.save(
+                Dataset(
+                    id="ds-mysql-cdc",
+                    project_id="p-1",
+                    connection_id="c-mysql",
+                    name="mysql_events",
+                    source_object_name="mysql_events",
+                    status=DatasetStatus.ACTIVE.value,
+                    sync_mode=SyncMode.REAL_TIME,
+                    real_time_strategy="cdc",
+                )
+            )
+
+            mock_adapter = AsyncMock()
+            mock_adapter.fetch_table = AsyncMock()
+            mock_get_adapter.return_value = mock_adapter
+
+            reader_instance = AsyncMock()
+            reader_instance.start_streaming = AsyncMock(return_value=None)
+            mock_reader_cls.return_value = reader_instance
+
+            service = ExternalDbSyncService(session)
+            result = await service.run_async()
+            await asyncio.sleep(0)
+
+            assert result.status == "completed"
+            mock_adapter.fetch_table.assert_not_called()
+            mock_reader_cls.assert_called_once()
+            reader_instance.start_streaming.assert_called_once()
+        finally:
+            session.close()
+
+    @pytest.mark.asyncio
+    @patch("sync.readers.mysql_cdc_reader.MysqlCdcReader")
+    @patch("sync.external_sync_service.get_adapter")
+    @patch("sync.external_sync_service.AesGcmSecretStore")
+    async def test_cdc_storage_path_read_error_handled(
+        self,
+        mock_store,
+        mock_get_adapter,
+        mock_reader_cls,
+    ):
+        """lines 129-133: exception reading storage_path is handled."""
+
+        from connection.domain import Connection
+        from connection.repository import ConnectionRepository
+
+        session = _make_session()
+        try:
+            conn_repo = ConnectionRepository(session)
+            conn_repo.save(
+                Connection(
+                    id="c-storage",
+                    project_id="p-1",
+                    source_type="mysql",
+                    name="storage-test",
+                    config_json={"host": "localhost", "supports_cdc": True},
+                )
+            )
+
+            repo = DatasetRepository(session)
+            repo.save(
+                Dataset(
+                    id="ds-storage",
+                    project_id="p-1",
+                    connection_id="c-storage",
+                    name="storage_events",
+                    source_object_name="storage_events",
+                    status=DatasetStatus.ACTIVE.value,
+                    sync_mode=SyncMode.REAL_TIME,
+                    real_time_strategy="cdc",
+                )
+            )
+
+            mock_adapter = AsyncMock()
+            mock_get_adapter.return_value = mock_adapter
+
+            reader_instance = AsyncMock()
+            reader_instance.start_streaming = AsyncMock(return_value=None)
+            mock_reader_cls.return_value = reader_instance
+
+            from pathlib import Path
+
+            with patch.object(Path, "exists", return_value=True), patch(
+                "builtins.open", side_effect=OSError("read error")
+            ):
+                service = ExternalDbSyncService(session)
+                result = await service.run_async()
+                await asyncio.sleep(0)
+
+            assert result.status == "completed"
+        finally:
+            session.close()
+
+    @pytest.mark.asyncio
+    @patch("sync.readers.mysql_cdc_reader.MysqlCdcReader")
+    @patch("sync.external_sync_service.get_adapter")
+    @patch("sync.external_sync_service.AesGcmSecretStore")
+    async def test_cdc_storage_path_read_success(
+        self,
+        mock_store,
+        mock_get_adapter,
+        mock_reader_cls,
+    ):
+        """line 131: successful file read counts rows."""
+        import io
+
+        from connection.domain import Connection
+        from connection.repository import ConnectionRepository
+
+        session = _make_session()
+        try:
+            conn_repo = ConnectionRepository(session)
+            conn_repo.save(
+                Connection(
+                    id="c-count",
+                    project_id="p-1",
+                    source_type="mysql",
+                    name="count-test",
+                    config_json={"host": "localhost", "supports_cdc": True},
+                )
+            )
+
+            repo = DatasetRepository(session)
+            repo.save(
+                Dataset(
+                    id="ds-count",
+                    project_id="p-1",
+                    connection_id="c-count",
+                    name="count_events",
+                    source_object_name="count_events",
+                    status=DatasetStatus.ACTIVE.value,
+                    sync_mode=SyncMode.REAL_TIME,
+                    real_time_strategy="cdc",
+                )
+            )
+
+            mock_adapter = AsyncMock()
+            mock_get_adapter.return_value = mock_adapter
+
+            reader_instance = AsyncMock()
+            reader_instance.start_streaming = AsyncMock(return_value=None)
+            mock_reader_cls.return_value = reader_instance
+
+            from pathlib import Path
+
+            mock_file = io.StringIO("line1\nline2\nline3\n")
+            with patch.object(Path, "exists", return_value=True), patch(
+                "builtins.open", return_value=mock_file
+            ):
+                service = ExternalDbSyncService(session)
+                result = await service.run_async()
+                await asyncio.sleep(0)
+
+            assert result.status == "completed"
         finally:
             session.close()
 
