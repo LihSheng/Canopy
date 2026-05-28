@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from dataset.domain import Dataset, DatasetStatus, SyncMode
+from dataset.domain import Dataset, DatasetStatus, DatasetVersionStatus, SyncMode
 from dataset.repository import DatasetRepository
 from sync.external_sync_service import ExternalDbSyncService
 from tests.unit.postgres_test_db import make_postgres_session
@@ -579,6 +579,55 @@ class TestExternalDbSyncService:
                 result = await service.run_async()
 
             assert result.status == "completed"
+        finally:
+            session.close()
+
+
+class TestSkipBlockedDatasets:
+    @pytest.mark.asyncio
+    @patch("sync.external_sync_service.get_adapter")
+    @patch("sync.external_sync_service.AesGcmSecretStore")
+    async def test_skips_blocked_schema_drift_datasets(self, mock_store, mock_get_adapter):
+        """Datasets with status=blocked_schema_drift should be skipped during sync."""
+        session = _make_session()
+        try:
+            from connection.domain import Connection
+            from connection.repository import ConnectionRepository
+
+            conn_repo = ConnectionRepository(session)
+            conn_repo.save(
+                Connection(
+                    id="c-blocked",
+                    project_id="p-1",
+                    source_type="postgresql",
+                    name="test",
+                    config_json={"host": "localhost"},
+                )
+            )
+
+            repo = DatasetRepository(session)
+            repo.save(
+                Dataset(
+                    id="ds-blocked",
+                    project_id="p-1",
+                    connection_id="c-blocked",
+                    name="blocked_table",
+                    source_object_name="blocked_table",
+                    status=DatasetStatus.BLOCKED_SCHEMA_DRIFT.value,
+                    sync_mode=SyncMode.BATCH.value,
+                    batch_strategy="full_snapshot",
+                )
+            )
+
+            service = ExternalDbSyncService(session)
+            result = await service.run_async()
+
+            assert result.status == "completed"
+            assert len(result.snapshots) == 1
+            assert result.snapshots[0].status == "skipped"
+            assert "blocked by schema drift" in (result.snapshots[0].error_message or "").lower()
+            # Verify that _sync_one was never called (adapter.fetch_table should not be invoked)
+            mock_get_adapter.assert_not_called()
         finally:
             session.close()
 

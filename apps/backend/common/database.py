@@ -171,6 +171,7 @@ def init_db(engine_override: Engine | None = None):
     import project.schema  # noqa: F401  ensure project models are registered
     import refresh.schema  # noqa: F401  ensure refresh models are registered
     import run.schema  # noqa: F401  ensure run models are registered
+    import schema_drift.schema  # noqa: F401  ensure schema drift models are registered
     import source_type.schema  # noqa: F401  ensure source type models are registered
     import sync.schema  # noqa: F401  ensure SourceSnapshotModel is registered
     import tenant_data.schemas.clean  # noqa: F401

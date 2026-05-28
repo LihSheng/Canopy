@@ -12,7 +12,7 @@ from common.errors import NotFoundError
 from connection._shared import slugify, storage_root
 from connection.database_adapter import get_adapter
 from connection.secret_store import AesGcmSecretStore, decrypt_secret_value
-from dataset.domain import Dataset, DatasetVersion, DatasetVersionStatus
+from dataset.domain import Dataset, DatasetStatus, DatasetVersion, DatasetVersionStatus
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from sync.domain import EntitySnapshot, SyncResult
 
@@ -46,6 +46,19 @@ class ExternalDbSyncService:
 
         for ds in datasets:
             if ds.sync_mode not in ("batch", "real_time"):
+                continue
+
+            # Skip datasets blocked by schema drift
+            if ds.status == DatasetStatus.BLOCKED_SCHEMA_DRIFT.value:
+                snapshots.append(
+                    EntitySnapshot(
+                        entity_type=ds.name,
+                        status="skipped",
+                        started_at=started_at,
+                        completed_at=utcnow(),
+                        error_message="Dataset blocked by schema drift",
+                    )
+                )
                 continue
 
             try:

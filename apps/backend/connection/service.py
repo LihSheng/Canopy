@@ -221,6 +221,30 @@ class ConnectionService:
         for table in tables:
             table["detected_cursor_column"] = detect_cursor_column(table.get("columns", []))
 
+        # Check schema drift for each discovered table
+        if connection.source_type in {"postgresql", "mysql"}:
+            try:
+                from schema_drift.service import SchemaDriftService
+
+                drift_service = SchemaDriftService(self._repo._db)
+                for table in tables:
+                    raw_columns = table.get("columns", [])
+                    drift_result = drift_service.check_and_record_drift(
+                        connection_id=connection.id,
+                        source_object_name=table["table_name"],
+                        raw_columns=raw_columns,
+                        detected_by="discovery",
+                    )
+                    if drift_result["drift_detected"]:
+                        table["schema_drift"] = {
+                            "drift_detected": True,
+                            "is_breaking": drift_result["is_breaking"],
+                        }
+            except Exception:
+                # Drift detection is advisory during discovery; never break discovery
+                logger = __import__("logging").getLogger(__name__)
+                logger.exception("Schema drift check failed during discovery")
+
         return tables
 
     async def preview_table(self, id: str, table: str) -> dict:

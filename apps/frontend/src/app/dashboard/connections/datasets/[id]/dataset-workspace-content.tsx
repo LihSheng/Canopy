@@ -700,7 +700,7 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
               </div>
             </div>
             <div className="lg:col-span-1">
-              {health && <HealthPanel health={health} />}
+              {health && <HealthPanel health={health} datasetId={datasetId} />}
             </div>
           </div>
         )}

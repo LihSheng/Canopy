@@ -241,6 +241,12 @@ class DatasetService:
         last_run_status = last_run.status if last_run else None
         last_run_started = last_run.started_at if last_run else None
 
+        # Check schema drift status
+        from schema_drift.service import SchemaDriftService
+
+        drift_service = SchemaDriftService(self._repo._db)
+        drift_status = drift_service.get_drift_status(dataset_id)
+
         return {
             "dataset_id": dataset_id,
             "row_count": active_version.row_count if active_version else 0,
@@ -251,6 +257,7 @@ class DatasetService:
             "last_run_status": last_run_status,
             "last_published_version": active_version.version_number if active_version else None,
             "freshness_at": last_run_started,
+            "schema_drift": drift_status,
         }
 
     def update_sync_policy(
@@ -491,12 +498,22 @@ class DatasetService:
 
         if dataset.source_object_name:
             nodes.append(
-                {"id": f"source_{id}", "type": "source_object", "label": dataset.source_object_name, "state": "materialized"}
+                {
+                    "id": f"source_{id}",
+                    "type": "source_object",
+                    "label": dataset.source_object_name,
+                    "state": "materialized",
+                }
             )
 
         if connection is not None:
             nodes.append(
-                {"id": f"connection_{dataset.connection_id}", "type": "connection", "label": connection.name, "state": "materialized"}
+                {
+                    "id": f"connection_{dataset.connection_id}",
+                    "type": "connection",
+                    "label": connection.name,
+                    "state": "materialized",
+                }
             )
 
         nodes.append({"id": f"dataset_{id}", "type": "dataset", "label": dataset.name, "state": dataset_state})
@@ -508,7 +525,9 @@ class DatasetService:
             edges.append({"from": f"connection_{dataset.connection_id}", "to": f"dataset_{id}", "type": "provides"})
 
         for v in versions:
-            nodes.append({"id": f"version_{v.id}", "type": "version", "label": f"v{v.version_number}", "state": "materialized"})
+            nodes.append(
+                {"id": f"version_{v.id}", "type": "version", "label": f"v{v.version_number}", "state": "materialized"}
+            )
             edges.append({"from": f"version_{v.id}", "to": f"dataset_{id}", "type": "belongs_to"})
 
         for r in runs:

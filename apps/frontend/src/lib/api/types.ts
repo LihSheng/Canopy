@@ -214,6 +214,13 @@ export interface TenantContextResponse {
   role: string;
 }
 
+export interface DriftStatus {
+  drift_detected: boolean;
+  is_blocked: boolean;
+  last_drift_at: string | null;
+  last_drift_is_breaking: boolean | null;
+}
+
 export interface DatasetHealth {
   dataset_id: string;
   row_count: number;
@@ -223,6 +230,28 @@ export interface DatasetHealth {
   last_run_status: string | null;
   last_published_version: number | null;
   freshness_at: string | null;
+  schema_drift: DriftStatus | null;
+}
+
+export interface DriftEvent {
+  id: string;
+  connection_id: string;
+  source_object_name: string;
+  dataset_id: string | null;
+  drift_type: string;
+  before_hash: string;
+  after_hash: string;
+  delta: {
+    added: unknown[];
+    removed: unknown[];
+    renamed: { old: unknown; new: unknown }[];
+    type_changed: { old: unknown; new: unknown }[];
+    is_breaking: boolean;
+    severity: string;
+  };
+  is_breaking: boolean;
+  detected_by: string;
+  created_at: string;
 }
 
 export interface DatasetDeleteSummary {

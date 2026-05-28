@@ -225,6 +225,36 @@ def get_dataset_health(id: str, db: Session = Depends(get_db), user: SessionUser
     return service.get_dataset_health(id)
 
 
+@router.get("/{id}/drift-events")
+def get_drift_events(
+    id: str,
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    from schema_drift.service import SchemaDriftService
+
+    service = SchemaDriftService(db)
+    return service.list_drift_events(id, limit=limit)
+
+
+class ClearBlockRequest(BaseModel):
+    actor_user_id: str | None = None
+
+
+@router.post("/{id}/clear-drift-block")
+def clear_drift_block(
+    id: str,
+    body: ClearBlockRequest,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    from schema_drift.service import SchemaDriftService
+
+    service = SchemaDriftService(db)
+    return service.clear_block(dataset_id=id, actor_user_id=body.actor_user_id or user.id)
+
+
 @router.patch("/{id}/sync-policy")
 def update_sync_policy(
     id: str,

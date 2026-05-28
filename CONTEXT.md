@@ -90,15 +90,38 @@ The encryption interface that protects third-party database credentials at rest.
 
 A future module (separate from the snapshot-based dashboard) that hosts Direct Query datasets with their own auto-refresh and freshness indicators. Queries the source database in real time; never feeds analytics, exports, or AI summaries.
 
+### Source object
+
+The upstream database object a dataset imports from. In v1 this is a table name, identified as `connection_id + source_object_name`.
+
+### Schema signature
+
+A canonical, normalized representation of a source object’s column schema (column name, type details, and nullability) plus a derived hash. Used to detect schema drift.
+
+### Schema drift
+
+Any detected difference between the current discovered schema of a source object and the last stored **schema signature**. Drift types include: added column, removed column, renamed column, type change (including nullability, string length, numeric precision/scale, timestamp timezone).
+
+### Schema drift event
+
+An immutable record of a schema drift detection with before/after details and a computed delta. Used for auditability, UI surfacing, and alerting.
+
+### Schema drift block
+
+The dataset-level circuit breaker state applied when breaking schema drift is detected. While blocked, affected datasets are skipped by sync/materialization until reviewed and cleared.
+
 ## Relationships
 
 - A **Data connector** produces one or more datasets.
 - A **Dataset** carries a **sync mode** and optional **batch strategy** and **cursor column**.
+- A **Dataset** references a **Source object** via `connection_id + source_object_name`.
 - A **Connection Wizard** creates a **data connector** and its associated **datasets** through a 3-step flow.
 - A **Connector lifecycle** changes the app-owned connector record and related Canopy Intelligence resources, not the upstream system or host machine.
 - **Data Studio** hosts the **Connection Wizard** and presents the connection/dataset catalog to the user.
 - **Live Explorer** will host **direct_query** datasets in a separate module outside the snapshot pipeline.
 - The **SecretStore** encrypts third-party credentials stored in the **data connector** config.
+- A **Schema signature** is stored per **Source object** and compared during discovery and sync runs.
+- A breaking **Schema drift** triggers a **Schema drift block** on affected datasets and emits a **Schema drift event**.
 
 ## Example dialogue
 

@@ -12,6 +12,7 @@ import type {
   DiscoveredTable,
   Run,
   DatasetHealth,
+  DriftEvent,
   StaticFilePreview,
   SyncPolicyUpdate,
   TablePreview,
@@ -162,6 +163,18 @@ export const fetchDatasetLineage = (datasetId: string): Promise<{ nodes: Dataset
 
 export const fetchDatasetHealth = (datasetId: string): Promise<DatasetHealth> => {
   return request<DatasetHealth>(`/api/datasets/${datasetId}/health`);
+}
+
+export const fetchDriftEvents = (datasetId: string, limit: number = 20): Promise<DriftEvent[]> => {
+  return request<DriftEvent[]>(`/api/datasets/${datasetId}/drift-events?limit=${limit}`);
+}
+
+export const clearDriftBlock = (datasetId: string): Promise<{ id: string; status: string }> => {
+  return request<{ id: string; status: string }>(`/api/datasets/${datasetId}/clear-drift-block`, {
+    method: "POST",
+    body: JSON.stringify({}),
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 export const fetchDatasetDeleteSummary = (datasetId: string): Promise<DatasetDeleteSummary> => {

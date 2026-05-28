@@ -8,6 +8,7 @@ class DatasetStatus(StrEnum):
     PENDING_INITIAL_RUN = "pending_initial_run"
     INACTIVE = "inactive"
     ERROR = "error"
+    BLOCKED_SCHEMA_DRIFT = "blocked_schema_drift"
 
 
 class SyncMode(StrEnum):
