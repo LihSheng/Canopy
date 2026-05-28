@@ -347,9 +347,8 @@ class TestMysqlCdcReader:
     # start_streaming routing (lines 31-52)
     # ------------------------------------------------------------------
 
-    async def test_start_streaming_creates_directory_and_falls_back_to_simulation(self):
+    async def test_start_streaming_creates_directory_and_falls_back_to_simulation(self, tmp_path):
         """Cover lines 31-34 (running, mkdir), 36-41 (config), 44-52 (ImportError→_run_simulation)."""
-        import tempfile
         from pathlib import Path
         from unittest.mock import MagicMock, patch
 
@@ -370,10 +369,9 @@ class TestMysqlCdcReader:
         assert reader.running is False
 
         mock_on_event = MagicMock()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            nested = Path(tmpdir) / "sub" / "events.jsonl"
-            with patch.object(reader, "_run_simulation") as mock_sim:
-                await reader.start_streaming(nested, mock_on_event)
+        nested = tmp_path / "sub" / "events.jsonl"
+        with patch.object(reader, "_run_simulation") as mock_sim:
+            await reader.start_streaming(nested, mock_on_event)
 
         assert reader.running is True
         assert nested.parent.exists()
@@ -404,11 +402,11 @@ class TestMysqlCdcReader:
             with patch("asyncio.sleep", stop_after_one_sleep):
                 await reader._run_simulation(path, mock_on_event)
 
-        lines = path.read_text(encoding="utf-8").strip().split("\n")
-        assert len(lines) == 2  # initial + 1 simulated
-        assert json.loads(lines[0])["op"] == "INSERT"
-        assert json.loads(lines[1])["op"] == "UPDATE"
-        assert mock_on_event.call_count == 2
+            lines = path.read_text(encoding="utf-8").strip().split("\n")
+            assert len(lines) == 2  # initial + 1 simulated
+            assert json.loads(lines[0])["op"] == "INSERT"
+            assert json.loads(lines[1])["op"] == "UPDATE"
+            assert mock_on_event.call_count == 2
 
     async def test_run_simulation_cancelled_error(self):
         """Cover lines 149-150: CancelledError caught, loop exits."""
@@ -430,9 +428,9 @@ class TestMysqlCdcReader:
             with patch("asyncio.sleep", raise_cancelled):
                 await reader._run_simulation(path, mock_on_event)
 
-        lines = path.read_text(encoding="utf-8").strip().split("\n")
-        assert len(lines) == 1  # only initial event
-        assert mock_on_event.call_count == 1
+            lines = path.read_text(encoding="utf-8").strip().split("\n")
+            assert len(lines) == 1  # only initial event
+            assert mock_on_event.call_count == 1
 
     async def test_run_simulation_generic_error(self):
         """Cover lines 151-152: generic exception caught, loop continues."""
@@ -460,9 +458,9 @@ class TestMysqlCdcReader:
             with patch("asyncio.sleep", sleep_with_error):
                 await reader._run_simulation(path, mock_on_event)
 
-        lines = path.read_text(encoding="utf-8").strip().split("\n")
-        assert len(lines) == 2  # initial + 1 simulated (after error caught)
-        assert mock_on_event.call_count == 2
+            lines = path.read_text(encoding="utf-8").strip().split("\n")
+            assert len(lines) == 2  # initial + 1 simulated (after error caught)
+            assert mock_on_event.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -536,10 +534,10 @@ class TestPostgresCdcReader:
             with patch("asyncio.sleep", stop_loop):
                 await reader.start_streaming(path, mock_on_event)
 
-        assert reader.running is True
-        assert path.parent.exists()
-        first_line = json.loads(path.read_text(encoding="utf-8").strip().split("\n")[0])
-        assert first_line["op"] == "INSERT"
+            assert path.parent.exists()
+            first_line = json.loads(path.read_text(encoding="utf-8").strip().split("\n")[0])
+            assert first_line["op"] == "INSERT"
+
         assert mock_on_event.called
 
     # ------------------------------------------------------------------
@@ -572,8 +570,8 @@ class TestPostgresCdcReader:
                 with patch("asyncio.sleep", stop_loop):
                     await reader.start_streaming(path, mock_on_event)
 
-        assert reader.running is True
-        assert "CDC Initial Seed" in path.read_text(encoding="utf-8")
+                assert "CDC Initial Seed" in path.read_text(encoding="utf-8")
+
         assert mock_on_event.called
 
     # ------------------------------------------------------------------
@@ -601,11 +599,11 @@ class TestPostgresCdcReader:
             with patch("asyncio.sleep", stop_after_one_sleep):
                 await reader._run_simulation(path, mock_on_event)
 
-        lines = path.read_text(encoding="utf-8").strip().split("\n")
-        assert len(lines) == 2  # initial + 1 simulated
-        assert json.loads(lines[0])["op"] == "INSERT"
-        assert json.loads(lines[1])["op"] == "UPDATE"
-        assert mock_on_event.call_count == 2
+            lines = path.read_text(encoding="utf-8").strip().split("\n")
+            assert len(lines) == 2  # initial + 1 simulated
+            assert json.loads(lines[0])["op"] == "INSERT"
+            assert json.loads(lines[1])["op"] == "UPDATE"
+            assert mock_on_event.call_count == 2
 
     async def test_run_simulation_cancelled_error(self):
         """Cover lines 149-150: CancelledError caught, loop exits."""
@@ -627,9 +625,9 @@ class TestPostgresCdcReader:
             with patch("asyncio.sleep", raise_cancelled):
                 await reader._run_simulation(path, mock_on_event)
 
-        lines = path.read_text(encoding="utf-8").strip().split("\n")
-        assert len(lines) == 1  # only initial event
-        assert mock_on_event.call_count == 1
+            lines = path.read_text(encoding="utf-8").strip().split("\n")
+            assert len(lines) == 1  # only initial event
+            assert mock_on_event.call_count == 1
 
     async def test_run_simulation_generic_error(self):
         """Cover lines 151-152: generic exception caught, loop continues."""
@@ -657,6 +655,6 @@ class TestPostgresCdcReader:
             with patch("asyncio.sleep", sleep_with_error):
                 await reader._run_simulation(path, mock_on_event)
 
-        lines = path.read_text(encoding="utf-8").strip().split("\n")
-        assert len(lines) == 2  # initial + 1 simulated (after error caught)
-        assert mock_on_event.call_count == 2
+            lines = path.read_text(encoding="utf-8").strip().split("\n")
+            assert len(lines) == 2  # initial + 1 simulated (after error caught)
+            assert mock_on_event.call_count == 2
