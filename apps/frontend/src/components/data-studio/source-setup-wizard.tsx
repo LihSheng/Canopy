@@ -54,8 +54,8 @@ export const SourceSetupWizard = () => {
   const [testing, setTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
   const [supportsCdc, setSupportsCdc] = useState(false);
-  const [connectionId, setConnectionId] = useState<string | null>(null);
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const [connectionId, setConnectionId] = useState<string | null>(existingConnectionId);
+  const [projectId, setProjectId] = useState<string | null>(existingProjectId);
 
   // --- Static file upload (Step 1) ---
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -137,9 +137,7 @@ export const SourceSetupWizard = () => {
   useEffect(() => {
     if (!isDb) return;
     if (!existingConnectionId) return;
-    // Auto-skip Step 1 when invoked from "Add tables" flow.
-    setConnectionId(existingConnectionId);
-    if (existingProjectId) setProjectId(existingProjectId);
+    // connectionId and projectId initialized from search params via useState
 
     const run = async () => {
       setLoadingTables(true);

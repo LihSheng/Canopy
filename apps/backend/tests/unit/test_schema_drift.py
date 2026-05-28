@@ -11,25 +11,21 @@ Covers:
     - Sync skip behavior (via unit test on ExternalDbSyncService)
 """
 
-import json
 from unittest.mock import MagicMock
 
 import pytest
 
 from dataset.domain import Dataset, DatasetStatus
 from schema_drift.domain import (
-    DriftType,
     ColumnSchema,
-    DriftDelta,
     SchemaSignature,
+    _rename_similarity,
+    _type_or_nullable_changed,
     compute_drift,
     normalize_type,
-    _type_or_nullable_changed,
-    _rename_similarity,
 )
-from schema_drift.repository import SchemaSignatureRepository, SchemaDriftEventRepository
+from schema_drift.repository import SchemaDriftEventRepository, SchemaSignatureRepository
 from schema_drift.service import SchemaDriftService
-
 
 # ── Helpers ───────────────────────────────────────────────────────────
 

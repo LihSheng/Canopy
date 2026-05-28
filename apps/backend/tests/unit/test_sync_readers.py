@@ -349,7 +349,6 @@ class TestMysqlCdcReader:
 
     async def test_start_streaming_creates_directory_and_falls_back_to_simulation(self, tmp_path):
         """Cover lines 31-34 (running, mkdir), 36-41 (config), 44-52 (ImportError→_run_simulation)."""
-        from pathlib import Path
         from unittest.mock import MagicMock, patch
 
         from sync.readers.mysql_cdc_reader import MysqlCdcReader

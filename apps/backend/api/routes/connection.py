@@ -13,8 +13,8 @@ from connection.preview import delete_uploaded_file
 from connection.repository import ConnectionRepository
 from connection.service import ConnectionService
 from control_plane.audit_service import AuditService
-from ingestion.landing_guard import reject_transform_keys
 from dataset.repository import DatasetRepository
+from ingestion.landing_guard import reject_transform_keys
 from lineage.metadata_service import LineageMetadataService
 
 router = APIRouter(prefix="/connections", tags=["connections"])

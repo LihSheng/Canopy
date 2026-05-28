@@ -22,12 +22,18 @@ export const HealthPanel = ({ health, datasetId }: Props) => {
   const isBreaking = drift?.last_drift_is_breaking ?? false;
 
   useEffect(() => {
-    if (showDrift && driftEvents.length === 0) {
+    if (!showDrift || driftEvents.length > 0) return;
+
+    const run = async () => {
       setLoadingEvents(true);
-      fetchDriftEvents(datasetId)
-        .then(setDriftEvents)
-        .finally(() => setLoadingEvents(false));
-    }
+      try {
+        const events = await fetchDriftEvents(datasetId);
+        setDriftEvents(events);
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+    run();
   }, [showDrift, driftEvents.length, datasetId]);
 
   const handleClearBlock = async () => {

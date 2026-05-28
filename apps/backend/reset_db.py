@@ -11,9 +11,9 @@ Usage:
 PostgreSQL only.
 """
 
+import os
 import subprocess
 import sys
-import os
 from pathlib import Path
 
 # Ensure the backend package root is on sys.path
