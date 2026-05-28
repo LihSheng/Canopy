@@ -112,7 +112,7 @@ Implemented backend areas:
 - [`apps/backend/common`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/common): config, DB wiring, error classes, clock, logging
 - [`apps/backend/auth`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/auth): domain, repository, password hashing, JWT/session service, ORM user model
 - [`apps/backend/api`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/api): health/auth/dashboard/departments/claims/anomalies/exports/refresh routes, request/response schemas, auth dependency
-- [`apps/backend/ingestion`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/ingestion): workbook profiling, cleaning, normalization, lineage, templates, publish, source adapters
+- [`apps/backend/ingestion`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/ingestion): workbook profiling, cleaning, normalization, lineage, templates, publish, source adapters, landing-zone preservation guard
 - [`apps/backend/project`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/project): project workspace domain, repository, service
 - [`apps/backend/source_type`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/source_type): source catalog domain, repository, service
 - [`apps/backend/connection`](C:/Users/Lih%20Sheng/Documents/Canopy/apps/backend/connection): connection setup, preview, materialization, repository, service

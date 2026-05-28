@@ -8,6 +8,7 @@ from common.database import get_db
 from common.errors import NotFoundError
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from dataset.service import DatasetService, DatasetVersionService
+from ingestion.landing_guard import reject_transform_keys
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
@@ -74,6 +75,7 @@ def list_datasets(
 async def create_dataset(
     body: CreateDatasetRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)
 ):
+    reject_transform_keys(body.model_dump(), label="dataset")
     service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
     return await service.create_dataset_async(
         project_id=body.project_id,
@@ -139,6 +141,7 @@ def reimport_dataset_version(
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
+    reject_transform_keys(body.model_dump(), label="reimport")
     version_repo = DatasetVersionRepository(db)
     dataset_repo = DatasetRepository(db)
     service = DatasetVersionService(version_repo, dataset_repo)

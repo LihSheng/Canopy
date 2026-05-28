@@ -12,7 +12,6 @@ from connection.materialization import materialize_dataset_version
 from connection.preview import build_sheet_profiles
 from connection.repository import ConnectionRepository
 from connection.secret_store import AesGcmSecretStore, decrypt_secret_value
-from dataset.cleaning import clean_source_file
 from dataset.domain import Dataset, DatasetStatus, DatasetVersion, DatasetVersionStatus
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from run.repository import RunRepository
@@ -82,10 +81,10 @@ class DatasetService:
             if connection is not None:
                 source_file_path = connection_repo.resolve_static_source_file_path(connection)
                 if connection.source_type == "static_file" and source_file_path:
-                    result = clean_source_file(
-                        source_file_path=Path(source_file_path),
-                        sheet_name=source_object_name or name,
-                        dataset_id=dataset.id,
+                    landing_path, row_count, column_count = materialize_dataset_version(
+                        Path(source_file_path),
+                        source_object_name or name,
+                        dataset.id,
                     )
                     version = self._version_repo.save(
                         DatasetVersion(
@@ -94,11 +93,11 @@ class DatasetService:
                             run_id=None,
                             version_number=1,
                             status=DatasetVersionStatus.READY.value,
-                            row_count=result["row_count"],
-                            column_count=result["column_count"],
-                            storage_path=result["cleaned_path"],
-                            raw_storage_path=result["raw_path"],
-                            cleaning_issues=result["cleaning_issues"],
+                            row_count=row_count,
+                            column_count=column_count,
+                            storage_path=str(landing_path),
+                            raw_storage_path=str(source_file_path),
+                            cleaning_issues=[],
                         ),
                     )
                     dataset = self._repo.update_active_version(dataset.id, version.id) or dataset
@@ -299,10 +298,10 @@ class DatasetService:
                 return self._repo.update_active_version(dataset.id, version.id) or dataset
             return dataset
 
-        result = clean_source_file(
-            source_file_path=Path(source_file_path),
-            sheet_name=dataset.source_object_name or dataset.name,
-            dataset_id=dataset.id,
+        landing_path, row_count, column_count = materialize_dataset_version(
+            Path(source_file_path),
+            dataset.source_object_name or dataset.name,
+            dataset.id,
         )
         version_number = 1
         if latest_version is not None:
@@ -315,11 +314,11 @@ class DatasetService:
                 run_id=None,
                 version_number=version_number,
                 status=DatasetVersionStatus.READY.value,
-                row_count=result["row_count"],
-                column_count=result["column_count"],
-                storage_path=result["cleaned_path"],
-                raw_storage_path=result["raw_path"],
-                cleaning_issues=result["cleaning_issues"],
+                row_count=row_count,
+                column_count=column_count,
+                storage_path=str(landing_path),
+                raw_storage_path=str(source_file_path),
+                cleaning_issues=[],
             ),
         )
         return self._repo.update_active_version(dataset.id, version.id) or dataset

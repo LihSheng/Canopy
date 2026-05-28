@@ -13,6 +13,7 @@ from connection.preview import delete_uploaded_file
 from connection.repository import ConnectionRepository
 from connection.service import ConnectionService
 from control_plane.audit_service import AuditService
+from ingestion.landing_guard import reject_transform_keys
 
 router = APIRouter(prefix="/connections", tags=["connections"])
 
@@ -64,6 +65,7 @@ def create_connection(
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
+    reject_transform_keys(body.model_dump(), label="connection")
     service = ConnectionService(ConnectionRepository(db))
     return service.create_connection(
         project_id=body.project_id,

@@ -26,7 +26,7 @@ from cache.hooks import (
 from cache.invalidation import CacheInvalidator
 from cache.routing_cache import RoutingCache
 from common.database import init_db, session_factory
-from common.errors import AppError
+from common.errors import AppError, IngestionTransformNotAllowedError
 from control_plane.admin_router import router as admin_router
 
 _cache_listeners_registered = False
@@ -70,6 +70,19 @@ def create_app() -> FastAPI:
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.message},
+        )
+
+    @app.exception_handler(IngestionTransformNotAllowedError)
+    async def ingestion_transform_not_allowed_handler(
+        request: Request, exc: IngestionTransformNotAllowedError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "code": exc.code,
+                "message": exc.message,
+                "blocked_keys": exc.blocked_keys,
+            },
         )
 
     app.add_middleware(

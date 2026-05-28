@@ -26,3 +26,13 @@ class NotFoundError(AppError):
 class SyncError(AppError):
     def __init__(self, message: str):
         super().__init__(message, status_code=502)
+
+
+class IngestionTransformNotAllowedError(AppError):
+    def __init__(self, blocked_keys: list[str]):
+        super().__init__(
+            "Transformation settings are not allowed at landing stage",
+            status_code=422,
+        )
+        self.code = "INGESTION_TRANSFORM_NOT_ALLOWED"
+        self.blocked_keys = blocked_keys
