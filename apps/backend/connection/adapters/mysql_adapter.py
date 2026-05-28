@@ -196,4 +196,4 @@ class MysqlAdapter(DatabaseAdapter):
             finally:
                 conn.close()
 
-        return generator()
+        return generator()  # type: ignore[no-any-return]
