@@ -5,7 +5,7 @@
 This document captures the agreed v2 UI/UX direction for the analytics
 experience.
 
-It is not a visual design-system replacement for [`DESIGN.md`](C:/Users/Lih%20Sheng/Documents/Canopy/DESIGN.md). It defines layout,
+It is not a visual design-system replacement for [`DESIGN.md`](../../DESIGN.md). It defines layout,
 navigation, hierarchy, page behavior, and interaction rules that v2 should
 implement while staying inside the established design language.
 
@@ -33,7 +33,7 @@ V2 should be a moderate redesign in the same design language.
 
 Required design alignment:
 
-- follow [`DESIGN.md`](C:/Users/Lih%20Sheng/Documents/Canopy/DESIGN.md)
+- follow [`DESIGN.md`](../../DESIGN.md)
 - keep the interface light, calm, and content-led
 - use the existing pill, card, spacing, and typography language
 - improve hierarchy and navigation without creating a new brand direction
@@ -505,6 +505,6 @@ This UI/UX direction implies:
 
 Implementation should stay aligned with:
 
-- [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/Canopy/ARCHITECTURE.md)
-- [`DESIGN.md`](C:/Users/Lih%20Sheng/Documents/Canopy/DESIGN.md)
-- [`doc/v2/plan.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v2/plan.md)
+- [`ARCHITECTURE.md`](../../ARCHITECTURE.md)
+- [`DESIGN.md`](../../DESIGN.md)
+- [`doc/v2/plan.md`](../../doc/v2/plan.md)

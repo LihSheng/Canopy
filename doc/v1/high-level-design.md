@@ -494,6 +494,6 @@ This document no longer defines the next document to write.
 
 For current-state implementation and repo status, use:
 
-- [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/Canopy/ARCHITECTURE.md)
-- [`doc/codebase-map.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/codebase-map.md)
-- [`doc/v2/plan.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v2/plan.md)
+- [`ARCHITECTURE.md`](../../ARCHITECTURE.md)
+- [`doc/codebase-map.md`](../../doc/codebase-map.md)
+- [`doc/v2/plan.md`](../../doc/v2/plan.md)

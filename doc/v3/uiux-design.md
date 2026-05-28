@@ -5,7 +5,7 @@
 This document captures the agreed v3 UI/UX direction for the data ingestion
 and preparation experience.
 
-It is not a visual design-system replacement for [`DESIGN.md`](C:/Users/Lih%20Sheng/Documents/Canopy/DESIGN.md). It defines layout,
+It is not a visual design-system replacement for [`DESIGN.md`](../../DESIGN.md). It defines layout,
 navigation, hierarchy, page behavior, and interaction rules that v3 should
 implement while staying inside the established design language.
 
@@ -37,7 +37,7 @@ V3 should feel like a guided data-prep workspace for non-technical users.
 
 Required design alignment:
 
-- follow [`DESIGN.md`](C:/Users/Lih%20Sheng/Documents/Canopy/DESIGN.md)
+- follow [`DESIGN.md`](../../DESIGN.md)
 - keep the interface clear, calm, and task-driven
 - use the existing pill, card, spacing, and typography language
 - avoid technical jargon where plain labels work better

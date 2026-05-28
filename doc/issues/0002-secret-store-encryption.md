@@ -2,7 +2,7 @@
 
 ## Parent
 
-PRD: [doc/prd/0001-connection-wizard-sync-modes.md](C:/Users/Lih%20Sheng/Documents/Canopy/doc/prd/0001-connection-wizard-sync-modes.md)
+PRD: [doc/prd/0001-connection-wizard-sync-modes.md](../../doc/prd/0001-connection-wizard-sync-modes.md)
 
 ## Scope
 

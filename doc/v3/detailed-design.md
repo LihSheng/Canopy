@@ -7,16 +7,16 @@ module detail for Excel ingestion, workbook profiling, guided mapping,
 deterministic cleaning, normalization, lineage, and publish control.
 
 It is the v3 counterpart to the completed v2 analytics shell work. It does not
-replace [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/Canopy/ARCHITECTURE.md).
+replace [`ARCHITECTURE.md`](../../ARCHITECTURE.md).
 
 ## Source documents
 
 This design follows:
 
-- [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/Canopy/ARCHITECTURE.md)
-- [`doc/v3/plan.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v3/plan.md)
-- [`doc/v3/high-level-design.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v3/high-level-design.md)
-- [`doc/v3/uiux-design.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v3/uiux-design.md)
+- [`ARCHITECTURE.md`](../../ARCHITECTURE.md)
+- [`doc/v3/plan.md`](../../doc/v3/plan.md)
+- [`doc/v3/high-level-design.md`](../../doc/v3/high-level-design.md)
+- [`doc/v3/uiux-design.md`](../../doc/v3/uiux-design.md)
 
 If these documents conflict, `ARCHITECTURE.md` remains the source of truth for
 system boundaries and `doc/v3/plan.md` remains the source of truth for v3

@@ -6,14 +6,14 @@ This document expands the agreed v2 direction into an implementation-ready
 design for the analytics shell and dashboard UX refresh.
 
 It is the v2 counterpart to the historical v1 detailed design. It does not
-replace [`doc/v1/detailed-design.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v1/detailed-design.md).
+replace [`doc/v1/detailed-design.md`](../../doc/v1/detailed-design.md).
 
 This document follows:
 
-- [`ARCHITECTURE.md`](C:/Users/Lih%20Sheng/Documents/Canopy/ARCHITECTURE.md)
-- [`DESIGN.md`](C:/Users/Lih%20Sheng/Documents/Canopy/DESIGN.md)
-- [`doc/v2/plan.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v2/plan.md)
-- [`doc/v2/uiux-design.md`](C:/Users/Lih%20Sheng/Documents/Canopy/doc/v2/uiux-design.md)
+- [`ARCHITECTURE.md`](../../ARCHITECTURE.md)
+- [`DESIGN.md`](../../DESIGN.md)
+- [`doc/v2/plan.md`](../../doc/v2/plan.md)
+- [`doc/v2/uiux-design.md`](../../doc/v2/uiux-design.md)
 
 If these documents conflict, `ARCHITECTURE.md` remains the source of truth for
 architecture and `DESIGN.md` remains the source of truth for visual language.
