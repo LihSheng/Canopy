@@ -1,5 +1,5 @@
 type Props = {
-  nodes: { id: string; type: string; label: string }[];
+  nodes: { id: string; type: string; label: string; state?: "pending" | "materialized" }[];
   edges: { from: string; to: string; type: string }[];
 };
 
@@ -20,9 +20,20 @@ export const LineageView = ({ nodes = [], edges = [] }: Props) => {
         {nodes.map((node) => (
           <div
             key={node.id}
-            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 shadow-sm"
+            className={
+              node.state === "pending"
+                ? "rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2 shadow-sm"
+                : "rounded-lg border border-zinc-200 bg-white px-3 py-2 shadow-sm"
+            }
           >
-            <span className="text-xs font-medium text-zinc-500">{node.type}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-zinc-500">{node.type}</span>
+              {node.state === "pending" && (
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                  Pending
+                </span>
+              )}
+            </div>
             <p className="text-sm font-medium text-zinc-900">{node.label}</p>
           </div>
         ))}

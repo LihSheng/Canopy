@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createConnection,
+  fetchConnection,
   fetchConnectionTest,
   fetchTableDiscovery,
   createDataset,
+  refreshDatasetVersion,
   previewStaticFile,
   deleteStaticFilePreview,
   createProject,
@@ -33,6 +35,8 @@ export const SourceSetupWizard = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sourceType = searchParams.get("source") ?? "static_file";
+  const existingConnectionId = searchParams.get("connection_id");
+  const existingProjectId = searchParams.get("project_id");
   const isDb = isDbSource(sourceType);
 
   const [step, setStep] = useState<Step>(1);
@@ -129,6 +133,39 @@ export const SourceSetupWizard = () => {
       setLoadingTables(false);
     }
   }, [connectionId]);
+
+  useEffect(() => {
+    if (!isDb) return;
+    if (!existingConnectionId) return;
+    // Auto-skip Step 1 when invoked from "Add tables" flow.
+    setConnectionId(existingConnectionId);
+    if (existingProjectId) setProjectId(existingProjectId);
+
+    const run = async () => {
+      setLoadingTables(true);
+      setError(null);
+      try {
+        const [conn, testResult, discovered] = await Promise.all([
+          fetchConnection(existingConnectionId),
+          fetchConnectionTest(existingConnectionId).catch(() => ({ success: false })),
+          fetchTableDiscovery(existingConnectionId),
+        ]);
+        setTestSuccess(Boolean(testResult?.success));
+        setSupportsCdc(Boolean((testResult as { supports_cdc?: boolean } | null)?.supports_cdc));
+        setConnectionId(conn.id);
+        setProjectId(conn.project_id);
+        setTables(discovered);
+        setTableSearch("");
+        setStep(2);
+      } catch {
+        setError(ERROR_MESSAGES.failedToDiscoverTables);
+      } finally {
+        setLoadingTables(false);
+      }
+    };
+
+    void run();
+  }, [isDb, existingConnectionId, existingProjectId]);
 
   const handleFileDrop = useCallback(async (dropped: File) => {
     setFile(dropped);
@@ -255,6 +292,7 @@ export const SourceSetupWizard = () => {
               connection_id: connectionId,
               name: tableName,
               source_object_name: tableName,
+              defer_materialization: true,
               sync_mode: policy.syncMode,
               batch_strategy:
                 policy.syncMode === "batch" ? policy.batchStrategy : null,
@@ -269,9 +307,12 @@ export const SourceSetupWizard = () => {
             });
           }),
         );
-        if (results.length > 0) {
-          router.push(ROUTES.connections.datasets);
-        }
+        await Promise.all(
+          results.map((ds) =>
+            refreshDatasetVersion(ds.id).catch(() => undefined),
+          ),
+        );
+        if (results.length > 0) router.push(ROUTES.connections.connectionLineage(connectionId));
       } else if (preview && file) {
         // Create connection from static file preview
         let pid = projectId;
@@ -300,7 +341,7 @@ export const SourceSetupWizard = () => {
             batch_strategy: "full_snapshot",
           });
         }
-        router.push(ROUTES.connections.datasets);
+        router.push(ROUTES.connections.connectionLineage(conn.id));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : ERROR_MESSAGES.failedToCreateDatasets);

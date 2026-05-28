@@ -8,6 +8,23 @@ class DatasetRepository:
     def __init__(self, db: Session):
         self._db = db
 
+    def get_by_connection_and_source_object_name(self, connection_id: str, source_object_name: str) -> Dataset | None:
+        model = (
+            self._db.query(DatasetModel)
+            .filter(DatasetModel.connection_id == connection_id, DatasetModel.source_object_name == source_object_name)
+            .first()
+        )
+        return self._to_domain(model) if model else None
+
+    def list_by_connection(self, connection_id: str) -> list[Dataset]:
+        models = (
+            self._db.query(DatasetModel)
+            .filter(DatasetModel.connection_id == connection_id)
+            .order_by(DatasetModel.created_at.desc())
+            .all()
+        )
+        return [self._to_domain(m) for m in models]
+
     def save(self, domain: Dataset) -> Dataset:
         model = self._to_model(domain)
         merged = self._db.merge(model)

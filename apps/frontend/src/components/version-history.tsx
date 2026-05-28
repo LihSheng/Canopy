@@ -23,14 +23,6 @@ export const VersionHistory = ({
   deletingVersionId = null,
   onRefreshLatest,
 }: Props) => {
-  if (!versions || versions.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-12 text-sm text-zinc-500">
-        No versions yet
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -49,9 +41,15 @@ export const VersionHistory = ({
           </button>
         )}
       </div>
-      <div className="overflow-hidden rounded-lg border border-zinc-200">
 
-      <table className="min-w-full divide-y divide-zinc-200 text-sm">
+      {(!versions || versions.length === 0) ? (
+        <div className="flex items-center justify-center py-12 text-sm text-zinc-500">
+          No versions yet
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-zinc-200">
+
+        <table className="min-w-full divide-y divide-zinc-200 text-sm">
         <thead>
           <tr className="bg-zinc-50">
             <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -152,8 +150,9 @@ export const VersionHistory = ({
             );
           })}
         </tbody>
-      </table>
-      </div>
+        </table>
+        </div>
+      )}
 
       {/* Show failed version details below the table */}
       {versions.filter(v => v.status === "failed" && v.failure_reason).length > 0 && (

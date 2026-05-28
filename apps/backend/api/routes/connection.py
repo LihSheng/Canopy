@@ -14,6 +14,8 @@ from connection.repository import ConnectionRepository
 from connection.service import ConnectionService
 from control_plane.audit_service import AuditService
 from ingestion.landing_guard import reject_transform_keys
+from dataset.repository import DatasetRepository
+from lineage.metadata_service import LineageMetadataService
 
 router = APIRouter(prefix="/connections", tags=["connections"])
 
@@ -115,6 +117,12 @@ def get_connection(
     if connection is None:
         raise NotFoundError("Connection not found")
     return connection
+
+
+@router.get("/{id}/lineage")
+def get_connection_lineage(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+    service = LineageMetadataService(ConnectionRepository(db), DatasetRepository(db))
+    return service.get_connection_lineage(id)
 
 
 @router.post("/{id}/test")

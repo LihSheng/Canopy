@@ -18,6 +18,7 @@ class CreateDatasetRequest(BaseModel):
     connection_id: str
     name: str
     source_object_name: str = ""
+    defer_materialization: bool = False
     sync_mode: str | None = None
     batch_strategy: str | None = None
     real_time_strategy: str | None = None
@@ -33,6 +34,10 @@ class ReimportRequest(BaseModel):
     data_path: str
     columns: list[str]
     sheet_name: str | None = None
+
+
+class UpdateDatasetNameRequest(BaseModel):
+    name: str
 
 
 class SyncPolicyUpdateRequest(BaseModel):
@@ -82,6 +87,7 @@ async def create_dataset(
         connection_id=body.connection_id,
         name=body.name,
         source_object_name=body.source_object_name,
+        defer_materialization=body.defer_materialization,
         sync_mode=body.sync_mode,
         batch_strategy=body.batch_strategy,
         real_time_strategy=body.real_time_strategy,
@@ -97,6 +103,17 @@ def get_dataset(id: str, db: Session = Depends(get_db), user: SessionUser = Depe
     if dataset is None:
         raise NotFoundError("Dataset not found")
     return dataset
+
+
+@router.patch("/{id}")
+def update_dataset(
+    id: str,
+    body: UpdateDatasetNameRequest,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
+    return service.update_dataset_name(id=id, name=body.name)
 
 
 @router.get("/{id}/versions")

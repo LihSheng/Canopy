@@ -53,6 +53,15 @@ export const fetchConnection = (id: string): Promise<Connection> => {
   return request<Connection>(`/api/connections/${id}`);
 }
 
+export type ConnectionLineageNode = { id: string; type: string; label: string; state?: "pending" | "materialized"; dataset_id?: string };
+export type ConnectionLineageEdge = { from: string; to: string; type: string };
+
+export const fetchConnectionLineage = (connectionId: string): Promise<{ nodes: ConnectionLineageNode[]; edges: ConnectionLineageEdge[] }> => {
+  return request<{ nodes: ConnectionLineageNode[]; edges: ConnectionLineageEdge[] }>(
+    `/api/connections/${connectionId}/lineage`,
+  );
+}
+
 export const fetchConnectionDependencies = (id: string): Promise<ConnectionDependencySummary> => {
   return request<ConnectionDependencySummary>(`/api/connections/${id}/dependencies`);
 }
@@ -109,6 +118,7 @@ export const createDataset = (data: {
   connection_id: string;
   name: string;
   source_object_name?: string;
+  defer_materialization?: boolean;
   sync_mode?: string | null;
   batch_strategy?: string | null;
   real_time_strategy?: string | null;
@@ -141,8 +151,11 @@ export const fetchDatasetPreview = (
   );
 }
 
-export const fetchDatasetLineage = (datasetId: string): Promise<{ nodes: { id: string; type: string; label: string }[]; edges: { from: string; to: string; type: string }[] }> => {
-  return request<{ nodes: { id: string; type: string; label: string }[]; edges: { from: string; to: string; type: string }[] }>(
+export type DatasetLineageNode = { id: string; type: string; label: string; state?: "pending" | "materialized" };
+export type DatasetLineageEdge = { from: string; to: string; type: string };
+
+export const fetchDatasetLineage = (datasetId: string): Promise<{ nodes: DatasetLineageNode[]; edges: DatasetLineageEdge[] }> => {
+  return request<{ nodes: DatasetLineageNode[]; edges: DatasetLineageEdge[] }>(
     `/api/datasets/${datasetId}/lineage`,
   );
 }
@@ -176,6 +189,16 @@ export const deleteDatasetVersion = (
 ): Promise<{ deleted: boolean; id: string }> => {
   return request<{ deleted: boolean; id: string }>(`/api/datasets/${datasetId}/versions/${versionId}`, {
     method: "DELETE",
+  });
+}
+
+export const updateDataset = (
+  datasetId: string,
+  data: { name: string },
+): Promise<Dataset> => {
+  return request<Dataset>(`/api/datasets/${datasetId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
   });
 }
 

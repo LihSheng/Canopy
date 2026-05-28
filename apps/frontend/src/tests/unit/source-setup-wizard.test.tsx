@@ -21,6 +21,7 @@ const mockCreateConnection = vi.fn();
 const mockFetchConnectionTest = vi.fn();
 const mockFetchTableDiscovery = vi.fn();
 const mockCreateDataset = vi.fn();
+const mockRefreshDatasetVersion = vi.fn();
 const mockPreviewStaticFile = vi.fn();
 const mockDeleteStaticFilePreview = vi.fn();
 const mockCreateProject = vi.fn();
@@ -30,6 +31,7 @@ vi.mock("@/lib/api/data-source", () => ({
   fetchConnectionTest: (...args: unknown[]) => mockFetchConnectionTest(...args),
   fetchTableDiscovery: (...args: unknown[]) => mockFetchTableDiscovery(...args),
   createDataset: (...args: unknown[]) => mockCreateDataset(...args),
+  refreshDatasetVersion: (...args: unknown[]) => mockRefreshDatasetVersion(...args),
   previewStaticFile: (...args: unknown[]) => mockPreviewStaticFile(...args),
   deleteStaticFilePreview: (...args: unknown[]) => mockDeleteStaticFilePreview(...args),
   createProject: (...args: unknown[]) => mockCreateProject(...args),
@@ -56,6 +58,7 @@ describe("SourceSetupWizard — DB source (postgresql)", () => {
       },
     ]);
     mockCreateDataset.mockResolvedValue({ id: "ds-1" });
+    mockRefreshDatasetVersion.mockResolvedValue({ id: "v-1", version_number: 1 });
   });
 
   it("shows DB connection form with PostgreSQL as source type", () => {
@@ -227,7 +230,7 @@ describe("SourceSetupWizard — DB source (postgresql)", () => {
       expect(mockCreateDataset).toHaveBeenCalledWith(
         expect.objectContaining({ name: "users", connection_id: "conn-1" }),
       );
-      expect(mockPush).toHaveBeenCalledWith("/dashboard/connections/datasets");
+      expect(mockPush).toHaveBeenCalledWith("/dashboard/connections/lineage/conn-1");
     });
   });
 
@@ -370,7 +373,7 @@ describe("SourceSetupWizard — Static file source", () => {
       expect(mockCreateDataset).toHaveBeenCalledWith(
         expect.objectContaining({ name: "Sheet1" }),
       );
-      expect(mockPush).toHaveBeenCalledWith("/dashboard/connections/datasets");
+      expect(mockPush).toHaveBeenCalledWith("/dashboard/connections/lineage/conn-1");
     });
   });
 

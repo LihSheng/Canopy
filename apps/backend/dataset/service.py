@@ -30,6 +30,7 @@ class DatasetService:
         connection_id: str,
         name: str,
         source_object_name: str = "",
+        defer_materialization: bool = False,
         sync_mode: str | None = None,
         batch_strategy: str | None = None,
         real_time_strategy: str | None = None,
@@ -41,6 +42,7 @@ class DatasetService:
                 connection_id=connection_id,
                 name=name,
                 source_object_name=source_object_name,
+                defer_materialization=defer_materialization,
                 sync_mode=sync_mode,
                 batch_strategy=batch_strategy,
                 real_time_strategy=real_time_strategy,
@@ -54,19 +56,35 @@ class DatasetService:
         connection_id: str,
         name: str,
         source_object_name: str = "",
+        defer_materialization: bool = False,
         sync_mode: str | None = None,
         batch_strategy: str | None = None,
         real_time_strategy: str | None = None,
         cursor_column: str | None = None,
     ) -> Dataset:
         now = datetime.now(UTC)
+        resolved_source_object_name = source_object_name or name
+
+        if defer_materialization:
+            existing = self._repo.get_by_connection_and_source_object_name(
+                connection_id=connection_id, source_object_name=resolved_source_object_name
+            )
+            if existing is not None:
+                existing.name = name
+                existing.sync_mode = sync_mode
+                existing.batch_strategy = batch_strategy
+                existing.real_time_strategy = real_time_strategy
+                existing.cursor_column = cursor_column
+                existing.updated_at = now
+                return self._repo.save(existing)
+
         dataset = Dataset(
             id=str(uuid.uuid4()),
             project_id=project_id,
             connection_id=connection_id,
             name=name,
-            source_object_name=source_object_name,
-            status=DatasetStatus.ACTIVE.value,
+            source_object_name=resolved_source_object_name,
+            status=(DatasetStatus.PENDING_INITIAL_RUN.value if defer_materialization else DatasetStatus.ACTIVE.value),
             sync_mode=sync_mode,
             batch_strategy=batch_strategy,
             real_time_strategy=real_time_strategy,
@@ -79,6 +97,8 @@ class DatasetService:
             connection_repo = ConnectionRepository(self._repo._db)
             connection = connection_repo.get(connection_id)
             if connection is not None:
+                if defer_materialization and connection.source_type in {"postgresql", "mysql"}:
+                    return dataset
                 source_file_path = connection_repo.resolve_static_source_file_path(connection)
                 if connection.source_type == "static_file" and source_file_path:
                     landing_path, row_count, column_count = materialize_dataset_version(
@@ -133,6 +153,28 @@ class DatasetService:
             raise
 
         return dataset
+
+    def update_dataset_name(self, id: str, name: str) -> Dataset:
+        import re
+
+        dataset = self._repo.get(id)
+        if dataset is None:
+            raise NotFoundError("Dataset not found")
+
+        stripped = name.strip()
+        if not stripped:
+            raise ValidationError("Dataset name must not be empty")
+        if not re.match(r"^[A-Za-z]", stripped):
+            raise ValidationError("Dataset name must start with a letter")
+        if not re.match(r"^[A-Za-z][A-Za-z0-9 _-]*$", stripped):
+            raise ValidationError(
+                "Dataset name contains invalid characters. "
+                "Only letters, digits, spaces, hyphens, and underscores are allowed."
+            )
+
+        dataset.name = stripped
+        dataset.updated_at = datetime.now(UTC)
+        return self._repo.save(dataset)
 
     def get_dataset(self, id: str) -> Dataset | None:
         return self._repo.get(id)
@@ -272,9 +314,15 @@ class DatasetService:
             source_object_name=source_object_name,
         )
         self._repo.update_active_version(dataset_id, version.id)
+        if dataset.status == DatasetStatus.PENDING_INITIAL_RUN.value:
+            dataset.status = DatasetStatus.ACTIVE.value
+            dataset.updated_at = datetime.now(UTC)
+            self._repo.save(dataset)
         return version
 
     def _hydrate_dataset_version(self, dataset: Dataset) -> Dataset:
+        if dataset.status == DatasetStatus.PENDING_INITIAL_RUN.value:
+            return dataset
         if dataset.active_version_id:
             return dataset
 
@@ -435,13 +483,23 @@ class DatasetService:
         nodes: list[dict] = []
         edges: list[dict] = []
 
+        dataset_state = (
+            "pending"
+            if (dataset.status == DatasetStatus.PENDING_INITIAL_RUN.value or dataset.active_version_id is None)
+            else "materialized"
+        )
+
         if dataset.source_object_name:
-            nodes.append({"id": f"source_{id}", "type": "source_object", "label": dataset.source_object_name})
+            nodes.append(
+                {"id": f"source_{id}", "type": "source_object", "label": dataset.source_object_name, "state": "materialized"}
+            )
 
         if connection is not None:
-            nodes.append({"id": f"connection_{dataset.connection_id}", "type": "connection", "label": connection.name})
+            nodes.append(
+                {"id": f"connection_{dataset.connection_id}", "type": "connection", "label": connection.name, "state": "materialized"}
+            )
 
-        nodes.append({"id": f"dataset_{id}", "type": "dataset", "label": dataset.name})
+        nodes.append({"id": f"dataset_{id}", "type": "dataset", "label": dataset.name, "state": dataset_state})
 
         if dataset.source_object_name and connection is not None:
             edges.append({"from": f"source_{id}", "to": f"connection_{dataset.connection_id}", "type": "feeds"})
@@ -450,11 +508,11 @@ class DatasetService:
             edges.append({"from": f"connection_{dataset.connection_id}", "to": f"dataset_{id}", "type": "provides"})
 
         for v in versions:
-            nodes.append({"id": f"version_{v.id}", "type": "version", "label": f"v{v.version_number}"})
+            nodes.append({"id": f"version_{v.id}", "type": "version", "label": f"v{v.version_number}", "state": "materialized"})
             edges.append({"from": f"version_{v.id}", "to": f"dataset_{id}", "type": "belongs_to"})
 
         for r in runs:
-            nodes.append({"id": f"run_{r.id}", "type": "run", "label": r.status})
+            nodes.append({"id": f"run_{r.id}", "type": "run", "label": r.status, "state": "materialized"})
             edges.append({"from": f"run_{r.id}", "to": f"dataset_{id}", "type": "produces"})
 
         return {"nodes": nodes, "edges": edges}

@@ -5,6 +5,7 @@ from enum import StrEnum
 
 class DatasetStatus(StrEnum):
     ACTIVE = "active"
+    PENDING_INITIAL_RUN = "pending_initial_run"
     INACTIVE = "inactive"
     ERROR = "error"
 

@@ -16,6 +16,7 @@ import {
   refreshDatasetVersion,
   previewStaticFile,
   updateSyncPolicy,
+  updateDataset,
   fetchConnection,
 } from "@/lib/api/data-source";
 import type {
@@ -89,6 +90,10 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
   const [refreshingLatest, setRefreshingLatest] = useState(false);
   const [editingSyncPolicy, setEditingSyncPolicy] = useState(false);
   const [savingSyncPolicy, setSavingSyncPolicy] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const editNameRef = useRef<HTMLInputElement | null>(null);
   const toast = useToast();
   const supportsCdc = !!connection?.config_json?.supports_cdc;
   const realTimeStrategyValue: SyncPolicy["realTimeStrategy"] =
@@ -184,6 +189,67 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
       toast.danger("Save failed", message);
     } finally {
       setSavingSyncPolicy(false);
+    }
+  };
+
+  const isValidDatasetName = (name: string): string | null => {
+    const trimmed = name.trim();
+    if (!trimmed) return "Dataset name must not be empty";
+    if (!/^[A-Za-z]/.test(trimmed)) return "Dataset name must start with a letter";
+    if (!/^[A-Za-z][A-Za-z0-9 _-]*$/.test(trimmed)) {
+      return "Only letters, digits, spaces, hyphens, and underscores are allowed";
+    }
+    return null;
+  };
+
+  const handleStartEditName = () => {
+    setEditNameValue(dataset?.name ?? "");
+    setEditingName(true);
+    // Focus the input on next tick after render
+    requestAnimationFrame(() => editNameRef.current?.focus());
+  };
+
+  const handleCancelEditName = () => {
+    setEditingName(false);
+    setEditNameValue("");
+    setActionError(null);
+  };
+
+  const handleSaveName = async () => {
+    const validationError = isValidDatasetName(editNameValue);
+    if (validationError) {
+      setActionError(validationError);
+      return;
+    }
+
+    const newName = editNameValue.trim();
+    if (newName === dataset?.name) {
+      setEditingName(false);
+      return;
+    }
+
+    setSavingName(true);
+    setActionError(null);
+    try {
+      await updateDataset(datasetId, { name: newName });
+      setEditingName(false);
+      toast.success("Dataset renamed", `Renamed to "${newName}".`);
+      await load();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to rename dataset";
+      setActionError(message);
+      toast.danger("Rename failed", message);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSaveName();
+    } else if (e.key === "Escape") {
+      handleCancelEditName();
     }
   };
 
@@ -322,8 +388,42 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
     <>
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-zinc-900">{dataset!.name}</h2>
+        <div className="min-w-0 flex-1">
+          {editingName ? (
+            <div className="flex items-center gap-2">
+              <input
+                ref={editNameRef}
+                type="text"
+                value={editNameValue}
+                onChange={(e) => setEditNameValue(e.target.value)}
+                onKeyDown={handleNameKeyDown}
+                onBlur={() => { if (!savingName) handleSaveName(); }}
+                disabled={savingName}
+                className="w-full max-w-md rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xl font-semibold text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:cursor-wait disabled:opacity-60"
+              />
+              {savingName && (
+                <LoadingSpinner className="size-4 shrink-0" />
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleStartEditName}
+              className="group flex items-center gap-2 text-left"
+              title="Click to rename dataset"
+            >
+              <h2 className="text-xl font-semibold text-zinc-900">{dataset!.name}</h2>
+              <svg
+                className="size-4 shrink-0 text-zinc-300 transition-colors group-hover:text-zinc-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+          )}
           <p className="mt-1 text-sm text-zinc-500">
             {dataset!.source_object_name} &middot; {dataset!.status}
           </p>

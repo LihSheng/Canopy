@@ -20,6 +20,7 @@ vi.mock("@/lib/api/data-source", () => ({
   fetchRuns: vi.fn(),
   deleteDataset: vi.fn(),
   deleteDatasetVersion: vi.fn(),
+  updateDataset: vi.fn(),
   fetchConnection: vi.fn(),
   previewStaticFile: vi.fn(),
   reimportDatasetVersion: vi.fn(),
@@ -276,5 +277,131 @@ describe("Dataset workspace delete actions", () => {
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(api.refreshDatasetVersion).not.toHaveBeenCalled();
     clickSpy.mockRestore();
+  });
+
+  describe("inline dataset rename", () => {
+    it("shows the dataset name and an edit button", async () => {
+      mockWorkspaceData();
+      render(<DatasetWorkspaceContent datasetId="dataset-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Leave Application Report")).toBeInTheDocument();
+      });
+
+      const editButton = screen.getByTitle("Click to rename dataset");
+      expect(editButton).toBeInTheDocument();
+    });
+
+    it("switches to input when edit button is clicked", async () => {
+      mockWorkspaceData();
+      render(<DatasetWorkspaceContent datasetId="dataset-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Leave Application Report")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTitle("Click to rename dataset"));
+
+      const input = screen.getByDisplayValue("Leave Application Report");
+      expect(input).toBeInTheDocument();
+    });
+
+    it("calls updateDataset and reloads on Enter", async () => {
+      mockWorkspaceData();
+      vi.mocked(api.updateDataset).mockResolvedValue({
+        id: "dataset-1",
+        project_id: "proj-1",
+        connection_id: "conn-1",
+        name: "Renamed Report",
+        source_object_name: "Payroll",
+        status: "active",
+        active_version_id: "version-1",
+        created_at: "2026-05-18T00:00:00Z",
+        updated_at: "2026-05-18T00:00:00Z",
+      });
+
+      render(<DatasetWorkspaceContent datasetId="dataset-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Leave Application Report")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTitle("Click to rename dataset"));
+
+      const input = screen.getByDisplayValue("Leave Application Report");
+      fireEvent.change(input, { target: { value: "Renamed Report" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() => {
+        expect(api.updateDataset).toHaveBeenCalledWith("dataset-1", { name: "Renamed Report" });
+        expect(mock_toast.success).toHaveBeenCalledWith(
+          "Dataset renamed",
+          'Renamed to "Renamed Report".',
+        );
+      });
+    });
+
+    it("shows validation error for empty name", async () => {
+      mockWorkspaceData();
+      render(<DatasetWorkspaceContent datasetId="dataset-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Leave Application Report")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTitle("Click to rename dataset"));
+
+      const input = screen.getByDisplayValue("Leave Application Report");
+      fireEvent.change(input, { target: { value: "   " } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() => {
+        expect(screen.getByText("Dataset name must not be empty")).toBeInTheDocument();
+      });
+
+      expect(api.updateDataset).not.toHaveBeenCalled();
+    });
+
+    it("shows validation error for name with special characters", async () => {
+      mockWorkspaceData();
+      render(<DatasetWorkspaceContent datasetId="dataset-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Leave Application Report")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTitle("Click to rename dataset"));
+
+      const input = screen.getByDisplayValue("Leave Application Report");
+      fireEvent.change(input, { target: { value: "Payroll@2024!" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Only letters, digits, spaces, hyphens, and underscores are allowed/)).toBeInTheDocument();
+      });
+
+      expect(api.updateDataset).not.toHaveBeenCalled();
+    });
+
+    it("cancels edit on Escape", async () => {
+      mockWorkspaceData();
+      render(<DatasetWorkspaceContent datasetId="dataset-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Leave Application Report")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTitle("Click to rename dataset"));
+
+      const input = screen.getByDisplayValue("Leave Application Report");
+      fireEvent.keyDown(input, { key: "Escape" });
+
+      await waitFor(() => {
+        expect(screen.queryByDisplayValue("Leave Application Report")).not.toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Leave Application Report")).toBeInTheDocument();
+      expect(api.updateDataset).not.toHaveBeenCalled();
+    });
   });
 });

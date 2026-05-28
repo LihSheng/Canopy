@@ -158,14 +158,14 @@ const ConnectionsHomeContent = () => {
                     key={connection.id}
                     className="flex items-center justify-between gap-3 rounded-md border border-zinc-100 px-3 py-2"
                   >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-zinc-900">
+                    <Link href={ROUTES.connections.connectionLineage(connection.id)} className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-zinc-900 hover:underline">
                         {connection.name}
                       </div>
                       <div className="text-xs text-zinc-500">
                         {connection.source_type} &middot; {connection.status}
                       </div>
-                    </div>
+                    </Link>
                     <button
                       type="button"
                       onClick={() => void handleDeleteConnection(connection)}
