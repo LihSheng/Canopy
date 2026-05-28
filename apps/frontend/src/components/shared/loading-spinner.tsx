@@ -1,9 +1,9 @@
 import { UI_LABELS } from "@/lib/constants";
 
-export const LoadingSpinner = ({ text = UI_LABELS.loading }: { text?: string }) => {
+export const LoadingSpinner = ({ text = UI_LABELS.loading, className }: { text?: string; className?: string }) => {
   return (
     <div
-      className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-zinc-200 bg-white py-10 text-center shadow-sm"
+      className={`flex flex-col items-center justify-center gap-4 rounded-2xl border border-zinc-200 bg-white py-10 text-center shadow-sm ${className ?? ""}`}
       role="status"
     >
       <div className="rounded-full border border-zinc-200 bg-zinc-50 p-3">

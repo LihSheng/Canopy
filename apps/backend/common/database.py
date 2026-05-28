@@ -95,10 +95,6 @@ def engine() -> Engine:
     return _db_manager.engine()
 
 
-def control_plane_engine() -> Engine:
-    return _db_manager.control_plane_engine()
-
-
 def tenant_data_engine() -> Engine:
     return _db_manager.tenant_data_engine()
 
@@ -107,29 +103,8 @@ def session_factory() -> sessionmaker[Session]:
     return _db_manager.session_factory()
 
 
-def control_plane_session_factory() -> sessionmaker[Session]:
-    return _db_manager.control_plane_session_factory()
-
-
 def tenant_data_session_factory() -> sessionmaker[Session]:
     return _db_manager.tenant_data_session_factory()
-
-
-def make_session(session_source):
-    if hasattr(session_source, "class_") and hasattr(session_source, "kw"):
-        candidate = session_source()
-        if not isinstance(candidate, Session):
-            raise TypeError("Expected a SQLAlchemy Session from sessionmaker")
-        if candidate.bind is None:
-            raise RuntimeError("Session does not have an engine bind")
-        return candidate
-
-    candidate = session_source() if callable(session_source) else session_source
-    if not isinstance(candidate, Session):
-        raise TypeError("Expected a SQLAlchemy Session or session factory")
-    if candidate.bind is None:
-        raise RuntimeError("Session does not have an engine bind")
-    return sessionmaker(autocommit=False, autoflush=False, bind=candidate.bind)()
 
 
 def set_engine(eng: Engine, tenant_data_eng: Engine | None = None) -> None:
@@ -145,7 +120,7 @@ class Base(DeclarativeBase):
 
 
 def get_db():
-    db = control_plane_session_factory()()
+    db = session_factory()()
     try:
         yield db
     finally:
@@ -153,34 +128,11 @@ def get_db():
 
 
 def init_db(engine_override: Engine | None = None):
-    import analytics.schema  # noqa: F401  ensure analytics models are registered
-    import anomalies.schema  # noqa: F401  ensure anomaly models are registered
-    import auth.schema  # noqa: F401  ensure UserModel is registered
-    import connection.schema  # noqa: F401  ensure connection models are registered
-    import control_plane.schemas.audit  # noqa: F401
-    import control_plane.schemas.config  # noqa: F401
-    import control_plane.schemas.database_targets  # noqa: F401
-    import control_plane.schemas.jobs  # noqa: F401
-    import control_plane.schemas.memberships  # noqa: F401
-    import control_plane.schemas.tenants  # noqa: F401
-    import dataset.schema  # noqa: F401  ensure dataset models are registered
-    import exports.schema  # noqa: F401  ensure export models are registered
-    import ingestion.schema  # noqa: F401  ensure ingestion models are registered
-    import insights.schema  # noqa: F401  ensure insight models are registered
-    import ontology.schema  # noqa: F401  ensure ontology models are registered
-    import project.schema  # noqa: F401  ensure project models are registered
-    import refresh.schema  # noqa: F401  ensure refresh models are registered
-    import run.schema  # noqa: F401  ensure run models are registered
-    import schema_drift.schema  # noqa: F401  ensure schema drift models are registered
-    import source_type.schema  # noqa: F401  ensure source type models are registered
-    import sync.schema  # noqa: F401  ensure SourceSnapshotModel is registered
-    import tenant_data.schemas.clean  # noqa: F401
-    import tenant_data.schemas.metadata  # noqa: F401
-    import tenant_data.schemas.raw  # noqa: F401
-    import tenant_data.schemas.staging  # noqa: F401
+    import common._all_models  # noqa: F401  register all control-plane models with Base.metadata
+    import tenant_data._all_models  # noqa: F401  register all tenant-data models with TenantDataBase.metadata
     from tenant_data.base import TenantDataBase
 
-    control_plane_eng = engine_override or control_plane_engine()
+    control_plane_eng = engine_override or engine()
     tenant_data_eng = engine_override or tenant_data_engine()
     Base.metadata.create_all(bind=control_plane_eng)
     _sync_missing_columns(control_plane_eng, Base.metadata)

@@ -9,7 +9,6 @@ from backup.backup_engine import BackupEngine
 from backup.domain import BackupStatus, RestoreRun
 from backup.lifecycle_validation import LifecycleValidator
 from backup.policy_manager import BackupPolicyManager
-from common.database import make_session
 from common.executor import background
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
@@ -67,38 +66,35 @@ class RestoreEngine:
         run.status = BackupStatus.RUNNING
         run.started_at = datetime.now(UTC)
 
-        session = make_session(self._db_session_factory)
+        session = self._db_session_factory()
         try:
-            errors = self.validate_restorable(run.tenant_id, run.source_backup_run_id)
-            if errors:
-                self._fail_run(run, "; ".join(errors), session)
+            tenant_repo = self._tenant_repo_cls(session)
+            tenant = tenant_repo.get_tenant_by_id(run.tenant_id)
+            if tenant is None:
+                self._fail_run(run, "Tenant not found", session)
                 return
+
+            lifecycle_errors = LifecycleValidator.can_restore(tenant)
+            if lifecycle_errors:
+                self._fail_run(run, "; ".join(lifecycle_errors), session)
+                return
+
+            policy_manager = BackupPolicyManager(self._config_repo_cls(session))
+            policy = policy_manager.get_policy(run.tenant_id)
 
             backup_run = self._backup_engine.get_backup(run.source_backup_run_id)
-            if backup_run is None or backup_run.snapshot_ref is None:
-                self._fail_run(
-                    run,
-                    "Backup snapshot not found",
-                    session,
-                )
-                return
-
-            if self._routing_cache is not None:
-                self._routing_cache.invalidate_tenant(run.tenant_id)  # type: ignore[attr-defined]
+            if backup_run and backup_run.finished_at:
+                age_days = (datetime.now(UTC) - backup_run.finished_at).days
+                if age_days > policy.retention_days:
+                    self._fail_run(
+                        run,
+                        f"Backup retention expired ({age_days}d > {policy.retention_days}d)",
+                        session,
+                    )
+                    return
 
             run.status = BackupStatus.COMPLETED
             run.finished_at = datetime.now(UTC)
-
-            audit_service = self._audit_service_cls(session)
-            audit_service.record_event(
-                tenant_id=run.tenant_id,
-                actor_user_id="system",
-                event_type="tenant.restored",
-                payload={
-                    "restore_run_id": run.id,
-                    "source_backup_run_id": run.source_backup_run_id,
-                },
-            )
         except Exception as e:
             self._fail_run(run, str(e), session)
         finally:
@@ -114,46 +110,10 @@ class RestoreEngine:
                 tenant_id=run.tenant_id,
                 actor_user_id="system",
                 event_type="restore.failed",
-                payload={
-                    "restore_run_id": run.id,
-                    "error_message": message,
-                },
+                payload={"restore_run_id": run.id, "error_message": message},
             )
         except Exception:
             pass
-
-    def validate_restorable(self, tenant_id: str, backup_run_id: str) -> list[str]:
-        errors: list[str] = []
-
-        backup_run = self._backup_engine.get_backup(backup_run_id)
-        if backup_run is None:
-            errors.append("Backup not found")
-            return errors
-        if backup_run.status != BackupStatus.COMPLETED:
-            errors.append("Backup is not in completed state")
-
-        session = make_session(self._db_session_factory)
-        try:
-            tenant_repo = self._tenant_repo_cls(session)
-            tenant = tenant_repo.get_tenant_by_id(tenant_id)
-            if tenant is None:
-                errors.append("Tenant not found")
-                return errors
-
-            lifecycle_errors = LifecycleValidator.can_restore(tenant)
-            errors.extend(lifecycle_errors)
-
-            policy_manager = BackupPolicyManager(self._config_repo_cls(session))
-            policy = policy_manager.get_policy(tenant_id)
-            if backup_run.finished_at:
-                cutoff = datetime.now(UTC)
-                age_days = (cutoff - backup_run.finished_at).days
-                if age_days > policy.retention_days:
-                    errors.append(f"Backup retention expired ({age_days}d > {policy.retention_days}d)")
-        finally:
-            session.close()
-
-        return errors
 
     def list_restores(self, tenant_id: str) -> list[RestoreRun]:
         with self._lock:

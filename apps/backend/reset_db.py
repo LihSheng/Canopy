@@ -25,9 +25,9 @@ from auth.hashing import hash_password
 from auth.schema import UserModel
 from common.config import settings
 from common.database import (
-    control_plane_session_factory,
     init_db,
     reset_engine,
+    session_factory,
 )
 
 # ── helpers ────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ def _reset_database(database_url: str, label: str) -> None:
 def _seed_admin_user() -> None:
     from sqlalchemy import select
 
-    session = control_plane_session_factory()()
+    session = session_factory()()
     try:
         existing = session.execute(select(UserModel).where(UserModel.email == "admin@canopy.dev")).scalar_one_or_none()
         if existing:

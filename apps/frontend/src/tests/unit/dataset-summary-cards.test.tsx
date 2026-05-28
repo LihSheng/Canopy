@@ -13,6 +13,7 @@ const mockHealth = {
   last_run_status: "completed",
   last_published_version: 3,
   freshness_at: "2026-05-18T10:30:00Z",
+  schema_drift: null,
 };
 
 const mockHealthFailed = {
@@ -24,6 +25,7 @@ const mockHealthFailed = {
   last_run_status: "failed",
   last_published_version: null,
   freshness_at: null,
+  schema_drift: null,
 };
 
 describe("DatasetSummaryCards", () => {

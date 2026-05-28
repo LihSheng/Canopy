@@ -33,10 +33,10 @@ class MigrationPipeline:
         return True
 
     def expand_phase(self) -> None:
-        pass
+        raise NotImplementedError("Expand migration phase not yet implemented")
 
     def contract_phase(self) -> None:
-        pass
+        raise NotImplementedError("Contract migration phase not yet implemented")
 
 
 def is_upgrade_supported(from_version: int, to_version: int) -> bool:

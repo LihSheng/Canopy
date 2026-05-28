@@ -36,16 +36,7 @@ def get_dashboard_summary(db: Session) -> DashboardSummary:
             snapshot_id="",
         )
 
-    return DashboardSummary(
-        total_payroll=cache.total_payroll,
-        total_claims=cache.total_claims,
-        year=cache.year,
-        month=cache.month,
-        department_count=cache.department_count,
-        anomaly_count=cache.anomaly_count,
-        last_updated=cache.created_at,
-        snapshot_id=cache.snapshot_id,
-    )
+    return _cache_to_summary(cache)
 
 
 def get_monthly_trends(

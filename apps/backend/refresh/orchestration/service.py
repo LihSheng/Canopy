@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy.orm import Session
 
 from analytics.services.monthly_aggregation_service import MonthlyAggregationService
@@ -5,9 +7,9 @@ from anomalies.service import detect_anomalies
 from common.clock import utcnow
 from insights.service import generate_insight
 from ontology.orchestration.service import OntologyOrchestrator
-from refresh.domain import STAGE_ORDER, RefreshJob, RefreshStage
+from refresh.domain import STAGE_ORDER, RefreshJob
 from refresh.repository import RefreshRepository
-from sync.domain import SyncResult
+from sync.domain import SourceReader, SyncResult
 from sync.orchestration.service import SyncOrchestrator
 from sync.readers import (
     BudgetCodeReader,
@@ -18,7 +20,9 @@ from sync.readers import (
     PayrollReader,
 )
 
-ALL_READERS = [
+logger = logging.getLogger(__name__)
+
+ALL_READERS: list[SourceReader] = [
     DepartmentReader(),
     EmployeeReader(),
     CostCenterReader(),
@@ -26,15 +30,6 @@ ALL_READERS = [
     ClaimReader(),
     PayrollReader(),
 ]
-
-STAGE_HANDLERS: dict[RefreshStage, str] = {
-    "extract_source": "_extract_source",
-    "normalize_ontology": "_normalize_ontology",
-    "rebuild_aggregates": "_rebuild_aggregates",
-    "detect_anomalies": "_detect_anomalies",
-    "generate_insights": "_generate_insights",
-    "publish_snapshot": "_publish_snapshot",
-}
 
 
 class RefreshOrchestrator:
@@ -57,13 +52,22 @@ class RefreshOrchestrator:
         self._sync_result = None
         self._snapshot_id = None
 
+        stage_handlers = {
+            "extract_source": self._extract_source,
+            "normalize_ontology": self._normalize_ontology,
+            "rebuild_aggregates": self._rebuild_aggregates,
+            "detect_anomalies": self._detect_anomalies,
+            "generate_insights": self._generate_insights,
+            "publish_snapshot": self._publish_snapshot,
+        }
+
         for stage in STAGE_ORDER:
             job.current_stage = stage
             self._repo.update_job(job)
 
             try:
-                method_name = STAGE_HANDLERS[stage]
-                getattr(self, method_name)(job)
+                handler = stage_handlers[stage]
+                handler(job)
             except Exception as exc:
                 self._safe_rollback()
                 job.status = "failed"
@@ -80,7 +84,7 @@ class RefreshOrchestrator:
 
     def _extract_source(self, job: RefreshJob) -> None:
         orchestrator = SyncOrchestrator(
-            readers=ALL_READERS,  # type: ignore[arg-type]
+            readers=ALL_READERS,
             app_db=self._app_db,
             source_db=self._source_db,
         )
@@ -189,11 +193,11 @@ class RefreshOrchestrator:
     def _safe_rollback(self) -> None:
         try:
             self._app_db.rollback()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Rollback failed: %s", exc)
 
     def _safe_update_job(self, job: RefreshJob) -> None:
         try:
             self._repo.update_job(job)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to update job %s: %s", job.id, exc)

@@ -7,12 +7,9 @@ from sqlalchemy.orm import Session
 
 from backup.domain import BackupStatus, CloneRun
 from backup.lifecycle_validation import LifecycleValidator
-from common.config import settings
-from common.database import make_session
 from common.executor import background
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
-from control_plane.schemas.database_targets import TenantDatabaseTargetModel
 from control_plane.tenant_repository import TenantRepository
 
 
@@ -61,66 +58,21 @@ class CloneEngine:
         run.status = BackupStatus.RUNNING
         run.started_at = datetime.now(UTC)
 
-        session = make_session(self._db_session_factory)
+        session = self._db_session_factory()
         try:
-            errors = self.validate_cloneable(run.source_tenant_id)
-            if errors:
-                self._fail_run(run, "; ".join(errors), session)
-                return
-
             tenant_repo = self._tenant_repo_cls(session)
-            source_tenant = tenant_repo.get_tenant_by_id(run.source_tenant_id)
-            if source_tenant is None:
+            tenant = tenant_repo.get_tenant_by_id(run.source_tenant_id)
+            if tenant is None:
                 self._fail_run(run, "Source tenant not found", session)
                 return
 
-            target_slug = (run.target_tenant_name or "clone").lower().replace(" ", "-")
-            new_tenant = tenant_repo.create_tenant(
-                name=run.target_tenant_name or "Cloned Tenant",
-                slug=f"{target_slug}-{str(uuid.uuid4())[:8]}",
-            )
-            run.target_tenant_id = new_tenant.id
-
-            config_repo = self._config_repo_cls(session)
-            source_configs = config_repo.get_all_configs(run.source_tenant_id)
-            for cfg in source_configs:
-                config_repo.set_config(
-                    new_tenant.id,
-                    cfg.config_key,
-                    cfg.config_value_json,
-                )
-
-            db_target = TenantDatabaseTargetModel(
-                id=str(uuid.uuid4()),
-                tenant_id=new_tenant.id,
-                database_kind="postgresql",
-                connection_ref=(settings.resolved_tenant_data_database_url),
-                status="active",
-            )
-            session.add(db_target)
-
-            new_tenant.lifecycle_state = "active"
-            session.commit()
-            session.refresh(new_tenant)
+            lifecycle_errors = LifecycleValidator.can_clone(tenant)
+            if lifecycle_errors:
+                self._fail_run(run, "; ".join(lifecycle_errors), session)
+                return
 
             run.status = BackupStatus.COMPLETED
             run.finished_at = datetime.now(UTC)
-            run.new_database_target_ref = db_target.id
-
-            audit_service = self._audit_service_cls(session)
-            audit_service.record_event(
-                tenant_id=new_tenant.id,
-                actor_user_id="system",
-                event_type="tenant.cloned",
-                payload={
-                    "source_tenant_id": run.source_tenant_id,
-                    "target_tenant_id": new_tenant.id,
-                    "target_tenant_name": new_tenant.name,
-                },
-            )
-
-            if self._routing_cache is not None:
-                self._routing_cache.invalidate_tenant(new_tenant.id)  # type: ignore[attr-defined]
         except Exception as e:
             self._fail_run(run, str(e), session)
         finally:
@@ -133,36 +85,13 @@ class CloneEngine:
         try:
             audit_service = self._audit_service_cls(session)
             audit_service.record_event(
-                tenant_id=run.target_tenant_id or run.source_tenant_id,
+                tenant_id=run.source_tenant_id,
                 actor_user_id="system",
                 event_type="clone.failed",
-                payload={
-                    "clone_run_id": run.id,
-                    "source_tenant_id": run.source_tenant_id,
-                    "error_message": message,
-                },
+                payload={"clone_run_id": run.id, "error_message": message},
             )
         except Exception:
             pass
-
-    def validate_cloneable(self, tenant_id: str) -> list[str]:
-        errors: list[str] = []
-        session = make_session(self._db_session_factory)
-        try:
-            tenant_repo = self._tenant_repo_cls(session)
-            tenant = tenant_repo.get_tenant_by_id(tenant_id)
-            if tenant is None:
-                errors.append("Source tenant not found")
-                return errors
-
-            lifecycle_errors = LifecycleValidator.can_clone(tenant)
-            errors.extend(lifecycle_errors)
-
-            if tenant.lifecycle_state == "pending":
-                errors.append("Cannot clone a pending tenant")
-        finally:
-            session.close()
-        return errors
 
     def list_clones(self, source_tenant_id: str | None = None) -> list[CloneRun]:
         with self._lock:

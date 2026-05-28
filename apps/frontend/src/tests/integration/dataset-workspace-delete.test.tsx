@@ -102,6 +102,7 @@ describe("Dataset workspace delete actions", () => {
       last_run_status: null,
       last_published_version: 1,
       freshness_at: null,
+      schema_drift: null,
     });
     vi.mocked(api.fetchDatasetLineage).mockResolvedValue({
       nodes: [],

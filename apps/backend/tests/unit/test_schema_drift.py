@@ -29,6 +29,7 @@ from schema_drift.service import SchemaDriftService
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
+
 def _col(name: str, data_type: str = "integer", nullable: bool = True, **kw) -> ColumnSchema:
     return ColumnSchema(name=name, data_type=data_type, nullable=nullable, **kw)
 
@@ -58,6 +59,7 @@ def _make_dataset(
 # ═══════════════════════════════════════════════════════════════════════
 # Type normalization
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestNormalizeType:
     def test_postgres_int_variants(self):
@@ -116,6 +118,7 @@ class TestNormalizeType:
 # Rename similarity
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestRenameSimilarity:
     def test_exact_match(self):
         assert _rename_similarity("email", "email") == 1.0
@@ -135,6 +138,7 @@ class TestRenameSimilarity:
 # ═══════════════════════════════════════════════════════════════════════
 # Type or nullable change detection
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestTypeOrNullableChanged:
     def test_identical_no_change(self):
@@ -170,6 +174,7 @@ class TestTypeOrNullableChanged:
 # ═══════════════════════════════════════════════════════════════════════
 # Drift diff algorithm
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestComputeDrift:
     def test_identical_schemas(self):
@@ -278,6 +283,7 @@ class TestComputeDrift:
 # SchemaSignature hash stability
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestSchemaSignatureHash:
     def test_same_columns_produce_same_hash(self):
         cols_a = [_col("id"), _col("name", "varchar")]
@@ -306,6 +312,7 @@ class TestSchemaSignatureHash:
 # ═══════════════════════════════════════════════════════════════════════
 # Service: check_and_record_drift
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestServiceCheckAndRecordDrift:
     def test_first_discovery_creates_baseline(self):
@@ -442,6 +449,7 @@ class TestServiceCheckAndRecordDrift:
 # Service: clear_block
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestServiceClearBlock:
     def test_clears_blocked_dataset(self):
         ds = _make_dataset(id="ds-1", status=DatasetStatus.BLOCKED_SCHEMA_DRIFT.value)
@@ -493,6 +501,7 @@ class TestServiceClearBlock:
 # Service: get_drift_status
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestServiceGetDriftStatus:
     def test_no_drift(self):
         mock_dataset_repo = MagicMock()
@@ -538,6 +547,7 @@ class TestServiceGetDriftStatus:
 # ═══════════════════════════════════════════════════════════════════════
 # Edge cases and hardening
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestDriftEdgeCases:
     def test_rename_with_numbered_suffix(self):
@@ -598,6 +608,7 @@ class TestDriftEdgeCases:
 # ColumnSchema.from_raw edge cases
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestColumnSchemaFromRaw:
     def test_minimal_fields(self):
         col = ColumnSchema.from_raw(name="id", data_type="integer")
@@ -608,8 +619,10 @@ class TestColumnSchemaFromRaw:
 
     def test_with_extra_fields(self):
         col = ColumnSchema.from_raw(
-            name="name", data_type="varchar(255)",
-            nullable=False, char_max_length=255,
+            name="name",
+            data_type="varchar(255)",
+            nullable=False,
+            char_max_length=255,
         )
         assert col.name == "name"
         assert col.data_type == "varchar"  # normalized
