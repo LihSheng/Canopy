@@ -32,6 +32,19 @@ class CloneEngine:
         self._runs: dict[str, CloneRun] = {}
         self._lock = threading.Lock()
 
+    def validate_cloneable(self, source_tenant_id: str) -> list[str]:
+        session = self._db_session_factory()
+        try:
+            tenant_repo = self._tenant_repo_cls(session)
+            tenant = tenant_repo.get_tenant_by_id(source_tenant_id)
+            if tenant is None:
+                return ["Source tenant not found"]
+            return LifecycleValidator.can_clone(tenant)
+        except Exception as e:
+            return [f"Validation error: {e}"]
+        finally:
+            session.close()
+
     def create_clone(self, source_tenant_id: str, target_tenant_name: str) -> CloneRun:
         run = CloneRun(
             id=str(uuid.uuid4()),
@@ -61,37 +74,52 @@ class CloneEngine:
         session = self._db_session_factory()
         try:
             tenant_repo = self._tenant_repo_cls(session)
-            tenant = tenant_repo.get_tenant_by_id(run.source_tenant_id)
-            if tenant is None:
-                self._fail_run(run, "Source tenant not found", session)
+            source_tenant = tenant_repo.get_tenant_by_id(run.source_tenant_id)
+            if source_tenant is None:
+                run.status = BackupStatus.FAILED
+                run.error_message = "Source tenant not found"
+                run.finished_at = datetime.now(UTC)
                 return
 
-            lifecycle_errors = LifecycleValidator.can_clone(tenant)
+            lifecycle_errors = LifecycleValidator.can_clone(source_tenant)
             if lifecycle_errors:
-                self._fail_run(run, "; ".join(lifecycle_errors), session)
+                run.status = BackupStatus.FAILED
+                run.error_message = "; ".join(lifecycle_errors)
+                run.finished_at = datetime.now(UTC)
                 return
+
+            slug = f"cloned-{run.source_tenant_id}"
+            name = run.target_tenant_name or run.source_tenant_id
+            target = tenant_repo.create_tenant(name=name, slug=slug)
+            run.target_tenant_id = target.id
+
+            config_repo = self._config_repo_cls(session)
+            source_configs = config_repo.get_all_configs(run.source_tenant_id)
+            for cfg in source_configs:
+                config_repo.set_config(target.id, cfg.config_key, cfg.config_value_json)
+
+            run.new_database_target_ref = f"pg_dump:{target.id}:{run.id}"
 
             run.status = BackupStatus.COMPLETED
             run.finished_at = datetime.now(UTC)
-        except Exception as e:
-            self._fail_run(run, str(e), session)
-        finally:
-            session.close()
 
-    def _fail_run(self, run: CloneRun, message: str, session: Session) -> None:
-        run.status = BackupStatus.FAILED
-        run.finished_at = datetime.now(UTC)
-        run.error_message = message
-        try:
             audit_service = self._audit_service_cls(session)
             audit_service.record_event(
-                tenant_id=run.source_tenant_id,
+                tenant_id=target.id,
                 actor_user_id="system",
-                event_type="clone.failed",
-                payload={"clone_run_id": run.id, "error_message": message},
+                event_type="tenant.cloned",
+                payload={
+                    "clone_run_id": run.id,
+                    "source_tenant_id": run.source_tenant_id,
+                    "target_tenant_id": target.id,
+                },
             )
-        except Exception:
-            pass
+        except Exception as e:
+            run.status = BackupStatus.FAILED
+            run.error_message = str(e)
+            run.finished_at = datetime.now(UTC)
+        finally:
+            session.close()
 
     def list_clones(self, source_tenant_id: str | None = None) -> list[CloneRun]:
         with self._lock:

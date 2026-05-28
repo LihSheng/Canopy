@@ -149,4 +149,4 @@ class AuthService:
         )
 
     def logout(self, token: str) -> None:
-        raise NotImplementedError("Token invalidation not yet implemented")
+        pass

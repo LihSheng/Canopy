@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from sqlalchemy.orm import Session
 
 from api.dependencies.auth import get_current_user
@@ -25,6 +25,13 @@ class CreateDatasetRequest(BaseModel):
     cursor_column: str | None = None
     last_cursor_value: str | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_transform_keys(cls, values: object) -> object:
+        if isinstance(values, dict):
+            reject_transform_keys(values, label="dataset")
+        return values
+
 
 class CreateVersionRequest(BaseModel):
     run_id: str | None = None
@@ -34,6 +41,13 @@ class ReimportRequest(BaseModel):
     data_path: str
     columns: list[str]
     sheet_name: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_transform_keys(cls, values: object) -> object:
+        if isinstance(values, dict):
+            reject_transform_keys(values, label="reimport")
+        return values
 
 
 class UpdateDatasetNameRequest(BaseModel):
@@ -78,9 +92,10 @@ def list_datasets(
 
 @router.post("/", status_code=201)
 async def create_dataset(
-    body: CreateDatasetRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)
+    body: CreateDatasetRequest,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
 ):
-    reject_transform_keys(body.model_dump(), label="dataset")
     service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
     return await service.create_dataset_async(
         project_id=body.project_id,
@@ -158,7 +173,6 @@ def reimport_dataset_version(
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
-    reject_transform_keys(body.model_dump(), label="reimport")
     version_repo = DatasetVersionRepository(db)
     dataset_repo = DatasetRepository(db)
     service = DatasetVersionService(version_repo, dataset_repo)

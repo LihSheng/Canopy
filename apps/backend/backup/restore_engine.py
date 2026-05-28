@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from backup.backup_engine import BackupEngine
 from backup.domain import BackupStatus, RestoreRun
 from backup.lifecycle_validation import LifecycleValidator
-from backup.policy_manager import BackupPolicyManager
 from common.executor import background
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
@@ -33,6 +32,37 @@ class RestoreEngine:
         self._routing_cache = routing_cache
         self._runs: dict[str, RestoreRun] = {}
         self._lock = threading.Lock()
+
+    def validate_restorable(self, tenant_id: str, backup_run_id: str) -> list[str]:
+        session = self._db_session_factory()
+        try:
+            errors: list[str] = []
+            tenant_repo = self._tenant_repo_cls(session)
+            tenant = tenant_repo.get_tenant_by_id(tenant_id)
+            if tenant is None:
+                errors.append("Tenant not found")
+                return errors
+
+            if tenant.lifecycle_state == "deleted":
+                errors.append("Tenant is deleted")
+                return errors
+
+            backup_run = self._backup_engine.get_backup(backup_run_id)
+            if backup_run is None:
+                errors.append(f"Backup {backup_run_id} not found")
+                return errors
+
+            if backup_run.status != BackupStatus.COMPLETED:
+                errors.append(f"Backup {backup_run_id} has not completed (status: {backup_run.status.value})")
+
+            lifecycle_errors = LifecycleValidator.can_restore(tenant)
+            errors.extend(lifecycle_errors)
+
+            return errors
+        except Exception as e:
+            return [f"Validation error: {e}"]
+        finally:
+            session.close()
 
     def create_restore(
         self,
@@ -71,49 +101,37 @@ class RestoreEngine:
             tenant_repo = self._tenant_repo_cls(session)
             tenant = tenant_repo.get_tenant_by_id(run.tenant_id)
             if tenant is None:
-                self._fail_run(run, "Tenant not found", session)
+                run.status = BackupStatus.FAILED
+                run.error_message = "Tenant not found"
+                run.finished_at = datetime.now(UTC)
                 return
 
             lifecycle_errors = LifecycleValidator.can_restore(tenant)
             if lifecycle_errors:
-                self._fail_run(run, "; ".join(lifecycle_errors), session)
+                run.status = BackupStatus.FAILED
+                run.error_message = "; ".join(lifecycle_errors)
+                run.finished_at = datetime.now(UTC)
                 return
-
-            policy_manager = BackupPolicyManager(self._config_repo_cls(session))
-            policy = policy_manager.get_policy(run.tenant_id)
-
-            backup_run = self._backup_engine.get_backup(run.source_backup_run_id)
-            if backup_run and backup_run.finished_at:
-                age_days = (datetime.now(UTC) - backup_run.finished_at).days
-                if age_days > policy.retention_days:
-                    self._fail_run(
-                        run,
-                        f"Backup retention expired ({age_days}d > {policy.retention_days}d)",
-                        session,
-                    )
-                    return
 
             run.status = BackupStatus.COMPLETED
             run.finished_at = datetime.now(UTC)
-        except Exception as e:
-            self._fail_run(run, str(e), session)
-        finally:
-            session.close()
 
-    def _fail_run(self, run: RestoreRun, message: str, session: Session) -> None:
-        run.status = BackupStatus.FAILED
-        run.finished_at = datetime.now(UTC)
-        run.error_message = message
-        try:
             audit_service = self._audit_service_cls(session)
             audit_service.record_event(
                 tenant_id=run.tenant_id,
                 actor_user_id="system",
-                event_type="restore.failed",
-                payload={"restore_run_id": run.id, "error_message": message},
+                event_type="tenant.restored",
+                payload={
+                    "restore_run_id": run.id,
+                    "source_backup_run_id": run.source_backup_run_id,
+                },
             )
-        except Exception:
-            pass
+        except Exception as e:
+            run.status = BackupStatus.FAILED
+            run.error_message = str(e)
+            run.finished_at = datetime.now(UTC)
+        finally:
+            session.close()
 
     def list_restores(self, tenant_id: str) -> list[RestoreRun]:
         with self._lock:

@@ -20,7 +20,7 @@ class IngestionOrchestrator:
             upload_id=upload_id, status=IngestionWorkflowStatus.started
         )
         state.error_message = None
-        return self._transition(state, IngestionWorkflowStatus.started, "upload")
+        return self._transition(state, IngestionWorkflowStatus.started, "upload", append_step=False)
 
     def after_profiling(self, upload_id: str) -> WorkflowState:
         state = self._require_state(upload_id)
@@ -68,10 +68,12 @@ class IngestionOrchestrator:
             raise ValidationError("Upload not found")
         return state
 
-    def _transition(self, state: WorkflowState, to_status: IngestionWorkflowStatus, step: str) -> WorkflowState:
+    def _transition(
+        self, state: WorkflowState, to_status: IngestionWorkflowStatus, step: str, *, append_step: bool = True
+    ) -> WorkflowState:
         state.status = to_status
         state.current_step = step
-        if step not in state.completed_steps:
+        if append_step and step not in state.completed_steps:
             state.completed_steps.append(step)
         return self._repo.save_workflow_state(state)
 

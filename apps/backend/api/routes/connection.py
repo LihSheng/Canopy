@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.orm import Session
 
 from api.dependencies.auth import get_current_user
@@ -25,6 +25,13 @@ class CreateConnectionRequest(BaseModel):
     source_type: str
     name: str
     config_json: dict = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_transform_keys(cls, values: object) -> object:
+        if isinstance(values, dict):
+            reject_transform_keys(values, label="connection")
+        return values
 
 
 class SheetProfileResponse(BaseModel):
@@ -67,7 +74,6 @@ def create_connection(
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
-    reject_transform_keys(body.model_dump(), label="connection")
     service = ConnectionService(ConnectionRepository(db))
     return service.create_connection(
         project_id=body.project_id,
