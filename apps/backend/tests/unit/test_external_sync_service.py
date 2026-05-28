@@ -422,8 +422,9 @@ class TestExternalDbSyncService:
 
             from pathlib import Path
 
-            with patch.object(Path, "exists", return_value=True), patch(
-                "builtins.open", side_effect=OSError("read error")
+            with (
+                patch.object(Path, "exists", return_value=True),
+                patch("builtins.open", side_effect=OSError("read error")),
             ):
                 service = ExternalDbSyncService(session)
                 result = await service.run_async()
@@ -486,9 +487,7 @@ class TestExternalDbSyncService:
             from pathlib import Path
 
             mock_file = io.StringIO("line1\nline2\nline3\n")
-            with patch.object(Path, "exists", return_value=True), patch(
-                "builtins.open", return_value=mock_file
-            ):
+            with patch.object(Path, "exists", return_value=True), patch("builtins.open", return_value=mock_file):
                 service = ExternalDbSyncService(session)
                 result = await service.run_async()
                 await asyncio.sleep(0)

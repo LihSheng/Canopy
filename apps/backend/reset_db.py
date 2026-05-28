@@ -64,9 +64,7 @@ def _seed_admin_user() -> None:
 
     session = control_plane_session_factory()()
     try:
-        existing = session.execute(
-            select(UserModel).where(UserModel.email == "admin@canopy.dev")
-        ).scalar_one_or_none()
+        existing = session.execute(select(UserModel).where(UserModel.email == "admin@canopy.dev")).scalar_one_or_none()
         if existing:
             print("  Admin user already exists — skipped")
             return

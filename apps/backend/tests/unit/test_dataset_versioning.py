@@ -233,4 +233,3 @@ class TestDatasetRepository:
             assert updated.active_version_id == "new-ver"
         finally:
             session.close()
-

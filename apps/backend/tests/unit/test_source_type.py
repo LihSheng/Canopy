@@ -213,4 +213,3 @@ class TestSourceTypeRepository:
             assert fetched.label == "Test Label"
         finally:
             session.close()
-

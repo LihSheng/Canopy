@@ -356,10 +356,16 @@ class TestMysqlCdcReader:
         from sync.readers.mysql_cdc_reader import MysqlCdcReader
 
         reader = MysqlCdcReader(
-            {"host": "myhost", "port": 3307, "database": "mydb",
-             "username": "myuser", "password": "mypass",
-             "cdc_parameters": {"server_id": 2002}},
-            "ds-1", "tbl",
+            {
+                "host": "myhost",
+                "port": 3307,
+                "database": "mydb",
+                "username": "myuser",
+                "password": "mypass",
+                "cdc_parameters": {"server_id": 2002},
+            },
+            "ds-1",
+            "tbl",
         )
         assert reader.running is False
 
@@ -516,7 +522,8 @@ class TestPostgresCdcReader:
 
         reader = PostgresCdcReader(
             {"host": "localhost", "database": "testdb_mock"},
-            "ds-1", "tbl",
+            "ds-1",
+            "tbl",
         )
         assert reader.running is False
 
@@ -549,9 +556,9 @@ class TestPostgresCdcReader:
 
         # host != localhost → bypasses mock branch, enters try block
         reader = PostgresCdcReader(
-            {"host": "nohost", "port": 5433, "database": "x",
-             "username": "u", "password": "p"},
-            "ds-1", "tbl",
+            {"host": "nohost", "port": 5433, "database": "x", "username": "u", "password": "p"},
+            "ds-1",
+            "tbl",
         )
         assert reader.running is False
 
