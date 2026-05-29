@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from backup.domain import BackupRun, BackupStatus, BackupType
 from backup.lifecycle_validation import LifecycleValidator
 from backup.policy_manager import BackupPolicyManager
+from common.database import fresh_session
 from common.executor import background
 from control_plane.audit_service import AuditService
 from control_plane.config_repository import ConfigRepository
@@ -58,7 +59,7 @@ class BackupEngine:
         run.status = BackupStatus.RUNNING
         run.started_at = datetime.now(UTC)
 
-        session = self._db_session_factory()
+        session = fresh_session(self._db_session_factory)
         try:
             tenant_repo = self._tenant_repo_cls(session)
             tenant = tenant_repo.get_tenant_by_id(run.tenant_id)

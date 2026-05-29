@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from sqlalchemy import Column, DefaultClause, Engine, create_engine, inspect, literal, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.schema import CreateColumn
@@ -105,6 +107,11 @@ def session_factory() -> sessionmaker[Session]:
 
 def tenant_data_session_factory() -> sessionmaker[Session]:
     return _db_manager.tenant_data_session_factory()
+
+
+def fresh_session(factory: Callable[[], Session]) -> Session:
+    candidate = factory()
+    return sessionmaker(autocommit=False, autoflush=False, bind=candidate.bind)()
 
 
 def set_engine(eng: Engine, tenant_data_eng: Engine | None = None) -> None:

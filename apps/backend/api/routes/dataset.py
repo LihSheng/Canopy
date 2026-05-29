@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, model_validator
+from typing import Any
+
+from fastapi import APIRouter, Depends, Query, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from api.dependencies.auth import get_current_user
@@ -11,6 +13,11 @@ from dataset.service import DatasetService, DatasetVersionService
 from ingestion.landing_guard import reject_transform_keys
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
+
+
+async def _raw_json(request: Request) -> dict[str, Any]:
+    result: dict[str, Any] = await request.json()
+    return result
 
 
 class CreateDatasetRequest(BaseModel):
@@ -25,13 +32,6 @@ class CreateDatasetRequest(BaseModel):
     cursor_column: str | None = None
     last_cursor_value: str | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def _reject_transform_keys(cls, values: object) -> object:
-        if isinstance(values, dict):
-            reject_transform_keys(values, label="dataset")
-        return values
-
 
 class CreateVersionRequest(BaseModel):
     run_id: str | None = None
@@ -41,13 +41,6 @@ class ReimportRequest(BaseModel):
     data_path: str
     columns: list[str]
     sheet_name: str | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def _reject_transform_keys(cls, values: object) -> object:
-        if isinstance(values, dict):
-            reject_transform_keys(values, label="reimport")
-        return values
 
 
 class UpdateDatasetNameRequest(BaseModel):
@@ -95,7 +88,9 @@ async def create_dataset(
     body: CreateDatasetRequest,
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
+    raw_body: dict = Depends(_raw_json),
 ):
+    reject_transform_keys(raw_body, label="dataset")
     service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
     return await service.create_dataset_async(
         project_id=body.project_id,
@@ -167,12 +162,14 @@ def create_version(
 
 
 @router.post("/{id}/reimport", status_code=201)
-def reimport_dataset_version(
+async def reimport_dataset_version(
     id: str,
     body: ReimportRequest,
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
+    raw_body: dict = Depends(_raw_json),
 ):
+    reject_transform_keys(raw_body, label="reimport")
     version_repo = DatasetVersionRepository(db)
     dataset_repo = DatasetRepository(db)
     service = DatasetVersionService(version_repo, dataset_repo)
