@@ -12,6 +12,7 @@ class SessionUser(BaseModel):
     id: str
     email: str
     display_name: str
+    is_admin: bool = False
 
 
 class TenantInfo(BaseModel):

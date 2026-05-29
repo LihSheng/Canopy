@@ -15,6 +15,16 @@ class RunRepository:
         self._db.refresh(model)
         return self._to_domain(model)
 
+    def update(self, domain: Run) -> Run:
+        model = self._db.query(RunModel).filter(RunModel.id == domain.id).first()
+        if model is None:
+            raise ValueError(f"Run {domain.id} not found")
+        for key, value in domain.__dataclass_fields__.items():
+            setattr(model, key, getattr(domain, key))
+        self._db.commit()
+        self._db.refresh(model)
+        return self._to_domain(model)
+
     def get(self, id: str) -> Run | None:
         model = self._db.query(RunModel).filter(RunModel.id == id).first()
         return self._to_domain(model) if model else None

@@ -51,6 +51,7 @@ class LoginOutputUser:
     id: str
     email: str
     display_name: str
+    is_admin: bool = False
 
 
 @dataclass

@@ -33,6 +33,10 @@ class CreateConnectionRequest(BaseModel):
     config_json: dict = Field(default_factory=dict)
 
 
+class UpdateConnectionNameRequest(BaseModel):
+    name: str
+
+
 class SheetProfileResponse(BaseModel):
     sheet_name: str
     row_count: int
@@ -124,6 +128,17 @@ def get_connection(
     if connection is None:
         raise NotFoundError("Connection not found")
     return connection
+
+
+@router.patch("/{id}")
+def update_connection(
+    id: str,
+    body: UpdateConnectionNameRequest,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = ConnectionService(ConnectionRepository(db))
+    return service.update_connection_name(id=id, name=body.name)
 
 
 @router.get("/{id}/lineage")

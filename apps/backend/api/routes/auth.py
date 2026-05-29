@@ -105,6 +105,7 @@ def switch_tenant(
                 "id": session_result.user.id,
                 "email": session_result.user.email,
                 "display_name": session_result.user.display_name,
+                "is_admin": session_result.user.is_admin,
             }
             if session_result.user
             else None

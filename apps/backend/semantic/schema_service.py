@@ -15,7 +15,7 @@ from dataset.repository import DatasetRepository, DatasetVersionRepository
 from semantic.domain import SchemaColumn
 
 # Mapping from Python runtime types to semantic primitive types
-_PY_TYPE_MAP: dict = {
+_PY_TYPE_MAP: dict[type, str] = {
     int: "integer",
     float: "number",
     bool: "boolean",
@@ -28,7 +28,7 @@ def _infer_type_from_sample(values: list) -> str:
     non_null = [v for v in values if v is not None]
     if not non_null:
         return "string"
-    types_found = set()
+    types_found: set[str] = set()
     for v in non_null:
         inferred = _PY_TYPE_MAP.get(type(v), "string")
         types_found.add(inferred)

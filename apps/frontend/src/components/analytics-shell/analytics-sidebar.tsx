@@ -71,13 +71,36 @@ const ITEMS = [
   },
 ];
 
-type Props = {
-  onNavigate?: () => void;
+const ADMIN_ITEM = {
+  href: ROUTES.admin.dataHealth,
+  label: "Data Health",
+  icon: (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+      <path
+        fillRule="evenodd"
+        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+        clipRule="evenodd"
+      />
+    </svg>
+  ),
 };
 
-export const AnalyticsSidebar = ({ onNavigate }: Props) => {
+type Props = {
+  onNavigate?: () => void;
+  isAdmin?: boolean;
+};
+
+export const AnalyticsSidebar = ({ onNavigate, isAdmin = false }: Props) => {
   const pathname = usePathname();
-  const { sidebarExpanded, toggleSidebar } = useAnalyticsLayout();
+  const { sidebarExpanded, toggleSidebar, setIsNavigating } =
+    useAnalyticsLayout();
+
+  const isActive = (href: string) =>
+    href === ROUTES.dashboard
+      ? pathname === ROUTES.dashboard
+      : pathname.startsWith(href);
+
+  const allItems = isAdmin ? [...ITEMS, ADMIN_ITEM] : ITEMS;
 
   return (
     <aside
@@ -108,25 +131,29 @@ export const AnalyticsSidebar = ({ onNavigate }: Props) => {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-2">
-        {ITEMS.map((item) => (
+        {allItems.map((item) => (
           <AnalyticsSidebarItem
             key={item.href}
             href={item.href}
             icon={item.icon}
             label={item.label}
-            active={
-              item.href === ROUTES.dashboard
-                ? pathname === ROUTES.dashboard
-                : pathname.startsWith(item.href)
-            }
+            active={isActive(item.href)}
             collapsed={!sidebarExpanded}
-            onClick={onNavigate}
+            onClick={() => {
+              onNavigate?.();
+              if (!isActive(item.href)) {
+                setIsNavigating(true);
+              }
+            }}
           />
         ))}
       </nav>
 
       <AnalyticsSidebarTenantSwitcher collapsed={!sidebarExpanded} />
-      <AnalyticsSidebarUtilities collapsed={!sidebarExpanded} onNavigate={onNavigate} />
+      <AnalyticsSidebarUtilities
+        collapsed={!sidebarExpanded}
+        onNavigate={onNavigate}
+      />
     </aside>
   );
-}
+};

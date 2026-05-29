@@ -3,9 +3,11 @@
 import { useEffect } from "react";
 import { AnalyticsSidebar } from "./analytics-sidebar";
 import { useAnalyticsLayout } from "./analytics-layout-context";
+import { useSession } from "@/hooks/use-session";
 
 export const AnalyticsDrawer = () => {
   const { mobileDrawerOpen, closeDrawer } = useAnalyticsLayout();
+  const { user } = useSession();
 
   useEffect(() => {
     if (mobileDrawerOpen) {
@@ -28,7 +30,7 @@ export const AnalyticsDrawer = () => {
         aria-hidden
       />
       <div className="fixed inset-y-0 left-0 z-50 flex">
-        <AnalyticsSidebar onNavigate={closeDrawer} />
+        <AnalyticsSidebar onNavigate={closeDrawer} isAdmin={user?.is_admin ?? false} />
       </div>
     </div>
   );

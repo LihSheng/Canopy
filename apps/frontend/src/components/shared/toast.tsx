@@ -73,7 +73,7 @@ const ToastViewport = ({
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex w-full max-w-sm flex-col gap-3 px-4 sm:px-0">
+    <div className="fixed right-4 top-4 z-50 flex w-full max-w-sm flex-col gap-3 px-4 sm:px-0">
       {toasts.map((toast) => (
         <div
           key={toast.id}

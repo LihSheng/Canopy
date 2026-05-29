@@ -274,6 +274,8 @@ class SemanticMappingService:
                 )
                 continue
 
+            assert target_type is not None, "target_type should be present when target_pk is resolved"
+
             source_prop = prop_by_name.get(link.source_property_key)
             if source_prop is None:
                 # Already caught by validate_links -> validate_link_excluded_properties

@@ -57,6 +57,13 @@ class ConnectionService:
         config = {"allowed_extensions": allowed_extensions or [".csv", ".xlsx", ".json", ".parquet"]}
         return self.create_connection(project_id, "static_file", name, config)
 
+    def update_connection_name(self, id: str, name: str) -> Connection:
+        self._require_connection(id)
+        updated = self._repo.update_name(id, name.strip())
+        if updated is None:
+            raise NotFoundError("Connection not found")
+        return updated
+
     def pause_connection(self, id: str, actor_user_id: str) -> Connection:
         return self._transition(
             id=id,

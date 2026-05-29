@@ -44,7 +44,7 @@ import {
 } from "@/components/shared";
 import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
 import { EntityTab } from "@/components/entity-mapping/entity-tab";
-import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, DATASET_STATUS_COLORS } from "@/lib/constants";
+import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, DATASET_STATUS_COLORS, errorMessageFailedToLoad } from "@/lib/constants";
 
 const TABS = [
   "Overview",

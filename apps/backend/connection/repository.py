@@ -53,6 +53,15 @@ class ConnectionRepository:
         self._db.refresh(model)
         return self._to_domain(model)
 
+    def update_name(self, id: str, name: str) -> Connection | None:
+        model = self._db.query(ConnectionModel).filter(ConnectionModel.id == id).first()
+        if model is None:
+            return None
+        model.name = name
+        self._db.commit()
+        self._db.refresh(model)
+        return self._to_domain(model)
+
     def update_config(self, id: str, config_json: dict) -> Connection | None:
         model = self._db.query(ConnectionModel).filter(ConnectionModel.id == id).first()
         if model is None:

@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { useSession } from "@/hooks/use-session";
 import { ROUTES, UI_LABELS } from "@/lib/constants";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { useAnalyticsLayout } from "@/components/analytics-shell/analytics-layout-context";
 
 type Props = {
   collapsed: boolean;
@@ -13,15 +16,37 @@ type Props = {
 export const AnalyticsSidebarUtilities = ({ collapsed, onNavigate }: Props) => {
   const { user, logout } = useSession();
   const pathname = usePathname();
+  const { setIsNavigating } = useAnalyticsLayout();
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const profileActive = pathname === ROUTES.profile;
 
+  const handleSignOutClick = () => {
+    setShowSignOutDialog(true);
+  };
+
+  const handleSignOutConfirm = async () => {
+    await logout();
+    setShowSignOutDialog(false);
+  };
+
+  const handleSignOutClose = () => {
+    setShowSignOutDialog(false);
+  };
+
   return (
-    <div className={`border-t border-zinc-200 ${collapsed ? "px-2 py-3" : "px-3 py-3"}`}>
+    <div
+      className={`border-t border-zinc-200 ${collapsed ? "px-2 py-3" : "px-3 py-3"}`}
+    >
       <div className="flex flex-col gap-1">
         <Link
           href={ROUTES.profile}
-          onClick={onNavigate}
+          onClick={() => {
+            onNavigate?.();
+            if (!profileActive) {
+              setIsNavigating(true);
+            }
+          }}
           className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
             profileActive
               ? "bg-zinc-100 text-zinc-900"
@@ -38,7 +63,7 @@ export const AnalyticsSidebarUtilities = ({ collapsed, onNavigate }: Props) => {
         </Link>
 
         <button
-          onClick={logout}
+          onClick={handleSignOutClick}
           className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 ${
             collapsed ? "justify-center px-2" : ""
           }`}
@@ -61,6 +86,16 @@ export const AnalyticsSidebarUtilities = ({ collapsed, onNavigate }: Props) => {
           {!collapsed && <span>{user?.display_name ?? UI_LABELS.signOut}</span>}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={showSignOutDialog}
+        title="Sign out"
+        description="Are you sure you want to sign out?"
+        confirmLabel="Sign out"
+        confirmTone="danger"
+        onConfirm={handleSignOutConfirm}
+        onClose={handleSignOutClose}
+      />
     </div>
   );
-}
+};

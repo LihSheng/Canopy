@@ -175,9 +175,7 @@ class SemanticMappingRepository:
             updated_at=d.updated_at,
         )
 
-    def _to_domain(self, m: SemanticMappingModel) -> SemanticMapping | None:
-        if m is None:
-            return None
+    def _to_domain(self, m: SemanticMappingModel) -> SemanticMapping:
         return SemanticMapping(
             id=m.id,
             tenant_id=m.tenant_id,

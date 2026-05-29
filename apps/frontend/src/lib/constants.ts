@@ -23,6 +23,10 @@ export const ROUTES = {
     setupWithSource: (source: string) => `/dashboard/connections/setup?source=${encodeURIComponent(source)}`,
   },
   departmentDetail: (id: string) => `/dashboard/departments/${encodeURIComponent(id)}`,
+  admin: {
+    home: "/dashboard/admin",
+    dataHealth: "/dashboard/admin/data-health",
+  },
 } as const;
 
 // ─── Run / Refresh / Dataset Status ───

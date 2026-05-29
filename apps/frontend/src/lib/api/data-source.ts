@@ -79,6 +79,16 @@ export const createConnection = (data: {
   });
 }
 
+export const updateConnection = (
+  id: string,
+  data: { name: string },
+): Promise<Connection> => {
+  return request<Connection>(`/api/connections/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 export const deleteConnection = (id: string): Promise<{ deleted: boolean; id: string }> => {
   return request<{ deleted: boolean; id: string }>(`/api/connections/${id}`, {
     method: "DELETE",

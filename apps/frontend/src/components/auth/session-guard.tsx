@@ -1,13 +1,22 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { switchTenant } from "@/lib/api/auth";
 import { useSession } from "@/hooks/use-session";
 import { getSession } from "@/lib/api/auth";
 import type { TenantContextResponse, TenantInfo } from "@/lib/api/types";
 import { ROUTES } from "@/lib/constants";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 
 interface SessionGuardProps {
   children: ReactNode;
@@ -27,7 +36,7 @@ export const useTenant = (): TenantContextValue => {
     throw new Error("useTenant must be used within SessionGuard");
   }
   return ctx;
-}
+};
 
 export const SessionGuard = ({ children }: SessionGuardProps) => {
   const { user, loading } = useSession();
@@ -61,7 +70,13 @@ export const SessionGuard = ({ children }: SessionGuardProps) => {
 
   // Auto-enter first tenant when authenticated but no tenant is active
   useEffect(() => {
-    if (user && tenants.length > 0 && !tenant && !sessionLoading && !autoEnterAttempted.current) {
+    if (
+      user &&
+      tenants.length > 0 &&
+      !tenant &&
+      !sessionLoading &&
+      !autoEnterAttempted.current
+    ) {
       autoEnterAttempted.current = true;
       (async () => {
         try {
@@ -82,8 +97,8 @@ export const SessionGuard = ({ children }: SessionGuardProps) => {
 
   if (loading || sessionLoading) {
     return (
-      <div className="flex min-h-full items-center justify-center">
-        <p className="text-sm text-zinc-500">Loading session...</p>
+      <div className="flex min-h-full items-center justify-center p-6">
+        <LoadingSpinner text="Loading session..." />
       </div>
     );
   }
@@ -93,10 +108,8 @@ export const SessionGuard = ({ children }: SessionGuardProps) => {
   }
 
   return (
-    <TenantCtx.Provider
-      value={{ tenant, tenants, refetch: fetchTenantInfo }}
-    >
+    <TenantCtx.Provider value={{ tenant, tenants, refetch: fetchTenantInfo }}>
       {children}
     </TenantCtx.Provider>
   );
-}
+};

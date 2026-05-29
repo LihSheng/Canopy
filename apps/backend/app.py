@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from api.routes.admin_health import router as admin_health_router
 from api.routes.anomalies import router as anomalies_router
 from api.routes.auth import router as auth_router
 from api.routes.claims import router as claims_router
@@ -104,6 +105,7 @@ def create_app() -> FastAPI:
     app.include_router(exports_router)
     app.include_router(insights_router)
     app.include_router(admin_router)
+    app.include_router(admin_health_router, prefix="/api/admin")
     app.include_router(project_router, prefix="/api")
     app.include_router(source_type_router, prefix="/api")
     app.include_router(connection_router, prefix="/api")

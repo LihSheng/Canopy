@@ -73,7 +73,12 @@ class AuthService:
         first_tenant_id = tenants[0]["tenant_id"] if tenants else None
         token, expires_at = _create_token(user.id, tenant_id=first_tenant_id)
         return LoginOutput(
-            user=LoginOutputUser(id=user.id, email=user.email, display_name=user.display_name),
+            user=LoginOutputUser(
+                id=user.id,
+                email=user.email,
+                display_name=user.display_name,
+                is_admin=user.is_admin,
+            ),
             token=token,
             expires_at=expires_at,
             tenants=[TenantInfo(**t) for t in tenants],
@@ -149,7 +154,12 @@ class AuthService:
 
         return SessionOutput(
             authenticated=True,
-            user=LoginOutputUser(id=user.id, email=user.email, display_name=user.display_name),
+            user=LoginOutputUser(
+                id=user.id,
+                email=user.email,
+                display_name=user.display_name,
+                is_admin=user.is_admin,
+            ),
             tenant_id=tenant_id,
             tenant_role=tenant_role,
             tenants=[TenantInfo(**t) for t in tenants],
