@@ -103,14 +103,29 @@ def engine(control_plane_engine):
     return control_plane_engine
 
 
-@pytest.fixture(autouse=True)
-def _setup_db(control_plane_engine, tenant_data_engine):
+def _truncate_all_tables(db_engine, metadata) -> None:
+    table_names = [table.name for table in metadata.sorted_tables]
+    if not table_names:
+        return
+
+    quoted = ", ".join(f'"{name}"' for name in table_names)
+    with db_engine.begin() as conn:
+        conn.execute(text(f"TRUNCATE TABLE {quoted} RESTART IDENTITY CASCADE"))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _init_test_db(control_plane_engine, tenant_data_engine):
     set_engine(control_plane_engine, tenant_data_engine)
     init_db()
     yield
-    Base.metadata.drop_all(bind=control_plane_engine)
-    TenantDataBase.metadata.drop_all(bind=tenant_data_engine)
     reset_engine()
+
+
+@pytest.fixture(autouse=True)
+def _clean_db_after_test(control_plane_engine, tenant_data_engine):
+    yield
+    _truncate_all_tables(control_plane_engine, Base.metadata)
+    _truncate_all_tables(tenant_data_engine, TenantDataBase.metadata)
 
 
 @pytest.fixture

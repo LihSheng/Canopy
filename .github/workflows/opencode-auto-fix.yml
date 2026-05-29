@@ -14,6 +14,9 @@ name: OpenCode Auto Fix CI
 #
 # Explicit opt-in keeps the agent a helpful assistant
 # rather than an autonomous committer.
+#
+# SCOPE: lint/format/typecheck only. Test failures are
+# excluded — they require human judgement.
 
 on:
   issue_comment:
@@ -109,10 +112,12 @@ jobs:
           echo ""
           echo "  What will happen:"
           echo "    1. OpenCode agent inspects the failed CI run logs"
-          echo "    2. Identifies failing test/lint/typecheck/format step"
+          echo "    2. Identifies failing lint/format/typecheck step"
           echo "    3. Makes the smallest safe fix"
-          echo "    4. Re-runs the relevant test command"
+          echo "    4. Re-runs the relevant lint command"
           echo "    5. Commits the fix to the PR branch"
+          echo ""
+          echo "  ❌ Test failures are excluded — only lint issues are fixed."
           echo ""
           echo "  Check CI run:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo "  ─────────────────────────────────────────────────────────"
@@ -147,42 +152,37 @@ jobs:
             - Frontend: apps/frontend
             - Backend: apps/backend
 
-            Existing CI checks include:
+            SCOPE RESTRICTION: lint/format/typecheck ONLY.
+            Test failures are excluded. If no lint check failed,
+            report "no lint failure found" and exit without making changes.
+
+            Relevant CI checks (lint-only):
             - npm run lint
             - npm run typecheck
-            - npm run test:unit
-            - npm run test:integration
-            - npx vitest run selected regression tests
             - ruff check .
             - ruff format --check
             - mypy .
-            - pytest -m unit
-            - pytest -m integration
-            - pytest -m "api_schema" -x --tb=long
-            - pytest -m "business_rule" -x --tb=long
-            - pytest tests/integration/test_smoke.py -v --tb=long
 
             Task:
             1. Inspect the failed GitHub Actions run and logs.
-            2. Identify the actual failing check.
-            3. Determine the root cause before editing.
-            4. Make the smallest safe code change.
-            5. Prefer fixing application code instead of weakening tests.
+            2. Identify the failing lint/format/typecheck check.
+            3. If no lint check failed, report "no lint failure found" and stop.
+            4. Determine the root cause before editing.
+            5. Make the smallest safe code change.
             6. Do not modify secrets, .env files, deployment files, CI credentials, or unrelated config.
-            7. Re-run the most relevant test command after editing.
+            7. Re-run the relevant lint command after editing.
             8. If the first fix fails, try at most one more focused fix.
             9. Stop if the problem is flaky infrastructure or unclear.
             10. Summarize:
                - failing job/check
                - root cause
                - files changed
-               - test command run
+               - lint command re-run
                - final result
 
             ## Security rules (never violate these)
             - Do not push directly to main, master, or release/* branches.
             - Do not modify .env files, secrets, deployment credentials, or production configuration.
-            - Do not weaken tests unless the test is clearly incorrect.
             - Keep changes minimal and focused. No broad refactors.
             - Do not update lockfiles unless a dependency change is truly required for the fix.
 
