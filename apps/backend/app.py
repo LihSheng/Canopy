@@ -17,6 +17,7 @@ from api.routes.insights import router as insights_router
 from api.routes.project import router as project_router
 from api.routes.refresh import router as refresh_router
 from api.routes.run import router as run_router
+from api.routes.semantic import router as semantic_router
 from api.routes.source_type import router as source_type_router
 from cache.cache_store import CacheStore
 from cache.config_cache import ConfigCache
@@ -108,6 +109,7 @@ def create_app() -> FastAPI:
     app.include_router(connection_router, prefix="/api")
     app.include_router(dataset_router, prefix="/api")
     app.include_router(run_router, prefix="/api")
+    app.include_router(semantic_router, prefix="/api")
 
     return app
 

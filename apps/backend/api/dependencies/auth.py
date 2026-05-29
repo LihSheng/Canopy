@@ -60,6 +60,7 @@ async def get_tenant_context() -> TenantContext | None:
 
 
 async def require_tenant_context(
+    user: SessionUser = Depends(get_current_user),
     ctx: TenantContext | None = Depends(get_tenant_context),
 ) -> TenantContext:
     if ctx is None:

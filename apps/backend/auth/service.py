@@ -128,8 +128,16 @@ class AuthService:
         if user is None or not user.is_active:
             return SessionOutput(authenticated=False)
 
+        tenants = self.get_user_tenants(user_id)
+
         tenant_id = decoded.get("tenant_id")
         tenant_role = None
+
+        # If the token has no tenant_id (common after seeding memberships),
+        # default to the user's first tenant so tenant-scoped modules can work.
+        if not tenant_id and tenants:
+            tenant_id = tenants[0]["tenant_id"]
+
         if tenant_id:
             try:
                 validator = MembershipValidator()
@@ -137,8 +145,7 @@ class AuthService:
                 tenant_role = ctx.tenant_role
             except AuthError:
                 tenant_id = None
-
-        tenants = self.get_user_tenants(user_id)
+                tenant_role = None
 
         return SessionOutput(
             authenticated=True,

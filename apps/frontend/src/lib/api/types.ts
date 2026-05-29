@@ -304,3 +304,51 @@ export interface SyncPolicyUpdate {
   cursor_column?: string | null;
   frequency_minutes?: number | null;
 }
+
+// ─── Semantic Mapping (Entity Tab) ───
+
+export interface ObjectType {
+  id: string;
+  tenant_id: string;
+  object_type_key: string;
+  display_name: string;
+  description: string;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface SchemaColumn {
+  column_name: string;
+  primitive_type: string;
+}
+
+export interface PropertyMapping {
+  source_column: string;
+  property_name: string;
+  semantic_type: string;
+  included: boolean;
+  is_primary_key: boolean;
+}
+
+export interface SemanticMapping {
+  id: string;
+  dataset_id: string;
+  dataset_version_id: string;
+  version_number: number;
+  object_type_id: string;
+  object_type_key: string;
+  properties: PropertyMapping[];
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface ValidationErrorItem {
+  field: string;
+  value: string | null;
+  message: string;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: ValidationErrorItem[];
+}

@@ -43,7 +43,8 @@ import {
   useToast,
 } from "@/components/shared";
 import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
-import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, errorMessageFailedToLoad, DATASET_STATUS_COLORS } from "@/lib/constants";
+import { EntityTab } from "@/components/entity-mapping/entity-tab";
+import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, DATASET_STATUS_COLORS } from "@/lib/constants";
 
 const TABS = [
   "Overview",
@@ -54,6 +55,7 @@ const TABS = [
   "Runs",
   "Versions",
   "Details",
+  "Entity",
 ] as const;
 
 type Tab = (typeof TABS)[number];
@@ -571,6 +573,10 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
             deletingVersionId={deletingVersionId}
             onRefreshLatest={handleRefreshLatest}
           />
+        )}
+
+        {activeTab === "Entity" && (
+          <EntityTab dataset={dataset} versions={versions} />
         )}
 
         {activeTab === "Details" && (

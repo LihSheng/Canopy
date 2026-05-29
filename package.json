@@ -3,10 +3,22 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "sandcastle": "tsx scripts/sandcastle-opencode.ts"
+    "sandcastle": "tsx scripts/sandcastle-opencode.ts",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "apps/frontend/src/**/*.{ts,tsx,js,jsx}": [
+      "apps/frontend/node_modules/.bin/eslint --fix --config apps/frontend/eslint.config.mjs"
+    ],
+    "apps/backend/**/*.py": [
+      "apps/backend/.venv/Scripts/ruff check --fix",
+      "apps/backend/.venv/Scripts/ruff format"
+    ]
   },
   "devDependencies": {
     "@ai-hero/sandcastle": "^0.5.11",
+    "husky": "^9",
+    "lint-staged": "^15",
     "tsx": "^4.19.0"
   }
 }

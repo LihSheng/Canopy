@@ -17,5 +17,6 @@ import project.schema  # noqa: F401
 import refresh.schema  # noqa: F401
 import run.schema  # noqa: F401
 import schema_drift.schema  # noqa: F401
+import semantic.schema  # noqa: F401
 import source_type.schema  # noqa: F401
 import sync.schema  # noqa: F401
