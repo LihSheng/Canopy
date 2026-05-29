@@ -38,6 +38,11 @@ jobs:
     name: OpenCode Auto Fix Failed CI
     runs-on: ubuntu-latest
 
+    # ── Safety timeout ──────────────────────────────────────
+    # Prevents the job from running indefinitely if the agent
+    # gets stuck.  Adjust if your typical fix cycle needs more time.
+    timeout-minutes: 30
+
     # ── Trigger guard ───────────────────────────────────────
     # Only proceed when:
     #   a) workflow_dispatch (manual trigger), OR
@@ -86,6 +91,36 @@ jobs:
           echo "Open a PR from a feature branch, then comment /fix-ci on that PR."
           exit 1
 
+      - name: ── Print context ──
+        shell: bash
+        run: |
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "  OpenCode Auto Fix — CI Repair Agent"
+          echo "═══════════════════════════════════════════════════════════════"
+          echo ""
+          echo "  PR:         ${{ github.event.pull_request.html_url || 'manual trigger' }}"
+          echo "  PR #:       ${{ github.event.pull_request.number || 'N/A' }}"
+          echo "  Branch:     ${{ github.head_ref || github.ref_name }}"
+          echo "  Base:       ${{ github.base_ref || 'N/A' }}"
+          echo "  Actor:      ${{ github.actor }}"
+          echo "  Trigger:    ${{ github.event_name }}"
+          echo ""
+          echo "  ⏱  timeout: 30 minutes"
+          echo ""
+          echo "  What will happen:"
+          echo "    1. OpenCode agent inspects the failed CI run logs"
+          echo "    2. Identifies failing test/lint/typecheck/format step"
+          echo "    3. Makes the smallest safe fix"
+          echo "    4. Re-runs the relevant test command"
+          echo "    5. Commits the fix to the PR branch"
+          echo ""
+          echo "  Check CI run:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "  ─────────────────────────────────────────────────────────"
+          echo "  This step runs the OpenCode action. Output will appear"
+          echo "  below as the agent works. If nothing changes for 5+ min"
+          echo "  the agent may be thinking — check the logs above."
+          echo "═══════════════════════════════════════════════════════════════"
+
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
@@ -99,6 +134,9 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
+          # These enable verbose/debug output from the action
+          ACTIONS_STEP_DEBUG: true
+          ACTIONS_RUNNER_DEBUG: true
         with:
           model: opencode-go/deepseek-v4-flash
           use_github_token: true
@@ -147,3 +185,34 @@ jobs:
             - Do not weaken tests unless the test is clearly incorrect.
             - Keep changes minimal and focused. No broad refactors.
             - Do not update lockfiles unless a dependency change is truly required for the fix.
+
+      # ── Always-run log dump ──────────────────────────────
+      # Even on timeout or failure, dump any OpenCode log
+      # artifacts that exist on disk so you can see what the
+      # agent was doing.
+      - name: Dump agent logs
+        if: always()
+        shell: bash
+        run: |
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "  OpenCode Agent Log Dump (always runs even on failure)"
+          echo "═══════════════════════════════════════════════════════════════"
+          found=0
+          for dir in ~/.local/share/opencode ~/.opencode ~/.config/opencode /home/runner/.opencode; do
+            if [ -d "$dir" ]; then
+              found=1
+              echo ""
+              echo "─── $dir ───"
+              find "$dir" -type f -maxdepth 5 -print 2>/dev/null | head -50
+            fi
+          done
+          if [ "$found" = "0" ]; then
+            echo "(No OpenCode agent directories found — agent may not have started writing logs)"
+          fi
+          echo ""
+          echo "─── Any .log files created in last 2 hours ───"
+          find ~ -name "*.log" -maxdepth 4 -mmin -120 2>/dev/null | head -20 || true
+          echo ""
+          echo "─── Agent summary ───"
+          echo "Job result: ${{ job.status }}"
+          echo "See the 'Run OpenCode auto-fix' step above for live agent output."
