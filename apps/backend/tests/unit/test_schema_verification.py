@@ -48,6 +48,12 @@ EXPECTED_CONTROL_PLANE_TABLES = {
     "tenant_database_targets",
     "tenant_memberships",
     "tenants",
+    "daily_pipeline_rollups",
+    "pipeline_run_telemetry",
+    "schema_drift_events",
+    "schema_signatures",
+    "semantic_mappings",
+    "semantic_object_types",
 }
 
 

@@ -3,6 +3,8 @@
 import pytest
 
 from context.tenant_context import TenantContext, set_current_tenant_context
+from control_plane.schemas.memberships import TenantMembershipModel
+from control_plane.schemas.tenants import TenantModel
 from semantic.repository import ObjectTypeRepository
 from semantic.service import ObjectTypeService
 
@@ -23,6 +25,41 @@ def tenant_context():
     set_current_tenant_context(ctx)
     yield ctx
     # No cleanup needed — _setup_db resets engine each test
+
+
+@pytest.fixture
+def seed_tenant_and_membership(db_session, seed_user):
+    """Create a tenant and membership so auth tokens carry tenant context."""
+    tenant = TenantModel(
+        id="test-tenant-1",
+        tenant_uuid="tuuid-test-1",
+        name="Test Tenant",
+        slug="test-tenant",
+        lifecycle_state="active",
+        status="active",
+    )
+    db_session.add(tenant)
+    membership = TenantMembershipModel(
+        user_id=seed_user.id,
+        tenant_id="test-tenant-1",
+        role="admin",
+        status="active",
+    )
+    db_session.add(membership)
+    db_session.commit()
+    return tenant, membership
+
+
+@pytest.fixture
+def auth_headers(client, seed_user, seed_tenant_and_membership):
+    """Override conftest auth_headers with a user that has a tenant membership."""
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "admin@canopy.dev", "password": "admin123"},
+    )
+    assert response.status_code == 200, response.text
+    token = response.json()["token"]
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture
@@ -48,13 +85,33 @@ def seed_object_type(db_session, object_type_service, tenant_context):
 class TestObjectTypesAPI:
     """Tests for Object Type CRUD endpoints."""
 
-    def test_list_object_types_no_tenant_returns_401(self, client, auth_headers):
+    def test_list_object_types_no_tenant_returns_401(self, client, db_session):
         """Without tenant context, endpoints return 401."""
-        # Clear tenant context to simulate missing-tenant scenario
-        from context.tenant_context import reset_tenant_context
+        # Create a user with no tenant membership and login
+        from auth.hashing import hash_password
+        from auth.schema import UserModel
 
-        reset_tenant_context()
-        response = client.get("/api/semantic/object-types", headers=auth_headers)
+        no_tenant_user = UserModel(
+            id="no-tenant-user",
+            email="noteam@canopy.dev",
+            password_hash=hash_password("nopass"),
+            display_name="No Tenant User",
+            is_active=True,
+        )
+        db_session.add(no_tenant_user)
+        db_session.commit()
+
+        resp = client.post(
+            "/api/auth/login",
+            json={"email": "noteam@canopy.dev", "password": "nopass"},
+        )
+        assert resp.status_code == 200
+        no_tenant_token = resp.json()["token"]
+
+        response = client.get(
+            "/api/semantic/object-types",
+            headers={"Authorization": f"Bearer {no_tenant_token}"},
+        )
         assert response.status_code == 401
 
     def test_create_object_type(self, client, auth_headers, tenant_context):
@@ -124,13 +181,30 @@ class TestSchemaAPI:
         assert response.status_code == 200
         assert response.json() == []
 
-    def test_schema_no_tenant_returns_401(self, client, auth_headers):
-        from context.tenant_context import reset_tenant_context
+    def test_schema_no_tenant_returns_401(self, client, db_session):
+        from auth.hashing import hash_password
+        from auth.schema import UserModel
 
-        reset_tenant_context()
+        no_tenant_user = UserModel(
+            id="no-tenant-schema-user",
+            email="noschema@canopy.dev",
+            password_hash=hash_password("nopass"),
+            display_name="No Tenant User",
+            is_active=True,
+        )
+        db_session.add(no_tenant_user)
+        db_session.commit()
+
+        resp = client.post(
+            "/api/auth/login",
+            json={"email": "noschema@canopy.dev", "password": "nopass"},
+        )
+        assert resp.status_code == 200
+        no_tenant_token = resp.json()["token"]
+
         response = client.get(
             "/api/semantic/datasets/fake-id/versions/fake-version/schema",
-            headers=auth_headers,
+            headers={"Authorization": f"Bearer {no_tenant_token}"},
         )
         assert response.status_code == 401
 

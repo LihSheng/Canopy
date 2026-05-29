@@ -178,6 +178,7 @@ class TestIngestionPayloadGuard:
                 "project_id": project_id,
                 "connection_id": conn_id,
                 "name": "Reimport DS",
+                "source_object_name": "Payroll",
             },
             headers=auth_headers,
         )
@@ -299,14 +300,17 @@ class TestStaticFileRawLanding:
         data = preview_resp.json()
         assert data["total_row_count"] == 2
 
-        # Headers from xlsx: "  Name  ", "Amount" -> normalize_header fills blank cols,
-        # but raw values should not be trimmed.
+        # Headers from xlsx: "  Name  ", "Amount" — should preserve whitespace.
+        columns = data["columns"]
+        assert len(columns) >= 1
+        assert columns[0] == "  Name  "
+
+        # Raw values should not be trimmed.
         rows = data["rows"]
+        assert len(rows) == 2
         # The first row has "  Alice  " (with whitespace) - should be preserved as-is
         alice_row = rows[0]
-        assert "  Name  " in alice_row or any("Name" in str(k) for k in alice_row)
-        # Check we have 2 data rows
-        assert len(rows) == 2
+        assert alice_row[0] == "  Alice  "
 
     def test_raw_storage_path_points_to_original_file(self, client: TestClient, auth_headers, monkeypatch, tmp_path):
         from common.config import settings

@@ -198,6 +198,7 @@ _TYPE_NORMALIZATION: dict[str, str] = {
     "tsvector": "tsvector",
     "tsquery": "tsquery",
     # MySQL types (only those not already in PostgreSQL section)
+    "tinyint": "integer",
     "mediumint": "integer",
     "int": "integer",
     "double": "float",

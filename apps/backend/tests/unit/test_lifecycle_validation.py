@@ -87,10 +87,11 @@ class TestCanClone:
         errors = LifecycleValidator.can_clone(tenant)
         assert errors == []
 
-    def test_pending_tenant_clone_ok_by_lifecycle(self):
+    def test_pending_tenant_clone_not_ok(self):
         tenant = _make_tenant("pending")
         errors = LifecycleValidator.can_clone(tenant)
-        assert errors == []
+        assert len(errors) > 0
+        assert any("pending" in e.lower() for e in errors)
 
     def test_deleted_tenant_clone_not_ok(self):
         tenant = _make_tenant("deleted")
