@@ -17,8 +17,9 @@ export const HealthPanel = ({ health, datasetId }: Props) => {
   const [clearing, setClearing] = useState(false);
 
   const drift = health.schema_drift;
-  const isBlocked = drift?.is_blocked ?? false;
+  const driftChecked = drift !== null && drift !== undefined;
   const hasDrift = drift?.drift_detected ?? false;
+  const isBlocked = drift?.is_blocked ?? false;
   const isBreaking = drift?.last_drift_is_breaking ?? false;
 
   useEffect(() => {
@@ -80,11 +81,15 @@ export const HealthPanel = ({ health, datasetId }: Props) => {
           label="Last Published Version"
           value={health.last_published_version?.toString() ?? "None"}
         />
-        {hasDrift && (
-          <div className="col-span-2">
-            <span className="text-xs font-medium text-zinc-500">Schema Drift</span>
-            <div className="mt-1 flex items-center gap-2">
-              {isBlocked ? (
+        <div className="col-span-2">
+          <span className="text-xs font-medium text-zinc-500">Schema Drift</span>
+          <div className="mt-1 flex items-center gap-2">
+            {!driftChecked ? (
+              <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">
+                Not checked yet
+              </span>
+            ) : hasDrift ? (
+              isBlocked ? (
                 <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
                   Blocked
                 </span>
@@ -96,25 +101,29 @@ export const HealthPanel = ({ health, datasetId }: Props) => {
                 <span className="inline-block rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
                   Non-Breaking
                 </span>
-              )}
-              {drift?.last_drift_at && (
-                <span className="text-xs text-zinc-500">
-                  {new Date(drift.last_drift_at).toLocaleString()}
-                </span>
-              )}
-            </div>
-            {isBlocked && (
-              <button
-                onClick={handleClearBlock}
-                disabled={clearing}
-                className="mt-2 rounded bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-200 disabled:opacity-50"
-              >
-                {clearing ? "Clearing..." : "Clear Block"}
-              </button>
+              )
+            ) : (
+              <span className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                No drift detected
+              </span>
+            )}
+            {drift?.last_drift_at && (
+              <span className="text-xs text-zinc-500">
+                {new Date(drift.last_drift_at).toLocaleString()}
+              </span>
             )}
           </div>
-        )}
-        {hasDrift && (
+          {hasDrift && isBlocked && (
+            <button
+              onClick={handleClearBlock}
+              disabled={clearing}
+              className="mt-2 rounded bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-200 disabled:opacity-50"
+            >
+              {clearing ? "Clearing..." : "Clear Block"}
+            </button>
+          )}
+        </div>
+        {driftChecked && hasDrift && (
           <div className="col-span-2">
             <button
               onClick={() => setShowDrift(!showDrift)}

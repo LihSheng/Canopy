@@ -106,9 +106,30 @@ describe("HealthPanel", () => {
     expect(screen.getByText("Clear Block")).toBeInTheDocument();
   });
 
-  it("hides drift section when schema_drift is null", () => {
+  it("shows 'Not checked yet' when schema_drift is null", () => {
     render(<HealthPanel health={baseHealth} datasetId="ds-1" />);
-    expect(screen.queryByText("Schema Drift")).not.toBeInTheDocument();
+    expect(screen.getByText("Schema Drift")).toBeInTheDocument();
+    expect(screen.getByText("Not checked yet")).toBeInTheDocument();
     expect(screen.queryByText("View drift details")).not.toBeInTheDocument();
+  });
+
+  it("shows 'No drift detected' when drift_detected is false", () => {
+    const health: DatasetHealth = {
+      ...baseHealth,
+      schema_drift: { drift_detected: false, is_blocked: false, last_drift_at: null, last_drift_is_breaking: null },
+    };
+    render(<HealthPanel health={health} datasetId="ds-1" />);
+    expect(screen.getByText("No drift detected")).toBeInTheDocument();
+    expect(screen.queryByText("View drift details")).not.toBeInTheDocument();
+  });
+
+  it("shows breaking badge for non-blocked breaking drift", () => {
+    const health: DatasetHealth = {
+      ...baseHealth,
+      schema_drift: { drift_detected: true, is_blocked: false, last_drift_at: "2026-05-20T12:00:00Z", last_drift_is_breaking: true },
+    };
+    render(<HealthPanel health={health} datasetId="ds-1" />);
+    expect(screen.getByText("Breaking")).toBeInTheDocument();
+    expect(screen.getByText("View drift details")).toBeInTheDocument();
   });
 });
