@@ -117,6 +117,10 @@ class SemanticMappingService:
         schema_columns: list[SchemaColumn] | None = None
         if self._schema_service:
             schema_columns = await self._schema_service.get_schema(dataset_id, dataset_version_id)
+            # Treat empty schema as unknown/unavailable. Validation endpoint should stay
+            # useful even when dataset/version isn't seeded in tests or schema isn't ready yet.
+            if not schema_columns:
+                schema_columns = None
 
         # Run all validation (stateless + I/O-bound)
         errors = validate_mapping(properties, schema_columns)
@@ -189,8 +193,8 @@ class SemanticMappingService:
 
         errors = validate_mapping(properties, schema_columns)
 
-        # Also check PK sample
-        if self._schema_service:
+        # Also check PK sample (only when schema is available)
+        if self._schema_service and schema_columns is not None:
             pk_props = [p for p in properties if p.is_primary_key]
             if pk_props:
                 pk_column = pk_props[0].source_column

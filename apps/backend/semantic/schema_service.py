@@ -95,15 +95,15 @@ class DatasetSchemaService:
         self._version_repo = DatasetVersionRepository(db)
         self._connection_repo = ConnectionRepository(db)
 
-    async def get_schema(self, dataset_id: str, dataset_version_id: str) -> list[SchemaColumn]:
+    async def get_schema(self, dataset_id: str, dataset_version_id: str) -> list[SchemaColumn] | None:
         """Get schema columns with primitive types for a dataset version."""
         dataset = self._dataset_repo.get(dataset_id)
         if dataset is None:
-            return []
+            return None
 
         version = self._version_repo.get(dataset_version_id)
         if version is None:
-            return []
+            return None
 
         # Strategy 1: DB introspection for postgresql/mysql sources
         if dataset.connection_id:

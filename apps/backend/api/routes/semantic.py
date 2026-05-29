@@ -236,6 +236,8 @@ async def get_dataset_schema(
 ):
     schema_service = DatasetSchemaService(db)
     columns = await schema_service.get_schema(dataset_id, version_id)
+    if not columns:
+        return []
     return [SchemaColumnResponse(column_name=c.column_name, primitive_type=c.primitive_type) for c in columns]
 
 

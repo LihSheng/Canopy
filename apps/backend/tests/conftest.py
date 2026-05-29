@@ -62,13 +62,43 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "smoke: end-to-end smoke tests")
 
 
+_DB_FIXTURE_NAMES: frozenset[str] = frozenset(
+    {
+        # Control-plane DB
+        "engine",
+        "control_plane_engine",
+        "db_session",
+        # Tenant-data DB
+        "tenant_data_engine",
+        "td_engine",
+        "td_session",
+        # Source DB
+        "source_engine",
+        # API tests (almost always DB-backed)
+        "client",
+        "auth_headers",
+        # Helpers that create dedicated postgres DBs for a module
+        "make_postgres_session",
+    }
+)
+
+
 def pytest_collection_modifyitems(config, items):
+    needs_db = False
     for item in items:
         fspath = str(item.fspath)
         if "/tests/unit/" in fspath or "\\tests\\unit\\" in fspath:
             item.add_marker(pytest.mark.unit)
         elif "/tests/integration/" in fspath or "\\tests\\integration\\" in fspath:
             item.add_marker(pytest.mark.integration)
+
+        if not needs_db:
+            # If any collected test requests a DB-ish fixture, enable DB init/cleanup.
+            if _DB_FIXTURE_NAMES.intersection(getattr(item, "fixturenames", ())):
+                needs_db = True
+
+    # Used by autouse fixtures to avoid booting Postgres for pure-logic runs.
+    setattr(config, "_canopy_needs_db", needs_db)
 
 
 def _ensure_database_exists(database_url: str) -> None:
@@ -117,12 +147,6 @@ def engine(control_plane_engine):
 
 
 def _truncate_all_tables(db_engine, metadata) -> None:
-    # Teardown cleanup must be resilient:
-    # - Some tables may not exist (schema drift, optional modules, or schema search_path differences)
-    # - Parallel workers/fixtures can deadlock on TRUNCATE unless we serialize per DB
-    if not metadata.sorted_tables:
-        return
-
     dialect = db_engine.dialect.name
 
     def _existing_tables(conn) -> set[tuple[str, str]]:
@@ -163,20 +187,20 @@ def _truncate_all_tables(db_engine, metadata) -> None:
                     conn.execute(text("SELECT pg_advisory_xact_lock(hashtext('canopy_test_db_truncate'))"))
 
                 existing = _existing_tables(conn)
-                idents: list[str] = []
-                for table in metadata.sorted_tables:
-                    schema = table.schema or ""
-                    key = (schema, table.name)
-                    if key in existing:
-                        idents.append(_quote_ident(table.schema, table.name))
-                        continue
 
-                    # If the DB was created with a different search_path, SQLAlchemy may not have a
-                    # schema set, but the table can still exist under exactly one non-system schema.
-                    schemas_for_name = sorted({s for (s, n) in existing if n == table.name})
-                    if len(schemas_for_name) == 1:
-                        only_schema = schemas_for_name[0] or None
-                        idents.append(_quote_ident(only_schema, table.name))
+                # In Postgres, the real set of tables can diverge from SQLAlchemy metadata
+                # because tests may rely on search_path (schema-qualified tables) and optional
+                # models. For teardown, truncate everything we can see in non-system schemas.
+                if dialect == "postgresql":
+                    idents = [_quote_ident(schema or None, name) for (schema, name) in existing]
+                else:
+                    if not metadata.sorted_tables:
+                        return
+                    idents = []
+                    for table in metadata.sorted_tables:
+                        schema = table.schema or ""
+                        if (schema, table.name) in existing:
+                            idents.append(_quote_ident(table.schema, table.name))
 
                 if not idents:
                     return
@@ -196,23 +220,37 @@ def _truncate_all_tables(db_engine, metadata) -> None:
             raise
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _init_test_db(control_plane_engine, tenant_data_engine):
+@pytest.fixture(scope="session")
+def db_initialized(pytestconfig, control_plane_engine, tenant_data_engine):
+    if not getattr(pytestconfig, "_canopy_needs_db", False):
+        yield False
+        return
+
     set_engine(control_plane_engine, tenant_data_engine)
     init_db()
-    yield
+    yield True
     reset_engine()
 
 
 @pytest.fixture(autouse=True)
-def _clean_db_after_test(control_plane_engine, tenant_data_engine):
+def _clean_db_after_test(pytestconfig, db_initialized, control_plane_engine, tenant_data_engine, request):
+    # Skip all DB work for pure-logic tests (no DB fixtures requested).
+    if not getattr(pytestconfig, "_canopy_needs_db", False):
+        yield
+        return
+
+    # If this specific test doesn't request any DB-ish fixtures, skip truncation.
+    if not _DB_FIXTURE_NAMES.intersection(getattr(request, "fixturenames", ())):
+        yield
+        return
+
     yield
     _truncate_all_tables(control_plane_engine, Base.metadata)
     _truncate_all_tables(tenant_data_engine, TenantDataBase.metadata)
 
 
 @pytest.fixture
-def db_session(control_plane_engine):
+def db_session(db_initialized, control_plane_engine):
     test_session = sessionmaker(autocommit=False, autoflush=False, bind=control_plane_engine)
     session = test_session()
     try:
@@ -222,7 +260,7 @@ def db_session(control_plane_engine):
 
 
 @pytest.fixture
-def client():
+def client(db_initialized):
     from app import create_app
 
     app = create_app()
