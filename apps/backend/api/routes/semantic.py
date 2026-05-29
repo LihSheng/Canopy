@@ -7,7 +7,7 @@ from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError
 from context.tenant_context import TenantContext
-from semantic.domain import PropertyMapping, SemanticMapping
+from semantic.domain import Cardinality, EntityLink, PropertyMapping, SemanticMapping
 from semantic.repository import ObjectTypeRepository, SemanticMappingRepository
 from semantic.schema_service import DatasetSchemaService
 from semantic.service import ObjectTypeService, SemanticMappingService
@@ -60,10 +60,29 @@ class PropertyMappingResponse(BaseModel):
     is_primary_key: bool
 
 
+class EntityLinkRequest(BaseModel):
+    link_id: str = Field(..., min_length=1)
+    display_name: str = Field(..., min_length=1)
+    source_property_key: str = Field(..., min_length=1)
+    target_object_type_id: str = Field(..., min_length=1)
+    target_property_key: str = ""
+    cardinality: str = Cardinality.MANY_TO_ONE
+
+
+class EntityLinkResponse(BaseModel):
+    link_id: str
+    display_name: str
+    source_property_key: str
+    target_object_type_id: str
+    target_property_key: str
+    cardinality: str
+
+
 class CreateMappingRequest(BaseModel):
     object_type_id: str
     object_type_key: str
     properties: list[PropertyMappingRequest]
+    links: list[EntityLinkRequest] = []
 
 
 class MappingResponse(BaseModel):
@@ -75,6 +94,7 @@ class MappingResponse(BaseModel):
     object_type_id: str
     object_type_key: str
     properties: list[PropertyMappingResponse]
+    links: list[EntityLinkResponse] = []
     created_at: str
     updated_at: str | None
 
@@ -120,6 +140,17 @@ def _mapping_to_response(m: SemanticMapping) -> MappingResponse:
                 is_primary_key=p.is_primary_key,
             )
             for p in m.properties
+        ],
+        links=[
+            EntityLinkResponse(
+                link_id=ln.link_id,
+                display_name=ln.display_name,
+                source_property_key=ln.source_property_key,
+                target_object_type_id=ln.target_object_type_id,
+                target_property_key=ln.target_property_key,
+                cardinality=ln.cardinality,
+            )
+            for ln in (m.links or [])
         ],
         created_at=m.created_at.isoformat() if m.created_at else "",
         updated_at=m.updated_at.isoformat() if m.updated_at else None,
@@ -245,6 +276,17 @@ async def create_mapping(
         )
         for p in body.properties
     ]
+    links = [
+        EntityLink(
+            link_id=ln.link_id,
+            display_name=ln.display_name,
+            source_property_key=ln.source_property_key,
+            target_object_type_id=ln.target_object_type_id,
+            target_property_key=ln.target_property_key,
+            cardinality=ln.cardinality,
+        )
+        for ln in body.links
+    ]
 
     mapping = await service.create(
         dataset_id=dataset_id,
@@ -252,6 +294,7 @@ async def create_mapping(
         object_type_id=body.object_type_id,
         object_type_key=body.object_type_key,
         properties=properties,
+        links=links,
     )
     return _mapping_to_response(mapping)
 
@@ -280,6 +323,17 @@ async def update_mapping(
         )
         for p in body.properties
     ]
+    links = [
+        EntityLink(
+            link_id=ln.link_id,
+            display_name=ln.display_name,
+            source_property_key=ln.source_property_key,
+            target_object_type_id=ln.target_object_type_id,
+            target_property_key=ln.target_property_key,
+            cardinality=ln.cardinality,
+        )
+        for ln in body.links
+    ]
 
     mapping = await service.update(
         dataset_id=dataset_id,
@@ -287,6 +341,7 @@ async def update_mapping(
         object_type_id=body.object_type_id,
         object_type_key=body.object_type_key,
         properties=properties,
+        links=links,
     )
     return _mapping_to_response(mapping)
 
@@ -315,8 +370,19 @@ async def validate_mapping_endpoint(
         )
         for p in body.properties
     ]
+    links = [
+        EntityLink(
+            link_id=ln.link_id,
+            display_name=ln.display_name,
+            source_property_key=ln.source_property_key,
+            target_object_type_id=ln.target_object_type_id,
+            target_property_key=ln.target_property_key,
+            cardinality=ln.cardinality,
+        )
+        for ln in body.links
+    ]
 
-    result = await service.validate(dataset_id, version_id, properties)
+    result = await service.validate(dataset_id, version_id, properties, links=links)
     return ValidationResponse(
         valid=result["valid"],
         errors=[ValidationErrorItem(**e) for e in result["errors"]],

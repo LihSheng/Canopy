@@ -194,3 +194,340 @@ class TestValidateMapping:
         ]
         errors = validate_mapping(props, schema_columns=None)
         assert errors == []
+
+
+# ─── Entity Link Validation Tests ───
+
+
+class TestValidateLinkIds:
+    def test_unique_link_ids_pass(self):
+        from semantic.domain import EntityLink
+        from semantic.validation import validate_link_ids
+
+        links = [
+            EntityLink(
+                link_id="reports_to",
+                display_name="Reports To",
+                source_property_key="mgr_id",
+                target_object_type_id="obj_1",
+                target_property_key="id",
+            ),
+            EntityLink(
+                link_id="department",
+                display_name="Department",
+                source_property_key="dept_id",
+                target_object_type_id="obj_2",
+                target_property_key="id",
+            ),
+        ]
+        errors = validate_link_ids(links)
+        assert errors == []
+
+    def test_duplicate_link_ids_blocked(self):
+        from semantic.domain import EntityLink
+        from semantic.validation import validate_link_ids
+
+        links = [
+            EntityLink(
+                link_id="reports_to",
+                display_name="Reports To",
+                source_property_key="mgr_id",
+                target_object_type_id="obj_1",
+                target_property_key="id",
+            ),
+            EntityLink(
+                link_id="Reports_To",
+                display_name="Duplicate",
+                source_property_key="other",
+                target_object_type_id="obj_2",
+                target_property_key="id",
+            ),
+        ]
+        errors = validate_link_ids(links)
+        assert len(errors) == 1
+        assert "duplicate" in errors[0]["message"].lower()
+
+    def test_empty_link_id_blocked(self):
+        from semantic.domain import EntityLink
+        from semantic.validation import validate_link_ids
+
+        links = [
+            EntityLink(
+                link_id="  ",
+                display_name="Empty",
+                source_property_key="col",
+                target_object_type_id="obj",
+                target_property_key="id",
+            ),
+        ]
+        errors = validate_link_ids(links)
+        assert len(errors) == 1
+        assert "empty" in errors[0]["message"].lower()
+
+    def test_whitespace_casefold_dedup(self):
+        from semantic.domain import EntityLink
+        from semantic.validation import validate_link_ids
+
+        links = [
+            EntityLink(
+                link_id="  Link_A  ",
+                display_name="A",
+                source_property_key="a",
+                target_object_type_id="o1",
+                target_property_key="id",
+            ),
+            EntityLink(
+                link_id="link_a",
+                display_name="B",
+                source_property_key="b",
+                target_object_type_id="o2",
+                target_property_key="id",
+            ),
+        ]
+        errors = validate_link_ids(links)
+        assert len(errors) == 1
+        assert "duplicate" in errors[0]["message"].lower()
+
+
+class TestValidateLinkRequiredFields:
+    def test_display_name_required(self):
+        from semantic.domain import EntityLink
+        from semantic.validation import validate_link_required_fields
+
+        links = [
+            EntityLink(
+                link_id="ok",
+                display_name="  ",
+                source_property_key="col",
+                target_object_type_id="obj",
+                target_property_key="id",
+            ),
+        ]
+        errors = validate_link_required_fields(links)
+        assert len(errors) == 1
+        assert "display name" in errors[0]["message"].lower()
+
+    def test_valid_display_name_passes(self):
+        from semantic.domain import EntityLink
+        from semantic.validation import validate_link_required_fields
+
+        links = [
+            EntityLink(
+                link_id="ok",
+                display_name="Valid Name",
+                source_property_key="col",
+                target_object_type_id="obj",
+                target_property_key="id",
+            ),
+        ]
+        errors = validate_link_required_fields(links)
+        assert errors == []
+
+
+class TestValidateLinkDuplicateEdges:
+    def test_duplicate_edge_blocked(self):
+        from semantic.domain import EntityLink
+        from semantic.validation import validate_link_duplicate_edges
+
+        links = [
+            EntityLink(
+                link_id="a",
+                display_name="A",
+                source_property_key="dept_id",
+                target_object_type_id="obj_department",
+                target_property_key="id",
+            ),
+            EntityLink(
+                link_id="b",
+                display_name="B",
+                source_property_key="dept_id",
+                target_object_type_id="obj_department",
+                target_property_key="id",
+            ),
+        ]
+        errors = validate_link_duplicate_edges(links)
+        assert len(errors) == 1
+        assert "duplicate edge" in errors[0]["message"].lower()
+
+    def test_different_edges_pass(self):
+        from semantic.domain import EntityLink
+        from semantic.validation import validate_link_duplicate_edges
+
+        links = [
+            EntityLink(
+                link_id="a",
+                display_name="A",
+                source_property_key="dept_id",
+                target_object_type_id="obj_department",
+                target_property_key="id",
+            ),
+            EntityLink(
+                link_id="b",
+                display_name="B",
+                source_property_key="mgr_id",
+                target_object_type_id="obj_employee",
+                target_property_key="id",
+            ),
+        ]
+        errors = validate_link_duplicate_edges(links)
+        assert errors == []
+
+
+class TestValidateLinkExcludedProperties:
+    def test_excluded_source_blocked(self):
+        from semantic.domain import EntityLink, PropertyMapping
+        from semantic.validation import validate_link_excluded_properties
+
+        links = [
+            EntityLink(
+                link_id="a",
+                display_name="A",
+                source_property_key="internal_code",
+                target_object_type_id="obj",
+                target_property_key="id",
+            ),
+        ]
+        properties = [
+            PropertyMapping(source_column="code", property_name="internal_code", included=False),
+        ]
+        errors = validate_link_excluded_properties(links, properties)
+        assert len(errors) == 1
+        assert "excluded" in errors[0]["message"].lower()
+
+    def test_missing_source_property_reported(self):
+        from semantic.domain import EntityLink, PropertyMapping
+        from semantic.validation import validate_link_excluded_properties
+
+        links = [
+            EntityLink(
+                link_id="a",
+                display_name="A",
+                source_property_key="nonexistent",
+                target_object_type_id="obj",
+                target_property_key="id",
+            ),
+        ]
+        properties = [
+            PropertyMapping(source_column="id", property_name="ID", included=True),
+        ]
+        errors = validate_link_excluded_properties(links, properties)
+        assert len(errors) == 1
+        assert "not found" in errors[0]["message"].lower()
+
+    def test_included_source_passes(self):
+        from semantic.domain import EntityLink, PropertyMapping
+        from semantic.validation import validate_link_excluded_properties
+
+        links = [
+            EntityLink(
+                link_id="a",
+                display_name="A",
+                source_property_key="dept_id",
+                target_object_type_id="obj",
+                target_property_key="id",
+            ),
+        ]
+        properties = [
+            PropertyMapping(source_column="dept_id", property_name="dept_id", included=True),
+        ]
+        errors = validate_link_excluded_properties(links, properties)
+        assert errors == []
+
+
+class TestValidateLinkCardinality:
+    def test_valid_cardinality_passes(self):
+        from semantic.domain import EntityLink
+        from semantic.validation import validate_link_cardinality
+
+        links = [
+            EntityLink(
+                link_id="a",
+                display_name="A",
+                source_property_key="col",
+                target_object_type_id="obj",
+                target_property_key="id",
+                cardinality="many_to_one",
+            ),
+            EntityLink(
+                link_id="b",
+                display_name="B",
+                source_property_key="col2",
+                target_object_type_id="obj2",
+                target_property_key="id",
+                cardinality="many_to_many",
+            ),
+        ]
+        errors = validate_link_cardinality(links)
+        assert errors == []
+
+    def test_invalid_cardinality_blocked(self):
+        from semantic.domain import EntityLink
+        from semantic.validation import validate_link_cardinality
+
+        links = [
+            EntityLink(
+                link_id="a",
+                display_name="A",
+                source_property_key="col",
+                target_object_type_id="obj",
+                target_property_key="id",
+                cardinality="one_to_one",
+            ),
+        ]
+        errors = validate_link_cardinality(links)
+        assert len(errors) == 1
+        assert "invalid cardinality" in errors[0]["message"].lower()
+
+
+class TestValidateLinks:
+    def test_valid_links_pass(self):
+        from semantic.domain import EntityLink, PropertyMapping
+        from semantic.validation import validate_links
+
+        links = [
+            EntityLink(
+                link_id="dept_link",
+                display_name="Department",
+                source_property_key="dept_id",
+                target_object_type_id="obj_dept",
+                target_property_key="id",
+            ),
+        ]
+        properties = [
+            PropertyMapping(source_column="dept_id", property_name="dept_id", included=True),
+        ]
+        errors = validate_links(links, properties)
+        assert errors == []
+
+    def test_multiple_link_errors_reported(self):
+        from semantic.domain import EntityLink, PropertyMapping
+        from semantic.validation import validate_links
+
+        links = [
+            EntityLink(
+                link_id="dup",
+                display_name="A",
+                source_property_key="excluded_col",
+                target_object_type_id="obj",
+                target_property_key="id",
+            ),
+            EntityLink(
+                link_id="dup",
+                display_name="B",
+                source_property_key="excluded_col",
+                target_object_type_id="obj",
+                target_property_key="id",
+            ),
+        ]
+        properties = [
+            PropertyMapping(source_column="excluded", property_name="excluded_col", included=False),
+        ]
+        errors = validate_links(links, properties)
+        # Should report: duplicate link_id, duplicate edge, excluded source property for each
+        assert len(errors) >= 3
+
+    def test_no_links_returns_empty(self):
+        from semantic.validation import validate_links
+
+        errors = validate_links([], [])
+        assert errors == []

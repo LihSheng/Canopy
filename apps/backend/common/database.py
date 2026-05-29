@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from sqlalchemy import Column, DefaultClause, Engine, create_engine, inspect, literal, text
+from sqlalchemy import JSON, Column, DefaultClause, Engine, create_engine, inspect, literal, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.schema import CreateColumn
 
@@ -185,6 +185,11 @@ def _sync_missing_columns(engine: Engine, metadata) -> None:
                             )
                         )
                         add_column.server_default = DefaultClause(text(default_sql))
+                    elif engine.dialect.name == "postgresql" and isinstance(column.type, JSON):
+                        # SQLAlchemy JSON columns often use callable defaults (e.g. default=list),
+                        # which are not representable as scalar defaults in DDL compilation here.
+                        # For schema sync, prefer a safe empty JSON value to satisfy NOT NULL.
+                        add_column.server_default = DefaultClause(text("'[]'::json"))
 
                 column_sql = str(CreateColumn(add_column).compile(dialect=engine.dialect))
                 conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN {column_sql}'))

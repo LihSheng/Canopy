@@ -10,6 +10,7 @@ import {
   validateMapping,
 } from "@/lib/api/semantic";
 import type {
+  EntityLink,
   ObjectType,
   SchemaColumn,
   PropertyMapping,
@@ -17,7 +18,7 @@ import type {
 } from "@/lib/api/types";
 import { LoadingSpinner, ErrorState, useToast } from "@/components/shared";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 type Props = {
   datasetId: string;
@@ -64,6 +65,9 @@ export const EntityMappingWizard = ({
   const [properties, setProperties] = useState<PropertyMapping[]>([]);
   const [primaryKeyColumn, setPrimaryKeyColumn] = useState<string>("");
 
+  // ─── Entity links (Step 4) ───
+  const [links, setLinks] = useState<EntityLink[]>([]);
+
   // ─── Initial load ───
   useEffect(() => {
     const load = async () => {
@@ -80,6 +84,7 @@ export const EntityMappingWizard = ({
         // Initialize property mappings from existing or from schema
         if (existingMapping) {
           setProperties(existingMapping.properties);
+          setLinks(existingMapping.links ?? []);
           const pkProp = existingMapping.properties.find(
             (p) => p.is_primary_key
           );
@@ -140,8 +145,36 @@ export const EntityMappingWizard = ({
       }
     });
 
+    // Link client-side validation (Step 4)
+    const linkIdSeen = new Map<string, number>();
+    links.forEach((ln, idx) => {
+      if (!ln.link_id || !ln.link_id.trim()) {
+        errs[`link_${idx}_id`] = "Link ID must not be empty";
+      } else {
+        const norm = normalizeName(ln.link_id);
+        const existing = linkIdSeen.get(norm);
+        if (existing !== undefined) {
+          errs[`link_${idx}_id`] = `Duplicate link_id: "${ln.link_id}" matches "${links[existing].link_id}"`;
+        } else {
+          linkIdSeen.set(norm, idx);
+        }
+      }
+      if (!ln.display_name || !ln.display_name.trim()) {
+        errs[`link_${idx}_name`] = "Display name must not be empty";
+      }
+      if (!ln.source_property_key) {
+        errs[`link_${idx}_source`] = "Select a source property";
+      }
+      if (!ln.target_object_type_id) {
+        errs[`link_${idx}_target`] = "Select a target object type";
+      }
+      if (!ln.cardinality) {
+        errs[`link_${idx}_card`] = "Select cardinality";
+      }
+    });
+
     return errs;
-  }, [primaryKeyColumn, properties]);
+  }, [primaryKeyColumn, properties, links]);
 
   // ─── Step navigation ───
   const canGoNext = (): boolean => {
@@ -156,7 +189,7 @@ export const EntityMappingWizard = ({
   };
 
   const handleNext = () => {
-    if (step < 3) {
+    if (step < 4) {
       setStep((step + 1) as Step);
     }
   };
@@ -165,6 +198,37 @@ export const EntityMappingWizard = ({
     if (step > 1) {
       setStep((step - 1) as Step);
     }
+  };
+
+  // ─── Link CRUD handlers ───
+  const handleAddLink = () => {
+    setLinks((prev) => [
+      ...prev,
+      {
+        link_id: "",
+        display_name: "",
+        source_property_key: "",
+        target_object_type_id: "",
+        target_property_key: "",
+        cardinality: "many_to_one",
+      },
+    ]);
+  };
+
+  const handleLinkChange = (
+    index: number,
+    field: keyof EntityLink,
+    value: string
+  ) => {
+    setLinks((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleRemoveLink = (index: number) => {
+    setLinks((prev) => prev.filter((_, i) => i !== index));
   };
 
   // ─── Create Object Type ───
@@ -250,6 +314,7 @@ export const EntityMappingWizard = ({
         object_type_id: selectedObjectTypeId,
         object_type_key: selectedObjectTypeKey,
         properties,
+        links: links.length > 0 ? links : undefined,
       });
 
       if (!validation.valid) {
@@ -271,6 +336,7 @@ export const EntityMappingWizard = ({
           object_type_id: selectedObjectTypeId,
           object_type_key: selectedObjectTypeKey,
           properties,
+          links: links.length > 0 ? links : undefined,
         });
         toast.success("Mapping updated", "Entity mapping saved.");
       } else {
@@ -278,6 +344,7 @@ export const EntityMappingWizard = ({
           object_type_id: selectedObjectTypeId,
           object_type_key: selectedObjectTypeKey,
           properties,
+          links: links.length > 0 ? links : undefined,
         });
         toast.success("Mapping created", "Entity mapping published.");
       }
@@ -296,13 +363,13 @@ export const EntityMappingWizard = ({
   if (loading) return <LoadingSpinner text="Loading entity mapping data..." />;
   if (error) return <ErrorState message={error} />;
 
-  const stepLabels = ["Object Type", "Primary Key", "Properties"];
+  const stepLabels = ["Object Type", "Primary Key", "Properties", "Relationships/Links"];
 
   return (
     <div className="space-y-6">
       {/* Step indicator */}
       <div className="flex items-center gap-2">
-        {([1, 2, 3] as const).map((s) => (
+        {([1, 2, 3, 4] as const).map((s) => (
           <div key={s} className="flex items-center gap-2">
             <div
               className={`flex size-7 items-center justify-center rounded-full text-xs font-semibold ${
@@ -328,7 +395,7 @@ export const EntityMappingWizard = ({
             >
               {stepLabels[s - 1]}
             </span>
-            {s < 3 && (
+            {s < 4 && (
               <div
                 className={`mx-1 h-px w-6 ${
                   step > s ? "bg-emerald-300" : "bg-zinc-200"
@@ -660,6 +727,241 @@ export const EntityMappingWizard = ({
         </div>
       )}
 
+      {/* ─── Step 4: Relationship Links ─── */}
+      {step === 4 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-zinc-900">
+            Entity Relationship Links
+          </h3>
+          <p className="text-xs text-zinc-500">
+            Define relationships between this entity and other tenant entities.
+            Links are metadata-only in v1 (no runtime join execution).
+          </p>
+
+          {links.length === 0 && (
+            <div className="rounded-md border border-dashed border-zinc-300 p-6 text-center">
+              <p className="text-sm text-zinc-400">No links configured yet.</p>
+            </div>
+          )}
+
+          {links.map((link, idx) => {
+            const idErr = validationErrors[`link_${idx}_id`];
+            const nameErr = validationErrors[`link_${idx}_name`];
+            const sourceErr = validationErrors[`link_${idx}_source`];
+            const targetErr = validationErrors[`link_${idx}_target`];
+            const cardErr = validationErrors[`link_${idx}_card`];
+
+            return (
+              <div
+                key={idx}
+                className="rounded-md border border-zinc-200 bg-zinc-50/50 p-4"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-700">
+                    Link #{idx + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveLink(idx)}
+                    className="rounded-md border border-rose-200 bg-white px-2 py-1 text-[10px] font-medium text-rose-600 hover:bg-rose-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {/* link_id */}
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1">
+                      Link ID
+                    </label>
+                    <input
+                      type="text"
+                      value={link.link_id}
+                      onChange={(e) =>
+                        handleLinkChange(idx, "link_id", e.target.value)
+                      }
+                      placeholder="e.g. reports_to"
+                      className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 ${
+                        idErr
+                          ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500"
+                          : "border-zinc-200 focus:border-zinc-500 focus:ring-zinc-500"
+                      }`}
+                    />
+                    {idErr && (
+                      <p className="mt-0.5 text-[10px] text-rose-600">
+                        {idErr}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* display_name */}
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1">
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={link.display_name}
+                      onChange={(e) =>
+                        handleLinkChange(idx, "display_name", e.target.value)
+                      }
+                      placeholder="e.g. Reports To"
+                      className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 ${
+                        nameErr
+                          ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500"
+                          : "border-zinc-200 focus:border-zinc-500 focus:ring-zinc-500"
+                      }`}
+                    />
+                    {nameErr && (
+                      <p className="mt-0.5 text-[10px] text-rose-600">
+                        {nameErr}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* source_property_key */}
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1">
+                      Source Property
+                    </label>
+                    <select
+                      value={link.source_property_key}
+                      onChange={(e) =>
+                        handleLinkChange(
+                          idx,
+                          "source_property_key",
+                          e.target.value
+                        )
+                      }
+                      className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 ${
+                        sourceErr
+                          ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500"
+                          : "border-zinc-200 focus:border-zinc-500 focus:ring-zinc-500"
+                      }`}
+                    >
+                      <option value="">-- Select property --</option>
+                      {properties
+                        .filter((p) => p.included)
+                        .map((p) => (
+                          <option
+                            key={p.property_name}
+                            value={p.property_name}
+                          >
+                            {p.property_name} ({p.semantic_type})
+                          </option>
+                        ))}
+                    </select>
+                    {sourceErr && (
+                      <p className="mt-0.5 text-[10px] text-rose-600">
+                        {sourceErr}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* target_object_type_id */}
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1">
+                      Target Object Type
+                    </label>
+                    <select
+                      value={link.target_object_type_id}
+                      onChange={(e) =>
+                        handleLinkChange(
+                          idx,
+                          "target_object_type_id",
+                          e.target.value
+                        )
+                      }
+                      className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 ${
+                        targetErr
+                          ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500"
+                          : "border-zinc-200 focus:border-zinc-500 focus:ring-zinc-500"
+                      }`}
+                    >
+                      <option value="">-- Select object type --</option>
+                      {objectTypes.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.display_name} ({t.object_type_key})
+                        </option>
+                      ))}
+                    </select>
+                    {targetErr && (
+                      <p className="mt-0.5 text-[10px] text-rose-600">
+                        {targetErr}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* target_property_key (read-only) */}
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1">
+                      Target Key (resolved)
+                    </label>
+                    <input
+                      type="text"
+                      value={
+                        link.target_property_key ||
+                        "(resolved on save)"
+                      }
+                      readOnly
+                      className="w-full rounded border border-zinc-200 bg-zinc-100 px-2 py-1.5 text-sm text-zinc-500"
+                    />
+                  </div>
+
+                  {/* cardinality */}
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-600 mb-1">
+                      Cardinality
+                    </label>
+                    <select
+                      value={link.cardinality}
+                      onChange={(e) => {
+                        handleLinkChange(idx, "cardinality", e.target.value);
+                      }}
+                      className={`w-full rounded border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 ${
+                        cardErr
+                          ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500"
+                          : "border-zinc-200 focus:border-zinc-500 focus:ring-zinc-500"
+                      }`}
+                    >
+                      <option value="many_to_one">many_to_one</option>
+                      <option value="many_to_many">many_to_many</option>
+                    </select>
+                    {cardErr && (
+                      <p className="mt-0.5 text-[10px] text-rose-600">
+                        {cardErr}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* many_to_many warning */}
+                {link.cardinality === "many_to_many" && (
+                  <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2">
+                    <p className="text-[10px] text-amber-800">
+                      <strong>Note:</strong> many-to-many is metadata-only in
+                      v1. No junction dataset selection, bridge modeling, or
+                      executable join guarantees. This will be enhanced in
+                      future releases.
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Add link button */}
+          <button
+            type="button"
+            onClick={handleAddLink}
+            className="rounded-md border border-dashed border-zinc-300 bg-white px-4 py-2 text-xs font-medium text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700"
+          >
+            + Add Link
+          </button>
+        </div>
+      )}
+
       {/* ─── Navigation buttons ─── */}
       <div className="flex items-center justify-between border-t border-zinc-200 pt-4">
         <div className="flex gap-2">
@@ -682,7 +984,7 @@ export const EntityMappingWizard = ({
         </div>
 
         <div>
-          {step < 3 ? (
+          {step < 4 ? (
             <button
               type="button"
               onClick={handleNext}

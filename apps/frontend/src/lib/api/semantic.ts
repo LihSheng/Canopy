@@ -1,5 +1,6 @@
 import { request } from "./client";
 import type {
+  EntityLink,
   ObjectType,
   SchemaColumn,
   PropertyMapping,
@@ -67,6 +68,7 @@ export const createMapping = (
     object_type_id: string;
     object_type_key: string;
     properties: PropertyMapping[];
+    links?: EntityLink[];
   }
 ): Promise<SemanticMapping> => {
   return request<SemanticMapping>(
@@ -85,6 +87,7 @@ export const updateMapping = (
     object_type_id: string;
     object_type_key: string;
     properties: PropertyMapping[];
+    links?: EntityLink[];
   }
 ): Promise<SemanticMapping> => {
   return request<SemanticMapping>(
@@ -103,6 +106,7 @@ export const validateMapping = (
     object_type_id: string;
     object_type_key: string;
     properties: PropertyMapping[];
+    links?: EntityLink[];
   }
 ): Promise<ValidationResult> => {
   return request<ValidationResult>(

@@ -12,6 +12,11 @@ class SemanticType(StrEnum):
     DATE = "date"
 
 
+class Cardinality(StrEnum):
+    MANY_TO_ONE = "many_to_one"
+    MANY_TO_MANY = "many_to_many"
+
+
 @dataclass
 class ObjectType:
     id: str
@@ -33,6 +38,16 @@ class PropertyMapping:
 
 
 @dataclass
+class EntityLink:
+    link_id: str
+    display_name: str
+    source_property_key: str
+    target_object_type_id: str
+    target_property_key: str
+    cardinality: str = "many_to_one"
+
+
+@dataclass
 class SemanticMapping:
     id: str
     tenant_id: str
@@ -42,6 +57,7 @@ class SemanticMapping:
     object_type_id: str
     object_type_key: str
     properties: list[PropertyMapping]
+    links: list[EntityLink] = field(default_factory=list)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = None
 

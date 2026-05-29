@@ -1,7 +1,7 @@
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from semantic.domain import ObjectType, PropertyMapping, SemanticMapping
+from semantic.domain import EntityLink, ObjectType, PropertyMapping, SemanticMapping
 from semantic.schema import ObjectTypeModel, SemanticMappingModel
 
 
@@ -111,6 +111,19 @@ class SemanticMappingRepository:
         )
         return result[0] if result else 0
 
+    def get_latest_by_object_type_id(self, tenant_id: str, object_type_id: str) -> SemanticMapping | None:
+        """Get the latest mapping (highest version) for a given object_type_id within a tenant."""
+        model = (
+            self._db.query(SemanticMappingModel)
+            .filter(
+                SemanticMappingModel.tenant_id == tenant_id,
+                SemanticMappingModel.object_type_id == object_type_id,
+            )
+            .order_by(desc(SemanticMappingModel.version_number))
+            .first()
+        )
+        return self._to_domain(model) if model else None
+
     def list_by_dataset(self, dataset_id: str) -> list[SemanticMapping]:
         models = (
             self._db.query(SemanticMappingModel)
@@ -147,6 +160,17 @@ class SemanticMappingRepository:
                 }
                 for p in d.properties
             ],
+            links=[
+                {
+                    "link_id": ln.link_id,
+                    "display_name": ln.display_name,
+                    "source_property_key": ln.source_property_key,
+                    "target_object_type_id": ln.target_object_type_id,
+                    "target_property_key": ln.target_property_key,
+                    "cardinality": ln.cardinality,
+                }
+                for ln in (d.links or [])
+            ],
             created_at=d.created_at,
             updated_at=d.updated_at,
         )
@@ -171,6 +195,17 @@ class SemanticMappingRepository:
                     is_primary_key=p.get("is_primary_key", False),
                 )
                 for p in (m.properties or [])
+            ],
+            links=[
+                EntityLink(
+                    link_id=ln["link_id"],
+                    display_name=ln["display_name"],
+                    source_property_key=ln["source_property_key"],
+                    target_object_type_id=ln["target_object_type_id"],
+                    target_property_key=ln["target_property_key"],
+                    cardinality=ln.get("cardinality", "many_to_one"),
+                )
+                for ln in (m.links or [])
             ],
             created_at=m.created_at,
             updated_at=m.updated_at,

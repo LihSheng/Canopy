@@ -36,6 +36,7 @@ class SemanticMappingModel(Base):
     object_type_id: Mapped[str] = mapped_column(String(36), ForeignKey("semantic_object_types.id"), nullable=False)
     object_type_key: Mapped[str] = mapped_column(String(255), nullable=False)
     properties: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
+    links: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )

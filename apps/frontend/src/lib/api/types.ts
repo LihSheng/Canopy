@@ -330,6 +330,15 @@ export interface PropertyMapping {
   is_primary_key: boolean;
 }
 
+export interface EntityLink {
+  link_id: string;
+  display_name: string;
+  source_property_key: string;
+  target_object_type_id: string;
+  target_property_key: string;
+  cardinality: string;
+}
+
 export interface SemanticMapping {
   id: string;
   dataset_id: string;
@@ -338,6 +347,7 @@ export interface SemanticMapping {
   object_type_id: string;
   object_type_key: string;
   properties: PropertyMapping[];
+  links: EntityLink[];
   created_at: string;
   updated_at: string | null;
 }

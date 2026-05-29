@@ -3,7 +3,7 @@
 These functions have no I/O side effects and are fully testable.
 """
 
-from semantic.domain import PropertyMapping, SchemaColumn
+from semantic.domain import EntityLink, PropertyMapping, SchemaColumn
 
 
 def validate_pk_sample(column_values: list) -> list[dict]:
@@ -174,4 +174,145 @@ def validate_mapping(
     errors.extend(validate_semantic_types(properties))
     if schema_columns is not None:
         errors.extend(validate_columns_exist(properties, schema_columns))
+    return errors
+
+
+# ─── Entity Link Validation ───
+
+
+def _normalize(s: str) -> str:
+    """Trim and case-fold for duplicate comparison."""
+    return s.strip().lower()
+
+
+def validate_link_ids(links: list[EntityLink]) -> list[dict]:
+    """Validate link_id: required, non-empty, no duplicates (trim+casefold)."""
+    errors: list[dict] = []
+    seen: dict[str, int] = {}  # normalized -> first index
+
+    for i, link in enumerate(links):
+        norm = _normalize(link.link_id)
+        if not norm:
+            errors.append(
+                {
+                    "field": f"links[{i}].link_id",
+                    "value": link.link_id,
+                    "message": "Link ID must not be empty",
+                }
+            )
+            continue
+        if norm in seen:
+            errors.append(
+                {
+                    "field": f"links[{i}].link_id",
+                    "value": link.link_id,
+                    "message": f"Duplicate link_id: '{link.link_id}' matches '{links[seen[norm]].link_id}'",
+                }
+            )
+        else:
+            seen[norm] = i
+
+    return errors
+
+
+def validate_link_required_fields(links: list[EntityLink]) -> list[dict]:
+    """Validate display_name is non-empty."""
+    errors: list[dict] = []
+    for i, link in enumerate(links):
+        if not link.display_name or not link.display_name.strip():
+            errors.append(
+                {
+                    "field": f"links[{i}].display_name",
+                    "value": link.display_name,
+                    "message": "Display name must not be empty",
+                }
+            )
+    return errors
+
+
+def validate_link_duplicate_edges(links: list[EntityLink]) -> list[dict]:
+    """Validate no duplicate (source_property_key, target_object_type_id) pairs."""
+    errors: list[dict] = []
+    seen: dict[tuple[str, str], int] = {}
+
+    for i, link in enumerate(links):
+        key = (_normalize(link.source_property_key), _normalize(link.target_object_type_id))
+        if key in seen:
+            errors.append(
+                {
+                    "field": f"links[{i}].source_property_key",
+                    "value": link.source_property_key,
+                    "message": (
+                        f"Duplicate edge: source property '{link.source_property_key}' "
+                        f"already links to target object type '{link.target_object_type_id}'"
+                    ),
+                }
+            )
+        else:
+            seen[key] = i
+
+    return errors
+
+
+def validate_link_excluded_properties(
+    links: list[EntityLink],
+    properties: list[PropertyMapping],
+) -> list[dict]:
+    """Validate source_property_key is not an excluded property."""
+    errors: list[dict] = []
+    prop_map: dict[str, PropertyMapping] = {}
+    for p in properties:
+        prop_map[p.property_name] = p
+
+    for i, link in enumerate(links):
+        prop = prop_map.get(link.source_property_key)
+        if prop is not None and not prop.included:
+            errors.append(
+                {
+                    "field": f"links[{i}].source_property_key",
+                    "value": link.source_property_key,
+                    "message": f"Cannot link from excluded property '{link.source_property_key}'",
+                }
+            )
+        elif prop is None:
+            errors.append(
+                {
+                    "field": f"links[{i}].source_property_key",
+                    "value": link.source_property_key,
+                    "message": f"Source property '{link.source_property_key}' not found in mapping properties",
+                }
+            )
+
+    return errors
+
+
+def validate_link_cardinality(links: list[EntityLink]) -> list[dict]:
+    """Validate cardinality is an allowed value."""
+    allowed = {"many_to_one", "many_to_many"}
+    errors: list[dict] = []
+
+    for i, link in enumerate(links):
+        if link.cardinality not in allowed:
+            errors.append(
+                {
+                    "field": f"links[{i}].cardinality",
+                    "value": link.cardinality,
+                    "message": f"Invalid cardinality '{link.cardinality}'. Allowed: {', '.join(sorted(allowed))}",
+                }
+            )
+
+    return errors
+
+
+def validate_links(
+    links: list[EntityLink],
+    properties: list[PropertyMapping],
+) -> list[dict]:
+    """Run all stateless link validation rules and return combined errors."""
+    errors: list[dict] = []
+    errors.extend(validate_link_ids(links))
+    errors.extend(validate_link_required_fields(links))
+    errors.extend(validate_link_duplicate_edges(links))
+    errors.extend(validate_link_excluded_properties(links, properties))
+    errors.extend(validate_link_cardinality(links))
     return errors

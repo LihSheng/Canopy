@@ -202,6 +202,67 @@ export const EntityTab = ({ dataset, versions }: Props) => {
               </tbody>
             </table>
           </div>
+
+          {/* Links table */}
+          {mapping.links && mapping.links.length > 0 && (
+            <div className="mt-6">
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Entity Relationship Links ({mapping.links.length})
+              </h4>
+              <div className="overflow-x-auto rounded-md border border-zinc-200">
+                <table className="min-w-full divide-y divide-zinc-200 text-sm">
+                  <thead>
+                    <tr className="bg-zinc-50">
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Link ID
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Display Name
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Source Property
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Target Object Type
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Target Key
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Cardinality
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
+                    {mapping.links.map((link, idx) => (
+                      <tr key={idx} className="hover:bg-zinc-50">
+                        <td className="px-3 py-2 font-medium text-zinc-900">
+                          {link.link_id}
+                        </td>
+                        <td className="px-3 py-2 text-zinc-700">
+                          {link.display_name}
+                        </td>
+                        <td className="px-3 py-2 text-zinc-500">
+                          {link.source_property_key}
+                        </td>
+                        <td className="px-3 py-2 text-zinc-500">
+                          {link.target_object_type_id}
+                        </td>
+                        <td className="px-3 py-2 text-zinc-500">
+                          {link.target_property_key}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                            {link.cardinality}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

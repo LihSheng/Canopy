@@ -1,8 +1,19 @@
 import { defineConfig, globalIgnores } from "eslint/config";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const eslintConfig = defineConfig([
+  {
+    settings: {
+      next: {
+        rootDir: __dirname,
+      },
+    },
+  },
   ...nextVitals,
   ...nextTs,
   {
