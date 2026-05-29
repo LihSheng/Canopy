@@ -98,8 +98,10 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
-          model: opencode/deepseek-v4-flash
+          model: opencode-go/deepseek-v4-flash
+          use_github_token: true
           prompt: |
             You are fixing a failed GitHub Actions CI run.
 
