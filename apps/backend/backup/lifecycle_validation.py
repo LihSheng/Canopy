@@ -25,6 +25,8 @@ class LifecycleValidator:
         errors: list[str] = []
         if tenant.lifecycle_state == "deleted":
             errors.append("Cannot clone a deleted tenant")
+        if tenant.lifecycle_state == "pending":
+            errors.append("Cannot clone a pending tenant")
         return errors
 
     @staticmethod

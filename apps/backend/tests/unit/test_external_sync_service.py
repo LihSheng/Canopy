@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from dataset.domain import Dataset, DatasetStatus, DatasetVersionStatus, SyncMode
+from dataset.domain import Dataset, DatasetStatus, SyncMode
 from dataset.repository import DatasetRepository
 from sync.external_sync_service import ExternalDbSyncService
 from tests.unit.postgres_test_db import make_postgres_session

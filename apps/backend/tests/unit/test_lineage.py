@@ -1,6 +1,5 @@
 import pytest
 
-from common.database import Base
 from connection.domain import Connection
 from connection.repository import ConnectionRepository
 from dataset.domain import Dataset, DatasetVersion

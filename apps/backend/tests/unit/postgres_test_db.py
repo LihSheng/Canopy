@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import importlib
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine

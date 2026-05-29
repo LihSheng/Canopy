@@ -304,7 +304,7 @@ class TestStaticFileRawLanding:
         rows = data["rows"]
         # The first row has "  Alice  " (with whitespace) - should be preserved as-is
         alice_row = rows[0]
-        assert "  Name  " in alice_row or any("Name" in k for k in alice_row.keys())
+        assert "  Name  " in alice_row or any("Name" in str(k) for k in alice_row)
         # Check we have 2 data rows
         assert len(rows) == 2
 

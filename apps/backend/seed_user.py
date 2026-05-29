@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 from auth.hashing import hash_password
 from auth.schema import UserModel
-from common.database import control_plane_session_factory, init_db
+from common.database import init_db, session_factory
 
 EMAIL = "admin@canopy.dev"
 PASSWORD = "admin123"
@@ -19,7 +19,7 @@ DISPLAY_NAME = "Admin User"
 
 def main():
     init_db()
-    session = control_plane_session_factory()()
+    session = session_factory()()
     try:
         existing = session.execute(select(UserModel).where(UserModel.email == EMAIL)).scalar_one_or_none()
         if existing:

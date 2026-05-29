@@ -48,4 +48,3 @@ class LineageMetadataService:
             edges.append({"from": external_source_node_id, "to": raw_node_id, "type": "feeds"})
 
         return {"nodes": nodes, "edges": edges}
-

@@ -1,6 +1,7 @@
 from pathlib import Path
+from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -13,11 +14,16 @@ from connection.preview import delete_uploaded_file
 from connection.repository import ConnectionRepository
 from connection.service import ConnectionService
 from control_plane.audit_service import AuditService
-from ingestion.landing_guard import reject_transform_keys
 from dataset.repository import DatasetRepository
+from ingestion.landing_guard import reject_transform_keys
 from lineage.metadata_service import LineageMetadataService
 
 router = APIRouter(prefix="/connections", tags=["connections"])
+
+
+async def _raw_json(request: Request) -> dict[str, Any]:
+    result: dict[str, Any] = await request.json()
+    return result
 
 
 class CreateConnectionRequest(BaseModel):
@@ -62,12 +68,13 @@ def list_connections(
 
 
 @router.post("/", status_code=201)
-def create_connection(
+async def create_connection(
     body: CreateConnectionRequest,
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
+    raw_body: dict = Depends(_raw_json),
 ):
-    reject_transform_keys(body.model_dump(), label="connection")
+    reject_transform_keys(raw_body, label="connection")
     service = ConnectionService(ConnectionRepository(db))
     return service.create_connection(
         project_id=body.project_id,

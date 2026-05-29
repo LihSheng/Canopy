@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Query
+from typing import Any
+
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -11,6 +13,11 @@ from dataset.service import DatasetService, DatasetVersionService
 from ingestion.landing_guard import reject_transform_keys
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
+
+
+async def _raw_json(request: Request) -> dict[str, Any]:
+    result: dict[str, Any] = await request.json()
+    return result
 
 
 class CreateDatasetRequest(BaseModel):
@@ -78,9 +85,12 @@ def list_datasets(
 
 @router.post("/", status_code=201)
 async def create_dataset(
-    body: CreateDatasetRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)
+    body: CreateDatasetRequest,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+    raw_body: dict = Depends(_raw_json),
 ):
-    reject_transform_keys(body.model_dump(), label="dataset")
+    reject_transform_keys(raw_body, label="dataset")
     service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
     return await service.create_dataset_async(
         project_id=body.project_id,
@@ -152,13 +162,14 @@ def create_version(
 
 
 @router.post("/{id}/reimport", status_code=201)
-def reimport_dataset_version(
+async def reimport_dataset_version(
     id: str,
     body: ReimportRequest,
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
+    raw_body: dict = Depends(_raw_json),
 ):
-    reject_transform_keys(body.model_dump(), label="reimport")
+    reject_transform_keys(raw_body, label="reimport")
     version_repo = DatasetVersionRepository(db)
     dataset_repo = DatasetRepository(db)
     service = DatasetVersionService(version_repo, dataset_repo)

@@ -117,15 +117,6 @@ class TestDatabaseManager:
         e = engine()
         assert isinstance(e, Engine)
 
-    def test_control_plane_engine_function(self):
-        """Line 103-104."""
-        from sqlalchemy import Engine
-
-        from common.database import control_plane_engine
-
-        e = control_plane_engine()
-        assert isinstance(e, Engine)
-
     def test_tenant_data_engine_function(self):
         """Line 107-108."""
         from sqlalchemy import Engine
@@ -140,13 +131,6 @@ class TestDatabaseManager:
         from common.database import session_factory
 
         f = session_factory()
-        assert f is not None
-
-    def test_control_plane_session_factory_function(self):
-        """Line 115-116."""
-        from common.database import control_plane_session_factory
-
-        f = control_plane_session_factory()
         assert f is not None
 
     def test_tenant_data_session_factory_function(self):
@@ -171,80 +155,6 @@ class TestDatabaseManager:
         from common.database import reset_engine
 
         reset_engine()
-
-
-class TestMakeSession:
-    """Cover make_session edge cases (lines 118-132)."""
-
-    def test_make_session_from_sessionmaker(self):
-        """line 124-128: sessionmaker input returns a Session."""
-        from sqlalchemy.orm import Session, sessionmaker
-
-        from common.database import make_session
-
-        handle = make_postgres_session(())
-        try:
-            factory = sessionmaker(bind=handle.engine)
-            session = make_session(factory)
-            assert isinstance(session, Session)
-            session.close()
-        finally:
-            handle.close()
-
-    def test_make_session_direct_session_instance(self):
-        """line 130: direct Session instance."""
-        from sqlalchemy.orm import Session
-
-        from common.database import make_session
-
-        handle = make_postgres_session(())
-        try:
-            session = Session(bind=handle.engine)
-            result = make_session(session)
-            assert isinstance(result, Session)
-            result.close()
-        finally:
-            handle.close()
-
-    def test_make_session_type_error_non_session(self):
-        """line 131-132: TypeError when input is not a Session."""
-        from common.database import make_session
-
-        with pytest.raises(TypeError, match="Expected a SQLAlchemy Session"):
-            make_session("not-a-session")
-
-    def test_make_session_runtime_error_no_bind(self):
-        """line 133-134: RuntimeError when session has no engine bind."""
-        from sqlalchemy.orm import sessionmaker
-
-        from common.database import make_session
-
-        factory = sessionmaker()
-        with pytest.raises(RuntimeError, match="does not have an engine bind"):
-            make_session(factory)
-
-    def test_make_session_sessionmaker_type_error(self):
-        """line 122: sessionmaker-like that produces non-Session raises TypeError."""
-        from unittest.mock import MagicMock
-
-        from common.database import make_session
-
-        fake_factory = MagicMock()
-        fake_factory.class_ = object
-        fake_factory.kw = {}
-        fake_factory.return_value = "not-a-session"
-        with pytest.raises(TypeError, match="Expected a SQLAlchemy Session from sessionmaker"):
-            make_session(fake_factory)
-
-    def test_make_session_callable_no_bind(self):
-        """line 131: callable returning Session with no bind raises RuntimeError."""
-        from sqlalchemy.orm import Session
-
-        from common.database import make_session
-
-        session = Session()
-        with pytest.raises(RuntimeError, match="does not have an engine bind"):
-            make_session(lambda: session)
 
 
 class TestSyncMissingColumns:

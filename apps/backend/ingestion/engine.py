@@ -177,6 +177,17 @@ def save_cleaned_rows(rows: list[dict], upload_id: str) -> Path:
     return path
 
 
+_STEP_HANDLERS: dict[str, tuple] = {
+    CleaningStepType.trim.value: (_apply_trim, False),
+    CleaningStepType.rename.value: (_apply_rename, True),
+    CleaningStepType.cast.value: (_apply_cast, False),
+    CleaningStepType.parse_date.value: (_apply_parse_date, False),
+    CleaningStepType.dedupe.value: (_apply_dedupe, False),
+    CleaningStepType.normalize_nulls.value: (_apply_normalize_nulls, False),
+    CleaningStepType.filter_empty_rows.value: (_apply_filter_empty_rows, False),
+}
+
+
 def execute_cleaning_pipeline(rows: list[dict], steps: list[CleaningStep]) -> CleaningResult:
     working = copy.deepcopy(rows)
     warnings: list[str] = []
@@ -185,24 +196,16 @@ def execute_cleaning_pipeline(rows: list[dict], steps: list[CleaningStep]) -> Cl
         for step in sorted(steps, key=lambda item: item.order):
             warnings.extend(validate_step_type(step.step_type))
             warnings.extend(validate_step_parameters(step.step_type, step.parameters))
-            if step.step_type == CleaningStepType.trim.value:
-                working, step_warnings = _apply_trim(working, step.parameters)
-            elif step.step_type == CleaningStepType.rename.value:
-                working, step_warnings, step_rename_map = _apply_rename(working, step.parameters)
-                rename_map.update(step_rename_map)
-            elif step.step_type == CleaningStepType.cast.value:
-                working, step_warnings = _apply_cast(working, step.parameters)
-            elif step.step_type == CleaningStepType.parse_date.value:
-                working, step_warnings = _apply_parse_date(working, step.parameters)
-            elif step.step_type == CleaningStepType.dedupe.value:
-                working, step_warnings = _apply_dedupe(working, step.parameters)
-            elif step.step_type == CleaningStepType.normalize_nulls.value:
-                working, step_warnings = _apply_normalize_nulls(working, step.parameters)
-            elif step.step_type == CleaningStepType.filter_empty_rows.value:
-                working, step_warnings = _apply_filter_empty_rows(working, step.parameters)
+            handler = _STEP_HANDLERS.get(step.step_type)
+            if handler is not None:
+                fn, has_rename = handler
+                result = fn(working, step.parameters)
+                working = result[0]
+                warnings.extend(result[1])
+                if has_rename and len(result) > 2:
+                    rename_map.update(result[2])
             else:
-                step_warnings = [f"Unknown step type: {step.step_type}"]
-            warnings.extend(step_warnings)
+                warnings.append(f"Unknown step type: {step.step_type}")
 
         status = "completed_with_warnings" if warnings else "completed"
         return CleaningResult(
