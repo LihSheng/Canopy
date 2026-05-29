@@ -1,8 +1,10 @@
 import os
+import time
 
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from starlette.testclient import TestClient
 
@@ -34,6 +36,17 @@ _TEST_SOURCE_DATABASE_NAME = os.environ.get(
     "CANOPY_TEST_SOURCE_DATABASE_NAME",
     "source_staging_test",
 )
+
+# When running with pytest-xdist, isolate each worker into its own database to avoid
+# cross-test interference and Postgres TRUNCATE deadlocks.
+_XDIST_WORKER = os.environ.get("PYTEST_XDIST_WORKER")
+if _XDIST_WORKER:
+    if "CANOPY_TEST_CONTROL_PLANE_DATABASE_NAME" not in os.environ:
+        _TEST_CONTROL_PLANE_DATABASE_NAME = f"{_TEST_CONTROL_PLANE_DATABASE_NAME}_{_XDIST_WORKER}"
+    if "CANOPY_TEST_TENANT_DATA_DATABASE_NAME" not in os.environ:
+        _TEST_TENANT_DATA_DATABASE_NAME = f"{_TEST_TENANT_DATA_DATABASE_NAME}_{_XDIST_WORKER}"
+    if "CANOPY_TEST_SOURCE_DATABASE_NAME" not in os.environ:
+        _TEST_SOURCE_DATABASE_NAME = f"{_TEST_SOURCE_DATABASE_NAME}_{_XDIST_WORKER}"
 
 _TEST_DATABASE_URL = f"{_TEST_SERVER_URL.rstrip('/')}/{_TEST_CONTROL_PLANE_DATABASE_NAME}"
 _TEST_TENANT_DATA_URL = f"{_TEST_SERVER_URL.rstrip('/')}/{_TEST_TENANT_DATA_DATABASE_NAME}"
@@ -104,13 +117,83 @@ def engine(control_plane_engine):
 
 
 def _truncate_all_tables(db_engine, metadata) -> None:
-    table_names = [table.name for table in metadata.sorted_tables]
-    if not table_names:
+    # Teardown cleanup must be resilient:
+    # - Some tables may not exist (schema drift, optional modules, or schema search_path differences)
+    # - Parallel workers/fixtures can deadlock on TRUNCATE unless we serialize per DB
+    if not metadata.sorted_tables:
         return
 
-    quoted = ", ".join(f'"{name}"' for name in table_names)
-    with db_engine.begin() as conn:
-        conn.execute(text(f"TRUNCATE TABLE {quoted} RESTART IDENTITY CASCADE"))
+    dialect = db_engine.dialect.name
+
+    def _existing_tables(conn) -> set[tuple[str, str]]:
+        if dialect == "postgresql":
+            rows = conn.execute(
+                text(
+                    """
+                    SELECT schemaname, tablename
+                    FROM pg_tables
+                    WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+                    """
+                )
+            ).all()
+            return {(r[0], r[1]) for r in rows}
+
+        # SQLite / others: no schemas. Treat schema as empty string.
+        rows = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).all()
+        return {("", r[0]) for r in rows}
+
+    def _quote_ident(schema: str | None, name: str) -> str:
+        # TRUNCATE does not accept bind params for identifiers.
+        # Identifiers here are always from SQLAlchemy metadata / DB catalog, but still escape quotes.
+        def esc(v: str) -> str:
+            return v.replace('"', '""')
+
+        if schema:
+            return f'"{esc(schema)}"."{esc(name)}"'
+        return f'"{esc(name)}"'
+
+    max_attempts = 5
+    base_sleep_s = 0.05
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            with db_engine.begin() as conn:
+                # Serialize cleanup within one database to avoid TRUNCATE deadlocks.
+                if dialect == "postgresql":
+                    conn.execute(text("SELECT pg_advisory_xact_lock(hashtext('canopy_test_db_truncate'))"))
+
+                existing = _existing_tables(conn)
+                idents: list[str] = []
+                for table in metadata.sorted_tables:
+                    schema = table.schema or ""
+                    key = (schema, table.name)
+                    if key in existing:
+                        idents.append(_quote_ident(table.schema, table.name))
+                        continue
+
+                    # If the DB was created with a different search_path, SQLAlchemy may not have a
+                    # schema set, but the table can still exist under exactly one non-system schema.
+                    schemas_for_name = sorted({s for (s, n) in existing if n == table.name})
+                    if len(schemas_for_name) == 1:
+                        only_schema = schemas_for_name[0] or None
+                        idents.append(_quote_ident(only_schema, table.name))
+
+                if not idents:
+                    return
+
+                # Deterministic order => consistent lock acquisition.
+                idents = sorted(set(idents))
+                conn.execute(text(f"TRUNCATE TABLE {', '.join(idents)} RESTART IDENTITY CASCADE"))
+            return
+        except OperationalError as e:
+            # psycopg deadlock/lock issues during parallel teardown.
+            msg = str(getattr(e, "orig", e)).lower()
+            if ("deadlock detected" in msg) or ("could not obtain lock" in msg) or ("lock timeout" in msg):
+                if attempt == max_attempts:
+                    raise
+                time.sleep(base_sleep_s * (2 ** (attempt - 1)))
+                continue
+            raise
 
 
 @pytest.fixture(scope="session", autouse=True)

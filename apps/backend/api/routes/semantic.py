@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from api.dependencies.auth import get_current_user, require_tenant_context
@@ -179,12 +181,18 @@ def create_object_type(
     user: SessionUser = Depends(get_current_user),
 ):
     service = ObjectTypeService(ObjectTypeRepository(db))
-    obj = service.create(
-        tenant_id=ctx.tenant_id,
-        object_type_key=body.object_type_key,
-        display_name=body.display_name,
-        description=body.description,
-    )
+    try:
+        obj = service.create(
+            tenant_id=ctx.tenant_id,
+            object_type_key=body.object_type_key,
+            display_name=body.display_name,
+            description=body.description,
+        )
+    except IntegrityError:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Object type key '{body.object_type_key}' already exists for this tenant"},
+        )
     return _obj_to_response(obj)
 
 
