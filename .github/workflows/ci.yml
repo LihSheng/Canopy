@@ -22,7 +22,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - run: npm ci --legacy-peer-deps --legacy-peer-deps
+      - run: npm ci --legacy-peer-deps
       - run: npm run lint
       - run: npm run typecheck
 
@@ -72,7 +72,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e ".[dev]"
-      - run: ruff check . --fix
+      - run: ruff check .
       - run: ruff format --check
       - run: mypy .
 

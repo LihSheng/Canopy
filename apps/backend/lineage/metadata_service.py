@@ -36,7 +36,15 @@ class LineageMetadataService:
                 if (ds.status == DatasetStatus.PENDING_INITIAL_RUN.value or ds.active_version_id is None)
                 else "materialized"
             )
-            nodes.append({"id": raw_node_id, "type": "raw_dataset", "label": ds.name, "state": state, "dataset_id": ds.id})
+            nodes.append(
+                {
+                    "id": raw_node_id,
+                    "type": "raw_dataset",
+                    "label": ds.name,
+                    "state": state,
+                    "dataset_id": ds.id,
+                }
+            )
             edges.append({"from": external_source_node_id, "to": raw_node_id, "type": "feeds"})
 
         return {"nodes": nodes, "edges": edges}
