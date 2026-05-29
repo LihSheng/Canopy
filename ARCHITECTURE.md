@@ -247,6 +247,11 @@ Rules:
   dumb where possible
 - chart and table data shaping should live in dedicated mapper or hook modules,
   not inline in page files
+- status labels must use the badge pill pattern:
+  `inline-block rounded-full px-2 py-0.5 text-xs font-medium`
+  with semantic color classes from the centralized maps in `constants.ts`
+  (`STATUS_COLORS`, `DATASET_STATUS_COLORS`, `CONNECTION_STATUS_COLORS`).
+  Do not inline status color logic in individual components.
 
 ### 2. Application API
 

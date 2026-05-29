@@ -43,7 +43,7 @@ import {
   useToast,
 } from "@/components/shared";
 import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
-import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, errorMessageFailedToLoad } from "@/lib/constants";
+import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, errorMessageFailedToLoad, DATASET_STATUS_COLORS } from "@/lib/constants";
 
 const TABS = [
   "Overview",
@@ -424,8 +424,15 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
               </svg>
             </button>
           )}
-          <p className="mt-1 text-sm text-zinc-500">
-            {dataset!.source_object_name} &middot; {dataset!.status}
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500">
+            <span>{dataset!.source_object_name}</span>
+            <span
+              className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                DATASET_STATUS_COLORS[dataset!.status] || "bg-zinc-100 text-zinc-600"
+              }`}
+            >
+              {dataset!.status}
+            </span>
           </p>
           {deleteSummary && !deleteSummary.can_delete && (
             <NoticeBanner

@@ -37,6 +37,26 @@ export const STATUS_COLORS: Record<string, string> = {
   queued: "bg-zinc-100 text-zinc-600",
 };
 
+// Connection-specific status colors (matches backend ConnectionStatus enum)
+export const CONNECTION_STATUS_COLORS: Record<string, string> = {
+  active: "bg-green-100 text-green-800",
+  paused: "bg-amber-100 text-amber-800",
+  archived: "bg-zinc-100 text-zinc-600",
+  soft_deleted: "bg-zinc-100 text-zinc-500",
+  deleted: "bg-red-100 text-red-800",
+  inactive: "bg-zinc-100 text-zinc-600",
+  error: "bg-red-100 text-red-800",
+};
+
+// Dataset-specific status colors (matches backend DatasetStatus enum)
+export const DATASET_STATUS_COLORS: Record<string, string> = {
+  active: "bg-green-100 text-green-800",
+  pending_initial_run: "bg-amber-100 text-amber-800",
+  inactive: "bg-zinc-100 text-zinc-600",
+  error: "bg-red-100 text-red-800",
+  blocked_schema_drift: "bg-orange-100 text-orange-800",
+};
+
 export const REFRESH_STATUS_LABELS: Record<
   RefreshStatusKey,
   { text: string; className: string }

@@ -8,7 +8,7 @@ const ConnectionsPage = () => {
   return (
     <AnalyticsPageShell
       title="Data Studio"
-      breadcrumbItems={buildConnectionsBreadcrumbs({ label: "Data Studio" })}
+      breadcrumbItems={buildConnectionsBreadcrumbs()}
     >
       <Suspense fallback={<LoadingSpinner text="Loading..." />}>
         <ConnectionsHomeContent />

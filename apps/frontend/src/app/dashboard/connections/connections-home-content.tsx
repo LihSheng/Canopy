@@ -13,7 +13,7 @@ import type { Connection, Dataset, Run } from "@/lib/api/types";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { ROUTES, UI_LABELS, ERROR_MESSAGES } from "@/lib/constants";
+import { ROUTES, UI_LABELS, ERROR_MESSAGES, DATASET_STATUS_COLORS, STATUS_COLORS, CONNECTION_STATUS_COLORS } from "@/lib/constants";
 
 const ConnectionsHomeContent = () => {
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -162,8 +162,15 @@ const ConnectionsHomeContent = () => {
                       <div className="truncate text-sm font-medium text-zinc-900 hover:underline">
                         {connection.name}
                       </div>
-                      <div className="text-xs text-zinc-500">
-                        {connection.source_type} &middot; {connection.status}
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                        <span>{connection.source_type}</span>
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                            CONNECTION_STATUS_COLORS[connection.status] || "bg-zinc-100 text-zinc-600"
+                          }`}
+                        >
+                          {connection.status}
+                        </span>
                       </div>
                     </Link>
                     <button
@@ -202,7 +209,13 @@ const ConnectionsHomeContent = () => {
                       className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
                     >
                       <span className="font-medium">{ds.name}</span>
-                      <span className="text-xs text-zinc-400">{ds.status}</span>
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                          DATASET_STATUS_COLORS[ds.status] || "bg-zinc-100 text-zinc-600"
+                        }`}
+                      >
+                        {ds.status}
+                      </span>
                     </Link>
                   </li>
                 ))}
@@ -227,7 +240,13 @@ const ConnectionsHomeContent = () => {
                       className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
                     >
                       <span className="font-medium">Run {run.id.slice(0, 8)}</span>
-                      <span className="text-xs text-zinc-400">{run.status}</span>
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                          STATUS_COLORS[run.status] || "bg-zinc-100 text-zinc-600"
+                        }`}
+                      >
+                        {run.status}
+                      </span>
                     </Link>
                   </li>
                 ))}
