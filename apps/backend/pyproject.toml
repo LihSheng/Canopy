@@ -78,7 +78,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["analytics", "anomalies", "sync", "ontology", "insights", "exports", "refresh", "common", "auth"]
+source = ["analytics", "anomalies", "sync", "ontology", "insights", "exports", "refresh", "common", "auth", "health", "context", "control_plane", "run"]
 omit = ["*/tests/*", "*/alembic/*"]
 
 [tool.coverage.report]

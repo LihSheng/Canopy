@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import type { RunDetail, FailureRun } from "@/lib/api/admin-health";
+import { ROUTES } from "@/lib/constants";
 
 interface RunDetailDrawerProps {
   runDetail: RunDetail | null;
@@ -157,9 +159,27 @@ const StepRow = ({
               : "-"
           }
         />
-        {step.dataset_id && <Field label="Dataset ID" value={step.dataset_id} />}
+        {step.dataset_id && (
+          <div>
+            <p className="text-xs text-zinc-500">Dataset ID</p>
+            <Link
+              href={ROUTES.connections.datasetLineage(step.dataset_id)}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+            >
+              {step.dataset_id}
+            </Link>
+          </div>
+        )}
         {step.connection_id && (
-          <Field label="Connection ID" value={step.connection_id} />
+          <div>
+            <p className="text-xs text-zinc-500">Connection ID</p>
+            <Link
+              href={ROUTES.connections.connectionLineage(step.connection_id)}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+            >
+              {step.connection_id}
+            </Link>
+          </div>
         )}
       </div>
     </div>

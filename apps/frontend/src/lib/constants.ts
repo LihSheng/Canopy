@@ -18,6 +18,7 @@ export const ROUTES = {
     setup: "/dashboard/connections/setup",
     lineage: "/dashboard/connections/lineage",
     datasetDetail: (id: string) => `/dashboard/connections/datasets/${id}`,
+    datasetLineage: (id: string) => `/dashboard/connections/datasets/${id}?tab=Lineage`,
     runDetail: (id: string) => `/dashboard/connections/runs/${id}`,
     connectionLineage: (id: string) => `/dashboard/connections/lineage/${id}`,
     setupWithSource: (source: string) => `/dashboard/connections/setup?source=${encodeURIComponent(source)}`,

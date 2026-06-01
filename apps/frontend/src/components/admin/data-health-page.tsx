@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   getHealthSummary,
@@ -15,6 +16,7 @@ import {
   type PipelineDetail,
   type RunDetail,
 } from "@/lib/api/admin-health";
+import { ROUTES } from "@/lib/constants";
 import { KpiCard } from "./kpi-card";
 import { TrendChart } from "./trend-chart";
 import { PipelineTable } from "./pipeline-table";
@@ -303,7 +305,7 @@ const RecentFailuresTable = ({
   failures,
   onRunClick,
 }: {
-  failures: { id: string; run_id: string; pipeline_id: string; error_message: string; finished_at: string | null }[];
+  failures: { id: string; run_id: string; pipeline_id: string; dataset_id: string | null; connection_id: string | null; error_message: string; finished_at: string | null }[];
   onRunClick: (runId: string) => void;
 }) => {
   return (
@@ -342,12 +344,30 @@ const RecentFailuresTable = ({
                   {f.finished_at ? new Date(f.finished_at).toLocaleString() : "-"}
                 </td>
                 <td className="whitespace-nowrap px-4 py-2 text-sm">
-                  <button
-                    onClick={() => onRunClick(f.run_id)}
-                    className="font-medium text-indigo-600 hover:text-indigo-800"
-                  >
-                    View Run
-                  </button>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => onRunClick(f.run_id)}
+                      className="font-medium text-indigo-600 hover:text-indigo-800 text-left"
+                    >
+                      View Run
+                    </button>
+                    {f.dataset_id && (
+                      <Link
+                        href={ROUTES.connections.datasetLineage(f.dataset_id)}
+                        className="font-medium text-indigo-600 hover:text-indigo-800"
+                      >
+                        View Dataset Lineage
+                      </Link>
+                    )}
+                    {f.connection_id && (
+                      <Link
+                        href={ROUTES.connections.connectionLineage(f.connection_id)}
+                        className="font-medium text-indigo-600 hover:text-indigo-800"
+                      >
+                        View Connection Lineage
+                      </Link>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
