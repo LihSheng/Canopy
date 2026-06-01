@@ -16,6 +16,7 @@ import insights.schema  # noqa: F401
 import ontology.schema  # noqa: F401
 import project.schema  # noqa: F401
 import refresh.schema  # noqa: F401
+import retention.schema  # noqa: F401
 import run.schema  # noqa: F401
 import schema_drift.schema  # noqa: F401
 import semantic.schema  # noqa: F401

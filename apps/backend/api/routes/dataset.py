@@ -7,10 +7,13 @@ from sqlalchemy.orm import Session
 from api.dependencies.auth import get_current_user
 from api.schemas.auth import SessionUser
 from common.database import get_db
-from common.errors import NotFoundError
+from common.errors import AuthError, NotFoundError
+from control_plane.audit_service import AuditService
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from dataset.service import DatasetService, DatasetVersionService
 from ingestion.landing_guard import reject_transform_keys
+from retention.repository import RetentionPolicyRepository
+from retention.service import RetentionPolicyService
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
@@ -282,4 +285,53 @@ def update_sync_policy(
         real_time_strategy=body.real_time_strategy,
         cursor_column=body.cursor_column,
         frequency_minutes=body.frequency_minutes,
+    )
+
+
+class RetentionPolicyRequest(BaseModel):
+    preset: str
+    mode: str | None = None
+    horizon_days: int | None = None
+
+
+def _require_admin_for_retention(user: SessionUser) -> None:
+    if not user.is_admin:
+        raise AuthError("Admin access required")
+
+
+@router.get("/{id}/retention-policy")
+def get_retention_policy(
+    id: str,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    repo = RetentionPolicyRepository(db)
+    service = RetentionPolicyService(repo)
+    return service.get_policy(dataset_id=id)
+
+
+@router.put("/{id}/retention-policy")
+def save_retention_policy(
+    id: str,
+    body: RetentionPolicyRequest,
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    _require_admin_for_retention(user)
+    repo = RetentionPolicyRepository(db)
+    audit = AuditService(db)
+    service = RetentionPolicyService(repo, audit_service=audit)
+
+    from context.tenant_context import get_current_tenant_context
+
+    ctx = get_current_tenant_context()
+    tenant_id = ctx.tenant_id if ctx else ""
+
+    return service.save_policy(
+        dataset_id=id,
+        tenant_id=tenant_id,
+        actor_user_id=user.id,
+        preset=body.preset,
+        mode=body.mode,
+        horizon_days=body.horizon_days,
     )

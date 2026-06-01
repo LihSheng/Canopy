@@ -16,6 +16,8 @@ import type {
   StaticFilePreview,
   SyncPolicyUpdate,
   TablePreview,
+  RetentionPolicy,
+  RetentionPolicyUpdate,
 } from "./types";
 
 export interface DatasetPreviewResponse {
@@ -279,5 +281,18 @@ export const updateSyncPolicy = (id: string, policy: SyncPolicyUpdate): Promise<
   return request<Dataset>(`/api/datasets/${id}/sync-policy`, {
     method: "PATCH",
     body: JSON.stringify(policy),
+  });
+}
+
+// ─── Retention Policy ───
+
+export const fetchRetentionPolicy = (datasetId: string): Promise<RetentionPolicy> => {
+  return request<RetentionPolicy>(`/api/datasets/${datasetId}/retention-policy`);
+}
+
+export const saveRetentionPolicy = (datasetId: string, data: RetentionPolicyUpdate): Promise<RetentionPolicy> => {
+  return request<RetentionPolicy>(`/api/datasets/${datasetId}/retention-policy`, {
+    method: "PUT",
+    body: JSON.stringify(data),
   });
 }

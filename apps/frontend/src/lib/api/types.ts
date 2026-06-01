@@ -305,6 +305,41 @@ export interface SyncPolicyUpdate {
   frequency_minutes?: number | null;
 }
 
+// ─── Retention Policy ───
+
+export type RetentionPreset =
+  | "retain_indefinitely"
+  | "30_days"
+  | "90_days"
+  | "1_year"
+  | "7_years"
+  | "custom";
+
+export type RetentionMode =
+  | "retain_indefinitely"
+  | "expire_after"
+  | "review_after";
+
+export interface RetentionPolicy {
+  dataset_id: string;
+  id: string | null;
+  mode: RetentionMode;
+  horizon_days: number | null;
+  preset: RetentionPreset;
+  is_active: boolean;
+  calculated_next_action_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface RetentionPolicyUpdate {
+  preset: RetentionPreset;
+  mode?: RetentionMode | null;
+  horizon_days?: number | null;
+}
+
 // ─── Semantic Mapping (Entity Tab) ───
 
 export interface ObjectType {

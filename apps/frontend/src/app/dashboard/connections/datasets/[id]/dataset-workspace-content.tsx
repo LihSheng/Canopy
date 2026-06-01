@@ -18,6 +18,8 @@ import {
   updateSyncPolicy,
   updateDataset,
   fetchConnection,
+  fetchRetentionPolicy,
+  saveRetentionPolicy,
 } from "@/lib/api/data-source";
 import type {
   Dataset,
@@ -26,6 +28,8 @@ import type {
   Run,
   DatasetDeleteSummary,
   Connection,
+  RetentionPolicy,
+  RetentionPreset,
 } from "@/lib/api/types";
 import type { DatasetPreviewResponse } from "@/lib/api/data-source";
 import { DatasetPreviewGrid } from "@/components/dataset-preview-grid";
@@ -44,7 +48,7 @@ import {
 } from "@/components/shared";
 import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
 import { EntityTab } from "@/components/entity-mapping/entity-tab";
-import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, DATASET_STATUS_COLORS, errorMessageFailedToLoad } from "@/lib/constants";
+import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, DATASET_STATUS_COLORS, errorMessageFailedToLoad, RETENTION_PRESETS, RETENTION_MODE_LABELS } from "@/lib/constants";
 
 const TABS = [
   "Overview",
@@ -104,6 +108,15 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
       : supportsCdc
         ? "cdc"
         : "polling";
+
+  // Retention policy state
+  const [retentionPolicy, setRetentionPolicy] = useState<RetentionPolicy | null>(null);
+  const [editingRetention, setEditingRetention] = useState(false);
+  const [retentionPreset, setRetentionPreset] = useState<RetentionPreset>("retain_indefinitely");
+  const [retentionMode, setRetentionMode] = useState<string>("expire_after");
+  const [retentionHorizonDays, setRetentionHorizonDays] = useState<number>(365);
+  const [savingRetention, setSavingRetention] = useState(false);
+  const [retentionError, setRetentionError] = useState<string | null>(null);
 
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -194,6 +207,42 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
     }
   };
 
+  const handleSaveRetentionPolicy = async () => {
+    setSavingRetention(true);
+    setRetentionError(null);
+    try {
+      const updated = await saveRetentionPolicy(datasetId, {
+        preset: retentionPreset,
+        mode: retentionPreset === "custom" ? (retentionMode as RetentionPolicy["mode"]) : null,
+        horizon_days: retentionPreset === "custom" ? retentionHorizonDays : null,
+      });
+      setRetentionPolicy(updated);
+      setEditingRetention(false);
+      toast.success("Retention policy saved", "Dataset retention configuration updated.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save retention policy";
+      setRetentionError(message);
+      toast.danger("Save failed", message);
+    } finally {
+      setSavingRetention(false);
+    }
+  };
+
+  const handleStartEditRetention = () => {
+    if (retentionPolicy?.preset) {
+      setRetentionPreset(retentionPolicy.preset);
+      setRetentionMode(retentionPolicy.mode || "expire_after");
+      setRetentionHorizonDays(retentionPolicy.horizon_days ?? 365);
+    }
+    setRetentionError(null);
+    setEditingRetention(true);
+  };
+
+  const handleCancelEditRetention = () => {
+    setEditingRetention(false);
+    setRetentionError(null);
+  };
+
   const isValidDatasetName = (name: string): string | null => {
     const trimmed = name.trim();
     if (!trimmed) return "Dataset name must not be empty";
@@ -264,7 +313,7 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
     try {
       const ds = await fetchDataset(datasetId);
       setDataset(ds);
-      const [versionsData, healthData, lineageData, runsData, deleteSummaryData, connData] =
+      const [versionsData, healthData, lineageData, runsData, deleteSummaryData, connData, retentionData] =
         await Promise.all([
           fetchDatasetVersions(datasetId),
           fetchDatasetHealth(datasetId),
@@ -272,6 +321,7 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
           fetchRuns(datasetId),
           fetchDatasetDeleteSummary(datasetId),
           fetchConnection(ds.connection_id),
+          fetchRetentionPolicy(datasetId),
         ]);
       setVersions(versionsData);
       setHealth(healthData);
@@ -279,6 +329,7 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
       setRuns(runsData);
       setDeleteSummary(deleteSummaryData);
       setConnection(connData);
+      setRetentionPolicy(retentionData);
     } catch (err) {
       setError(err instanceof Error ? err.message : errorMessageFailedToLoad("dataset"));
     } finally {
@@ -707,6 +758,125 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
                           ? "True CDC (Streaming)"
                           : "Accelerated Polling"}
                       </p>
+                    )}
+                  </dl>
+                )}
+              </div>
+
+              {/* Retention Policy section */}
+              <div className="rounded-lg border border-zinc-200 bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-zinc-900">Retention Policy</h3>
+                  {!editingRetention && (
+                    <button
+                      type="button"
+                      onClick={handleStartEditRetention}
+                      className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {editingRetention ? (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-500 mb-1">Preset</label>
+                      <select
+                        value={retentionPreset}
+                        onChange={(e) => setRetentionPreset(e.target.value as RetentionPreset)}
+                        className="w-full rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                      >
+                        {RETENTION_PRESETS.map((p) => (
+                          <option key={p.value} value={p.value}>{p.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {retentionPreset === "custom" && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-500 mb-1">Mode</label>
+                          <select
+                            value={retentionMode}
+                            onChange={(e) => setRetentionMode(e.target.value)}
+                            className="w-full rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                          >
+                            <option value="retain_indefinitely">Retain indefinitely</option>
+                            <option value="expire_after">Expire after</option>
+                            <option value="review_after">Review after</option>
+                          </select>
+                        </div>
+                        {retentionMode !== "retain_indefinitely" && (
+                          <div>
+                            <label className="block text-xs font-medium text-zinc-500 mb-1">Horizon (days)</label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={retentionHorizonDays}
+                              onChange={(e) => setRetentionHorizonDays(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="w-full rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {retentionError && (
+                      <p className="text-xs text-rose-600">{retentionError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveRetentionPolicy}
+                        disabled={savingRetention}
+                        className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {savingRetention ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEditRetention}
+                        disabled={savingRetention}
+                        className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {UI_LABELS.cancel}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <dl className="mt-3 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <dt className="text-zinc-500">Preset</dt>
+                      <dd className="font-medium text-zinc-900">
+                        {retentionPolicy?.preset
+                          ? RETENTION_PRESETS.find((p) => p.value === retentionPolicy.preset)?.label ?? retentionPolicy.preset
+                          : "Retain indefinitely"}
+                      </dd>
+                    </div>
+                    {retentionPolicy?.id && (
+                      <>
+                        <div className="flex justify-between">
+                          <dt className="text-zinc-500">Mode</dt>
+                          <dd className="text-zinc-900">
+                            {retentionPolicy.mode ? RETENTION_MODE_LABELS[retentionPolicy.mode] ?? retentionPolicy.mode : "—"}
+                          </dd>
+                        </div>
+                        {retentionPolicy.horizon_days != null && (
+                          <div className="flex justify-between">
+                            <dt className="text-zinc-500">Horizon</dt>
+                            <dd className="text-zinc-900">{retentionPolicy.horizon_days} days</dd>
+                          </div>
+                        )}
+                        {retentionPolicy.calculated_next_action_at && (
+                          <div className="flex justify-between">
+                            <dt className="text-zinc-500">Next Action</dt>
+                            <dd className="text-zinc-900">
+                              {new Date(retentionPolicy.calculated_next_action_at).toLocaleDateString()}
+                            </dd>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {!retentionPolicy?.id && (
+                      <p className="text-xs text-zinc-400">No retention policy configured. Data is retained indefinitely.</p>
                     )}
                   </dl>
                 )}

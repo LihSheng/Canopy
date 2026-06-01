@@ -185,3 +185,21 @@ export const ERROR_MESSAGES = {
 
 // ─── File Upload ───
 export const FILE_ACCEPT = ".xlsx,.csv";
+
+// ─── Retention Policy ───
+export type RetentionPreset = "retain_indefinitely" | "30_days" | "90_days" | "1_year" | "7_years" | "custom";
+
+export const RETENTION_PRESETS: { value: RetentionPreset; label: string }[] = [
+  { value: "retain_indefinitely", label: "Retain indefinitely" },
+  { value: "30_days", label: "30 days" },
+  { value: "90_days", label: "90 days" },
+  { value: "1_year", label: "1 year" },
+  { value: "7_years", label: "7 years" },
+  { value: "custom", label: "Custom" },
+];
+
+export const RETENTION_MODE_LABELS: Record<string, string> = {
+  retain_indefinitely: "Retain indefinitely",
+  expire_after: "Expire after",
+  review_after: "Review after",
+};

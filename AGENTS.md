@@ -19,3 +19,11 @@ Document roles:
 If there is a conflict, `ARCHITECTURE.md` is the source of truth.
 
 - ALWAYS USE "caveman full" MODE IN ALL CONVERSATIONS. Speak terse like smart caveman. All technical substance stay. Only fluff die.
+
+## Starting/stopping services
+
+- **NEVER run `uvicorn` or `npm run dev` directly.** Always use the dev scripts.
+- Start: `powershell -File scripts\dev-start.ps1`
+- Stop: `powershell -File scripts\dev-stop.ps1`
+- These scripts kill old processes on ports 8005/3005 before starting.
+- The backend uses `--reload-exclude "tests/*"` so test file changes do not trigger server restart.

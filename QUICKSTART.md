@@ -52,11 +52,23 @@ automatically if they do not exist.
 
 ## Run
 
+**Recommended — use the dev scripts** (they kill old processes first):
+
+```bash
+# Start both backend and frontend
+powershell -File scripts\dev-start.ps1
+
+# Stop everything
+powershell -File scripts\dev-stop.ps1
+```
+
+**Manual (not recommended — can leave old processes running):**
+
 ```bash
 # Terminal 1 — Backend (port 8005)
 cd apps/backend
 .venv\Scripts\activate
-uvicorn app:app --reload --port 8005
+uvicorn app:app --reload --reload-exclude "tests/*" --port 8005
 
 # Terminal 2 — Frontend (port 3005)
 cd apps/frontend
