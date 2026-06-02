@@ -25,6 +25,12 @@ vi.mock("@/lib/api/data-source", () => ({
   previewStaticFile: vi.fn(),
   reimportDatasetVersion: vi.fn(),
   refreshDatasetVersion: vi.fn(),
+  fetchRetentionPolicy: vi.fn(),
+  saveRetentionPolicy: vi.fn(),
+}));
+
+vi.mock("@/lib/api/semantic", () => ({
+  fetchDatasetVersionSchema: vi.fn(),
 }));
 
 const mock_toast = {
@@ -41,6 +47,7 @@ vi.mock("@/components/shared/toast", () => ({
 
 import DatasetWorkspaceContent from "@/app/dashboard/connections/datasets/[id]/dataset-workspace-content";
 import * as api from "@/lib/api/data-source";
+import * as semanticApi from "@/lib/api/semantic";
 
 describe("Dataset workspace delete actions", () => {
   beforeEach(() => {
@@ -126,6 +133,11 @@ describe("Dataset workspace delete actions", () => {
       created_at: "2026-05-18T00:00:00Z",
       updated_at: "2026-05-18T00:00:00Z",
     });
+    vi.mocked(semanticApi.fetchDatasetVersionSchema).mockResolvedValue([
+      { column_name: "id", primitive_type: "integer" },
+      { column_name: "created_at", primitive_type: "datetime" },
+      { column_name: "name", primitive_type: "string" },
+    ]);
   }
 
   function mockStaticWorkspaceData() {
@@ -404,5 +416,22 @@ describe("Dataset workspace delete actions", () => {
       expect(screen.getByText("Leave Application Report")).toBeInTheDocument();
       expect(api.updateDataset).not.toHaveBeenCalled();
     });
+  });
+
+  it("shows the real schema types in the Schema tab", async () => {
+    mockWorkspaceData();
+    mock_search_params = new URLSearchParams("tab=Schema");
+
+    render(<DatasetWorkspaceContent datasetId="dataset-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("id")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("integer")).toBeInTheDocument();
+    expect(screen.getByText("datetime")).toBeInTheDocument();
+    expect(screen.getByText("string")).toBeInTheDocument();
+    expect(screen.queryByText("text")).not.toBeInTheDocument();
+    expect(semanticApi.fetchDatasetVersionSchema).toHaveBeenCalledWith("dataset-1", "version-1");
   });
 });

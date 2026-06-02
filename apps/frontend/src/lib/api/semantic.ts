@@ -5,6 +5,7 @@ import type {
   SchemaColumn,
   PropertyMapping,
   SemanticMapping,
+  SourceNode,
   ValidationResult,
 } from "./types";
 
@@ -81,9 +82,10 @@ export const createMapping = (
   versionId: string,
   data: {
     object_type_id: string;
-    object_type_key: string;
     properties: PropertyMapping[];
     links?: EntityLink[];
+    source_nodes?: SourceNode[];
+    layout_state?: Record<string, unknown>;
   }
 ): Promise<SemanticMapping> => {
   return request<SemanticMapping>(
@@ -100,9 +102,10 @@ export const updateMapping = (
   versionId: string,
   data: {
     object_type_id: string;
-    object_type_key: string;
     properties: PropertyMapping[];
     links?: EntityLink[];
+    source_nodes?: SourceNode[];
+    layout_state?: Record<string, unknown>;
   }
 ): Promise<SemanticMapping> => {
   return request<SemanticMapping>(
@@ -119,7 +122,6 @@ export const validateMapping = (
   versionId: string,
   data: {
     object_type_id: string;
-    object_type_key: string;
     properties: PropertyMapping[];
     links?: EntityLink[];
   }

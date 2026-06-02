@@ -52,46 +52,95 @@ class PostgresAdapter(DatabaseAdapter):
         except Exception as e:
             return {"success": False, "message": str(e)}
 
-    async def discover_tables(self, config: dict) -> list[dict]:
-        # Return a basic schema or raise if not connected.
-        # This is primarily mocked in tests, but let's provide a basic implementation.
-        try:
-            host = config.get("host", "localhost")
-            port = config.get("port", 5432)
-            database = config.get("database", "")
-            username = config.get("username") or config.get("user", "")
-            password = config.get("password", "")
-            conninfo = (
-                f"host={host} port={port} dbname={database} user={username} password={password} connect_timeout=5"
-            )
+    def _build_conninfo(self, config: dict) -> str:
+        host = config.get("host", "localhost")
+        port = config.get("port", 5432)
+        database = config.get("database", "")
+        username = config.get("username") or config.get("user", "")
+        password = config.get("password", "")
+        return f"host={host} port={port} dbname={database} user={username} password={password} connect_timeout=5"
 
-            tables = []
-            async with await psycopg.AsyncConnection.connect(conninfo) as conn:
-                async with conn.cursor() as cur:
-                    # Query all user tables in public schema
-                    await cur.execute(
-                        """
-                        SELECT table_name
-                        FROM information_schema.tables
-                        WHERE table_schema = 'public';
+    async def _fetch_all_tables(self, config: dict) -> list[tuple[str, int]]:
+        """Return list of (table_name, row_count_estimate) for all user tables."""
+        conninfo = self._build_conninfo(config)
+        async with await psycopg.AsyncConnection.connect(conninfo) as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
                     """
-                    )
-                    rows = await cur.fetchall()
-                    for r in rows:
-                        table_name = r[0]
-                        tables.append(
-                            {
-                                "table_name": table_name,
-                                "row_count_estimate": 100,
-                                "columns": [{"name": "id", "data_type": "integer"}],
-                            }
-                        )
+                    SELECT table_name,
+                           coalesce(
+                               (SELECT n_live_tup
+                                FROM pg_stat_user_tables
+                                WHERE relname = table_name),
+                               0
+                           ) AS row_estimate
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                      AND table_type = 'BASE TABLE'
+                    ORDER BY table_name
+                    """
+                )
+                return [(r[0], int(r[1])) for r in await cur.fetchall()]
+
+    async def _fetch_columns(self, config: dict, table_name: str) -> list[dict]:
+        """Return column metadata for a single table."""
+        conninfo = self._build_conninfo(config)
+        async with await psycopg.AsyncConnection.connect(conninfo) as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    SELECT column_name, data_type
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = %s
+                    ORDER BY ordinal_position
+                    """,
+                    (table_name,),
+                )
+                return [{"name": r[0], "data_type": r[1]} for r in await cur.fetchall()]
+
+    async def discover_tables(self, config: dict) -> list[dict]:
+        try:
+            table_rows = await self._fetch_all_tables(config)
+            tables: list[dict] = []
+            for table_name, row_estimate in table_rows:
+                columns = await self._fetch_columns(config, table_name)
+                tables.append(
+                    {
+                        "table_name": table_name,
+                        "row_count_estimate": row_estimate,
+                        "columns": columns,
+                    }
+                )
             return tables
         except Exception:
             return []
 
     async def preview_table(self, config: dict, table: str, limit: int = 10) -> dict:
-        return {"columns": [], "rows": []}
+        try:
+            conninfo = self._build_conninfo(config)
+            async with await psycopg.AsyncConnection.connect(conninfo) as conn:
+                async with conn.cursor() as cur:
+                    # Fetch column metadata
+                    columns = await self._fetch_columns(config, table)
+
+                    # Fetch sample rows
+                    await cur.execute(
+                        f'SELECT * FROM "{table}" LIMIT %s',
+                        (limit,),
+                    )
+                    rows = await cur.fetchall()
+
+                    ordered_rows: list[list] = []
+                    for row in rows:
+                        ordered_rows.append(list(row))
+
+                    return {
+                        "columns": columns,
+                        "rows": ordered_rows,
+                    }
+        except Exception:
+            return {"columns": [], "rows": []}
 
     async def fetch_table(
         self,
@@ -100,9 +149,29 @@ class PostgresAdapter(DatabaseAdapter):
         cursor_column: str | None = None,
         cursor_value: str | None = None,
     ) -> AsyncIterator[list[dict]]:
-        # Dummy async generator
-        async def empty_generator():
-            if False:
-                yield []
+        conninfo = self._build_conninfo(config)
 
-        return empty_generator()  # type: ignore[no-any-return]
+        async def generator():
+            try:
+                async with await psycopg.AsyncConnection.connect(conninfo) as conn:
+                    async with conn.cursor() as cur:
+                        query = f'SELECT * FROM "{table}"'
+                        params: list = []
+                        if cursor_column:
+                            if cursor_value is not None:
+                                query += f' WHERE "{cursor_column}" > %s'
+                                params.append(cursor_value)
+                            query += f' ORDER BY "{cursor_column}"'
+
+                        await cur.execute(query, tuple(params))
+                        while True:
+                            batch = await cur.fetchmany(500)
+                            if not batch:
+                                break
+                            # Build dict rows manually from cursor description
+                            col_names = [desc[0] for desc in cur.description] if cur.description else []
+                            yield [dict(zip(col_names, row)) for row in batch]
+            except Exception:
+                return
+
+        return generator()  # type: ignore[no-any-return]

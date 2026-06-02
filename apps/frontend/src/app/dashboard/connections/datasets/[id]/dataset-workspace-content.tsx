@@ -21,6 +21,7 @@ import {
   fetchRetentionPolicy,
   saveRetentionPolicy,
 } from "@/lib/api/data-source";
+import { fetchDatasetVersionSchema } from "@/lib/api/semantic";
 import type {
   Dataset,
   DatasetVersion,
@@ -30,6 +31,7 @@ import type {
   Connection,
   RetentionPolicy,
   RetentionPreset,
+  SchemaColumn,
 } from "@/lib/api/types";
 import type { DatasetPreviewResponse } from "@/lib/api/data-source";
 import { DatasetPreviewGrid } from "@/components/dataset-preview-grid";
@@ -48,6 +50,7 @@ import {
 } from "@/components/shared";
 import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
 import { EntityTab } from "@/components/entity-mapping/entity-tab";
+import { EntityGraphTab } from "@/components/entity-graph/entity-graph-tab";
 import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, DATASET_STATUS_COLORS, errorMessageFailedToLoad, RETENTION_PRESETS, RETENTION_MODE_LABELS } from "@/lib/constants";
 
 const TABS = [
@@ -60,6 +63,7 @@ const TABS = [
   "Versions",
   "Details",
   "Entity",
+  "Graph",
 ] as const;
 
 type Tab = (typeof TABS)[number];
@@ -77,10 +81,13 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [connection, setConnection] = useState<Connection | null>(null);
   const [preview, setPreview] = useState<DatasetPreviewResponse | null>(null);
+  const [schemaColumns, setSchemaColumns] = useState<SchemaColumn[]>([]);
   const [previewPage, setPreviewPage] = useState(1);
   const previewPageSize = 25;
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [schemaLoading, setSchemaLoading] = useState(false);
+  const [schemaError, setSchemaError] = useState<string | null>(null);
   const [versions, setVersions] = useState<DatasetVersion[]>([]);
   const [health, setHealth] = useState<DatasetHealth | null>(null);
   const [deleteSummary, setDeleteSummary] = useState<DatasetDeleteSummary | null>(null);
@@ -354,6 +361,27 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
     }
   }, [datasetId, previewPage, previewPageSize]);
 
+  const activeVersionId = dataset?.active_version_id;
+  const loadSchema = useCallback(async () => {
+    if (!activeVersionId) {
+      setSchemaColumns([]);
+      setSchemaError(null);
+      return;
+    }
+
+    setSchemaLoading(true);
+    setSchemaError(null);
+    try {
+      const schemaData = await fetchDatasetVersionSchema(datasetId, activeVersionId);
+      setSchemaColumns(schemaData);
+    } catch (err) {
+      setSchemaColumns([]);
+      setSchemaError(err instanceof Error ? err.message : "Failed to load schema");
+    } finally {
+      setSchemaLoading(false);
+    }
+  }, [activeVersionId, datasetId]);
+
   useEffect(() => {
     load();
   }, [load]);
@@ -361,6 +389,13 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
   useEffect(() => {
     loadPreview();
   }, [loadPreview]);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- tab-driven lazy load */
+  useEffect(() => {
+    if (activeTab !== "Schema") return;
+    void loadSchema();
+  }, [activeTab, loadSchema]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const setTab = (tab: Tab) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -572,33 +607,39 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
 
         {activeTab === "Schema" && (
           <div className="rounded-lg border border-zinc-200">
-            <table className="min-w-full divide-y divide-zinc-200 text-sm">
-              <thead>
-                <tr className="bg-zinc-50">
-                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Column Name
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Type
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {preview?.columns.map((col) => (
-                  <tr key={col} className="hover:bg-zinc-50">
-                    <td className="px-4 py-2 font-medium text-zinc-900">{col}</td>
-                    <td className="px-4 py-2 text-zinc-500">text</td>
+            {schemaLoading ? (
+              <div className="px-4 py-8 text-center text-sm text-zinc-500">Loading schema...</div>
+            ) : schemaError ? (
+              <div className="px-4 py-8 text-center text-sm text-rose-600">{schemaError}</div>
+            ) : (
+              <table className="min-w-full divide-y divide-zinc-200 text-sm">
+                <thead>
+                  <tr className="bg-zinc-50">
+                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Column Name
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Type
+                    </th>
                   </tr>
-                ))}
-                {(!preview || preview.columns.length === 0) && (
-                  <tr>
-                    <td colSpan={2} className="px-4 py-8 text-center text-sm text-zinc-500">
-                      No schema information available
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {schemaColumns.map((col) => (
+                    <tr key={col.column_name} className="hover:bg-zinc-50">
+                      <td className="px-4 py-2 font-medium text-zinc-900">{col.column_name}</td>
+                      <td className="px-4 py-2 text-zinc-500">{col.primitive_type}</td>
+                    </tr>
+                  ))}
+                  {schemaColumns.length === 0 && (
+                    <tr>
+                      <td colSpan={2} className="px-4 py-8 text-center text-sm text-zinc-500">
+                        No schema information available
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 
@@ -628,6 +669,10 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
 
         {activeTab === "Entity" && (
           <EntityTab dataset={dataset} versions={versions} />
+        )}
+
+        {activeTab === "Graph" && (
+          <EntityGraphTab dataset={dataset} versions={versions} />
         )}
 
         {activeTab === "Details" && (

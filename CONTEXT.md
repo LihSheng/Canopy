@@ -76,6 +76,40 @@ The source table column (auto-detected from schema, user-overridable) used by in
 ### Data Studio
 
 The configuration section in the analytics shell sidebar where users manage Connections and Datasets. Separate from the consumption-oriented Dashboard, Departments, Anomalies, and Reports sections.
+
+### Entity
+The business-object configuration a user defines for a dataset version inside Data Studio. Entity is the user-facing term for semantic mapping in the workspace.
+
+### Object Type
+The tenant-scoped reusable business-object definition that an Entity mapping can select or create. Object Types are shared across dataset versions within the tenant.
+
+### Relationship Link
+An optional metadata declaration inside an Entity mapping that connects the current Entity to another tenant Object Type using a source property and the target Object Type's primary key.
+Phase 1 uses a visual, canvas-based editor for link layout and interaction, while the stored link remains metadata in the Semantic Mapping.
+Phase 1 graph scope shows source, dataset version, and Entity nodes only; clean/group/process nodes are deferred.
+Phase 1 graph edits are authoritative for the mapping config, so saved graph changes must update the Semantic Mapping record.
+Phase 1 graph changes are committed through an explicit Save/Publish action and produce a new versioned mapping record.
+Phase 1 graph version snapshots include both semantic config and canvas layout state so the graph can reopen in the same arrangement.
+Phase 1 canvas scope shows the current dataset graph plus target references only; it does not become a tenant-wide graph.
+Phase 1 canvas uses separate node types for raw source object, dataset version, Entity/Object Type, and target references.
+Phase 1 node inspector edits the Entity/Object Type mapping; source and dataset version nodes stay read-only.
+Phase 1 uses the graph as the primary workspace and reuses wizard logic in a graph-side inspector instead of keeping two separate editors.
+Phase 1 uses a right-side drawer for node and edge inspection/editing.
+Phase 1 graph load shows the current dataset lineage path, the current Entity, and existing links/references.
+Phase 1 graph supports designing an Entity from the canvas by adding one or more raw data source nodes and linking their fields into the Entity.
+Phase 1 edges connect source fields to Entity properties, not just source nodes to Entity nodes.
+Phase 1 source fields are collapsed inside the source node by default and expanded in the drawer when the source is selected.
+Phase 1 uses a one-source-field-to-one-Entity-property rule for mapping and does not support computed multi-field properties yet.
+Phase 1 source nodes include dataset tables and static files.
+Phase 1 canvas can create new source nodes from the graph so non-technical users can start from the Entity workspace instead of only attaching pre-imported sources.
+Phase 1 source creation from the canvas uses a lightweight setup drawer rather than the full Data Studio import wizard.
+Phase 1 source nodes are reusable across multiple Entities.
+Phase 1 Entities can connect to multiple source nodes.
+Phase 1 source nodes are an unordered set in the Entity config.
+Phase 1 canvas source creation only registers already known table/file sources; it does not start a full new connector import flow.
+
+### Semantic Mapping
+The versioned configuration record that stores one Entity's Object Type selection, primary key, property mappings, and relationship links for a specific dataset version.
 _Avoid_: Admin panel, settings page
 
 ### Connection Wizard
@@ -118,6 +152,10 @@ The dataset-level circuit breaker state applied when breaking schema drift is de
 - A **Connection Wizard** creates a **data connector** and its associated **datasets** through a 3-step flow.
 - A **Connector lifecycle** changes the app-owned connector record and related Canopy Intelligence resources, not the upstream system or host machine.
 - **Data Studio** hosts the **Connection Wizard** and presents the connection/dataset catalog to the user.
+- A **Dataset** can carry an **Entity** mapping for one dataset version.
+- An **Entity** selects or creates one **Object Type**.
+- A **Semantic Mapping** stores the versioned configuration for an **Entity**.
+- A **Relationship Link** connects one **Entity** to another tenant **Object Type**.
 - **Live Explorer** will host **direct_query** datasets in a separate module outside the snapshot pipeline.
 - The **SecretStore** encrypts third-party credentials stored in the **data connector** config.
 - A **Schema signature** is stored per **Source object** and compared during discovery and sync runs.

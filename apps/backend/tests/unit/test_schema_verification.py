@@ -54,6 +54,7 @@ EXPECTED_CONTROL_PLANE_TABLES = {
     "schema_signatures",
     "semantic_mappings",
     "semantic_object_types",
+    "retention_policies",
 }
 
 

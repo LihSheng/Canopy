@@ -5,6 +5,8 @@ Hybrid strategy:
 - Static file datasets: sample inference from stored JSONL preview data.
 """
 
+import logging
+
 from sqlalchemy.orm import Session
 
 from connection.database_adapter import get_adapter
@@ -13,6 +15,8 @@ from dataset.domain import DatasetVersion
 from dataset.preview_service import read_dataset_preview
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from semantic.domain import SchemaColumn
+
+logger = logging.getLogger(__name__)
 
 # Mapping from Python runtime types to semantic primitive types
 _PY_TYPE_MAP: dict[type, str] = {
@@ -48,25 +52,35 @@ _DB_TYPE_MAP: dict[str, str] = {
     "integer": "integer",
     "tinyint": "integer",
     "smallint": "integer",
+    "mediumint": "integer",
     "bigint": "integer",
     "serial": "integer",
+    "bigserial": "integer",
+    "int2": "integer",
+    "int4": "integer",
+    "int8": "integer",
     "float": "number",
     "double": "number",
     "real": "number",
     "decimal": "number",
     "numeric": "number",
+    "money": "number",
     "bool": "boolean",
     "boolean": "boolean",
+    "character": "string",
     "char": "string",
     "varchar": "string",
     "text": "string",
     "mediumtext": "string",
     "longtext": "string",
     "blob": "string",
+    "bytea": "string",
     "date": "date",
     "datetime": "datetime",
     "timestamp": "datetime",
     "timestamptz": "datetime",
+    "time": "datetime",
+    "year": "integer",
     "json": "string",
     "jsonb": "string",
     "uuid": "string",
@@ -112,6 +126,15 @@ class DatasetSchemaService:
                 db_schema = await self._introspect_from_db(connection, dataset.source_object_name)
                 if db_schema:
                     return db_schema
+                logger.warning(
+                    "DB schema introspection returned no results for dataset %s"
+                    " (connection %s, source %s, table %s);"
+                    " falling back to preview inference",
+                    dataset_id,
+                    dataset.connection_id,
+                    connection.source_type,
+                    dataset.source_object_name,
+                )
 
         # Strategy 2: Infer from stored JSONL preview data (static file or fallback)
         return self._infer_from_preview(version)
@@ -143,8 +166,21 @@ class DatasetSchemaService:
                         )
                         for col in table.get("columns", [])
                     ]
+            logger.warning(
+                "Table %s not found in discovery results for connection %s (source_type=%s); got %d tables",
+                source_object_name,
+                connection.id,
+                connection.source_type,
+                len(tables),
+            )
             return None
         except Exception:
+            logger.exception(
+                "Failed to introspect DB schema for connection %s (source_type=%s, table=%s)",
+                connection.id,
+                connection.source_type,
+                source_object_name,
+            )
             return None
 
     def _read_preview(self, version: DatasetVersion) -> tuple[list[str], list[list]]:

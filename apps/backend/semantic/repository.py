@@ -1,7 +1,7 @@
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from semantic.domain import EntityLink, ObjectType, PropertyMapping, SemanticMapping
+from semantic.domain import EntityLink, ObjectType, PropertyMapping, SemanticMapping, SourceNode
 from semantic.schema import ObjectTypeModel, SemanticMappingModel
 
 
@@ -183,6 +183,17 @@ class SemanticMappingRepository:
                 }
                 for ln in (d.links or [])
             ],
+            source_nodes=[
+                {
+                    "source_id": sn.source_id,
+                    "source_type": sn.source_type,
+                    "name": sn.name,
+                    "reference_id": sn.reference_id,
+                    "fields": sn.fields,
+                }
+                for sn in (d.source_nodes or [])
+            ],
+            layout_state=d.layout_state or {},
             created_at=d.created_at,
             updated_at=d.updated_at,
         )
@@ -217,6 +228,17 @@ class SemanticMappingRepository:
                 )
                 for ln in (m.links or [])
             ],
+            source_nodes=[
+                SourceNode(
+                    source_id=sn["source_id"],
+                    source_type=sn["source_type"],
+                    name=sn["name"],
+                    reference_id=sn["reference_id"],
+                    fields=sn.get("fields", []),
+                )
+                for sn in (m.source_nodes or [])
+            ],
+            layout_state=m.layout_state or {},
             created_at=m.created_at,
             updated_at=m.updated_at,
         )

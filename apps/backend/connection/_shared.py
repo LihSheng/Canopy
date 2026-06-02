@@ -2,9 +2,35 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from datetime import date, datetime, time
+from decimal import Decimal
 from pathlib import Path
+from uuid import UUID
 
 from common.config import settings
+
+
+def _json_default(obj: object) -> object:
+    """Serialize non-JSON-native types so JSONL preserves type information.
+
+    - datetime/date/time -> ISO string
+    - Decimal -> fallback to str (preserves precision)
+    - UUID -> str
+    - bytes -> hex string
+    - set -> sorted list
+    """
+    if isinstance(obj, (datetime, date, time)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return str(obj)
+    if isinstance(obj, UUID):
+        return str(obj)
+    if isinstance(obj, bytes):
+        return obj.hex()
+    if isinstance(obj, set):
+        return sorted(obj, key=str)
+    # Fallback: convert to str for any other non-serializable type
+    return str(obj)
 
 
 def storage_root() -> Path:
@@ -44,7 +70,7 @@ def write_jsonl_version(rows: list[dict], dataset_id: str, sheet_name: str) -> P
     version_path = version_dir / f"{slugify(sheet_name)}.jsonl"
     with open(version_path, "w", encoding="utf-8") as handle:
         for row in rows:
-            handle.write(json.dumps(row, default=str))
+            handle.write(json.dumps(row, default=_json_default))
             handle.write("\n")
     return version_path
 

@@ -48,6 +48,15 @@ class EntityLink:
 
 
 @dataclass
+class SourceNode:
+    source_id: str
+    source_type: str  # "dataset_table" | "static_file"
+    name: str
+    reference_id: str
+    fields: list[str] = field(default_factory=list)
+
+
+@dataclass
 class SemanticMapping:
     id: str
     tenant_id: str
@@ -58,6 +67,8 @@ class SemanticMapping:
     object_type_key: str
     properties: list[PropertyMapping]
     links: list[EntityLink] = field(default_factory=list)
+    source_nodes: list[SourceNode] = field(default_factory=list)
+    layout_state: dict = field(default_factory=dict)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = None
 

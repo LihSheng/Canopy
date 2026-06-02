@@ -374,6 +374,14 @@ export interface EntityLink {
   cardinality: string;
 }
 
+export interface SourceNode {
+  source_id: string;
+  source_type: string;
+  name: string;
+  reference_id: string;
+  fields: string[];
+}
+
 export interface SemanticMapping {
   id: string;
   dataset_id: string;
@@ -383,6 +391,8 @@ export interface SemanticMapping {
   object_type_key: string;
   properties: PropertyMapping[];
   links: EntityLink[];
+  source_nodes: SourceNode[];
+  layout_state: Record<string, unknown>;
   created_at: string;
   updated_at: string | null;
 }

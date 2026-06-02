@@ -43,6 +43,7 @@ class TestSmoke:
         assert status.status_code == 200
         assert status.json()["status"] in (
             "idle",
+            "pending",
             "running",
             "completed",
             "failed",

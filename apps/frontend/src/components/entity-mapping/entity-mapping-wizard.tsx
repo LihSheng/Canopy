@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   fetchObjectTypes,
   createObjectType,
+  updateObjectType,
   fetchDatasetVersionSchema,
   createMapping,
   updateMapping,
@@ -51,9 +52,6 @@ export const EntityMappingWizard = ({
   const [selectedObjectTypeId, setSelectedObjectTypeId] = useState<string>(
     existingMapping?.object_type_id ?? ""
   );
-  const [selectedObjectTypeKey, setSelectedObjectTypeKey] = useState<string>(
-    existingMapping?.object_type_key ?? ""
-  );
 
   // ─── Create Object Type form (Step 1) ───
   const [newTypeKey, setNewTypeKey] = useState("");
@@ -61,6 +59,13 @@ export const EntityMappingWizard = ({
   const [newTypeDescription, setNewTypeDescription] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creatingType, setCreatingType] = useState(false);
+
+  // ─── Edit Object Type form (Step 1 inline) ───
+  const [editingObjectTypeId, setEditingObjectTypeId] = useState<string | null>(
+    null
+  );
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [savingObjectType, setSavingObjectType] = useState(false);
 
   // ─── Property mappings (Steps 2 & 3) ───
   const [properties, setProperties] = useState<PropertyMapping[]>([]);
@@ -263,7 +268,6 @@ export const EntityMappingWizard = ({
       });
       setObjectTypes((prev) => [newType, ...prev]);
       setSelectedObjectTypeId(newType.id);
-      setSelectedObjectTypeKey(newType.object_type_key);
       setShowCreateForm(false);
       setNewTypeKey("");
       setNewTypeDisplayName("");
@@ -277,6 +281,47 @@ export const EntityMappingWizard = ({
     } finally {
       setCreatingType(false);
     }
+  };
+
+  const handleStartEditObjectType = () => {
+    const selected = objectTypes.find(
+      (t) => t.id === selectedObjectTypeId
+    );
+    if (selected) {
+      setEditingObjectTypeId(selected.id);
+      setEditDisplayName(selected.display_name);
+    }
+  };
+
+  const handleSaveObjectTypeEdit = async () => {
+    if (!editingObjectTypeId || !editDisplayName.trim()) return;
+    setSavingObjectType(true);
+    try {
+      const updated = await updateObjectType(editingObjectTypeId, {
+        display_name: editDisplayName.trim(),
+      });
+      setObjectTypes((prev) =>
+        prev.map((t) => (t.id === updated.id ? { ...t, display_name: updated.display_name } : t))
+      );
+      setEditingObjectTypeId(null);
+      setEditDisplayName("");
+      toast.success(
+        "Display name updated",
+        `Object type renamed to "${updated.display_name}".`
+      );
+    } catch (err) {
+      toast.danger(
+        "Failed to update",
+        err instanceof Error ? err.message : "Unknown error"
+      );
+    } finally {
+      setSavingObjectType(false);
+    }
+  };
+
+  const handleCancelEditObjectType = () => {
+    setEditingObjectTypeId(null);
+    setEditDisplayName("");
   };
 
   // ─── Property change handlers ───
@@ -332,7 +377,6 @@ export const EntityMappingWizard = ({
       // First validate on server
       const validation = await validateMapping(datasetId, datasetVersionId, {
         object_type_id: selectedObjectTypeId,
-        object_type_key: selectedObjectTypeKey,
         properties,
         links: links.length > 0 ? links : undefined,
       });
@@ -354,7 +398,6 @@ export const EntityMappingWizard = ({
       if (existingMapping) {
         await updateMapping(datasetId, datasetVersionId, {
           object_type_id: selectedObjectTypeId,
-          object_type_key: selectedObjectTypeKey,
           properties,
           links: links.length > 0 ? links : undefined,
         });
@@ -362,7 +405,6 @@ export const EntityMappingWizard = ({
       } else {
         await createMapping(datasetId, datasetVersionId, {
           object_type_id: selectedObjectTypeId,
-          object_type_key: selectedObjectTypeKey,
           properties,
           links: links.length > 0 ? links : undefined,
         });
@@ -465,7 +507,6 @@ export const EntityMappingWizard = ({
                   );
                   if (selected) {
                     setSelectedObjectTypeId(selected.id);
-                    setSelectedObjectTypeKey(selected.object_type_key);
                   }
                 }}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
@@ -484,6 +525,86 @@ export const EntityMappingWizard = ({
             <p className="text-xs text-zinc-400">
               No object types yet. Create one below.
             </p>
+          )}
+
+          {/* Edit selected Object Type display name */}
+          {selectedObjectTypeId && editingObjectTypeId !== selectedObjectTypeId && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleStartEditObjectType}
+                className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
+              >
+                Edit display name
+              </button>
+            </div>
+          )}
+
+          {editingObjectTypeId === selectedObjectTypeId && (
+            <div className="space-y-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
+              <h4 className="text-xs font-semibold text-zinc-700">
+                Edit Display Name
+              </h4>
+              {(() => {
+                const selected = objectTypes.find(
+                  (t) => t.id === selectedObjectTypeId
+                );
+                return (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-500 mb-1">
+                        Key (immutable)
+                      </label>
+                      <input
+                        type="text"
+                        value={selected?.object_type_key ?? ""}
+                        readOnly
+                        className="w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-600 mb-1">
+                        Display Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editDisplayName}
+                        onChange={(e) =>
+                          setEditDisplayName(e.target.value)
+                        }
+                        placeholder="e.g. Employee"
+                        className="w-full rounded-md border border-zinc-300 px-3 py-1.5 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                      />
+                    </div>
+                  </>
+                );
+              })()}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveObjectTypeEdit}
+                  disabled={
+                    savingObjectType ||
+                    !editDisplayName.trim() ||
+                    editDisplayName.trim() ===
+                      objectTypes.find(
+                        (t) => t.id === selectedObjectTypeId
+                      )?.display_name
+                  }
+                  className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {savingObjectType ? "Saving..." : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelEditObjectType}
+                  disabled={savingObjectType}
+                  className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Create new inline */}

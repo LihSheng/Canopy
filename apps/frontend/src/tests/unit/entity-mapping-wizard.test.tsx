@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { EntityMappingWizard } from "@/components/entity-mapping/entity-mapping-wizard";
 import type {
   ObjectType,
@@ -12,19 +12,24 @@ import type {
 
 const mockFetchObjectTypes = vi.fn();
 const mockCreateObjectType = vi.fn();
+const mockUpdateObjectType = vi.fn();
 const mockFetchDatasetVersionSchema = vi.fn();
 const mockCreateMapping = vi.fn();
 const mockUpdateMapping = vi.fn();
 const mockValidateMapping = vi.fn();
+const mockFetchObjectTypePrimaryKey = vi.fn();
 
 vi.mock("@/lib/api/semantic", () => ({
   fetchObjectTypes: (...args: unknown[]) => mockFetchObjectTypes(...args),
   createObjectType: (...args: unknown[]) => mockCreateObjectType(...args),
+  updateObjectType: (...args: unknown[]) => mockUpdateObjectType(...args),
   fetchDatasetVersionSchema: (...args: unknown[]) =>
     mockFetchDatasetVersionSchema(...args),
   createMapping: (...args: unknown[]) => mockCreateMapping(...args),
   updateMapping: (...args: unknown[]) => mockUpdateMapping(...args),
   validateMapping: (...args: unknown[]) => mockValidateMapping(...args),
+  fetchObjectTypePrimaryKey: (...args: unknown[]) =>
+    mockFetchObjectTypePrimaryKey(...args),
 }));
 
 // Mock toast to avoid DOM warnings
@@ -292,6 +297,173 @@ describe("EntityMappingWizard", () => {
 
       await waitFor(() => {
         expect(screen.getByText(/No object types yet/)).toBeInTheDocument();
+      });
+    });
+
+    // ─── Edit existing Object Type display name ───
+
+    it("shows 'Edit display name' button when an Object Type is selected", async () => {
+      render(<EntityMappingWizard {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Select or Create Object Type")).toBeInTheDocument();
+      });
+
+      // No edit button before selection
+      expect(screen.queryByText("Edit display name")).toBeNull();
+
+      // Select an Object Type
+      fireEvent.change(screen.getByRole("combobox"), {
+        target: { value: "ot-employee" },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Edit display name")).toBeInTheDocument();
+      });
+    });
+
+    it("opens inline edit form when 'Edit display name' is clicked", async () => {
+      render(<EntityMappingWizard {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Select or Create Object Type")).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByRole("combobox"), {
+        target: { value: "ot-employee" },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Edit display name")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Edit display name"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Edit Display Name")).toBeInTheDocument();
+      });
+
+      // Key is read-only with current key value
+      const keyInput = screen.getByDisplayValue("employee");
+      expect(keyInput).toBeInTheDocument();
+      expect((keyInput as HTMLInputElement).readOnly).toBe(true);
+
+      // Display name input pre-filled with current value
+      const nameInput = screen.getByDisplayValue("Employee");
+      expect(nameInput).toBeInTheDocument();
+
+      // Save and Cancel buttons present (scope within the edit form)
+      const { getByText } = within(
+        screen.getByRole("heading", { name: "Edit Display Name" })
+          .closest("div")!
+      );
+      expect(getByText("Save")).toBeInTheDocument();
+      expect(getByText("Cancel")).toBeInTheDocument();
+    });
+
+    it("Save calls updateObjectType and updates the object types list", async () => {
+      const updatedType: ObjectType = {
+        ...objectTypes[0],
+        display_name: "Employees",
+      };
+      mockUpdateObjectType.mockResolvedValue(updatedType);
+
+      render(<EntityMappingWizard {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Select or Create Object Type")).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByRole("combobox"), {
+        target: { value: "ot-employee" },
+      });
+      await waitFor(() => {
+        expect(screen.getByText("Edit display name")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Edit display name"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Edit Display Name")).toBeInTheDocument();
+      });
+
+      // Change the display name
+      const nameInput = screen.getByDisplayValue("Employee");
+      fireEvent.change(nameInput, { target: { value: "Employees" } });
+
+      // Save should now be enabled (value changed)
+      const saveBtn = screen.getByText("Save");
+      expect(saveBtn).not.toBeDisabled();
+
+      fireEvent.click(saveBtn);
+
+      await waitFor(() => {
+        expect(mockUpdateObjectType).toHaveBeenCalledWith("ot-employee", {
+          display_name: "Employees",
+        });
+      });
+
+      // Edit form should close after successful save
+      await waitFor(() => {
+        expect(screen.queryByText("Edit Display Name")).toBeNull();
+        expect(screen.getByText("Edit display name")).toBeInTheDocument();
+      });
+    });
+
+    it("Save is disabled when display name is unchanged", async () => {
+      render(<EntityMappingWizard {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Select or Create Object Type")).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByRole("combobox"), {
+        target: { value: "ot-employee" },
+      });
+      await waitFor(() => {
+        expect(screen.getByText("Edit display name")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Edit display name"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Edit Display Name")).toBeInTheDocument();
+      });
+
+      // Name is "Employee" — Save should be disabled (no change)
+      const saveBtn = screen.getByText("Save");
+      expect(saveBtn).toBeDisabled();
+    });
+
+    it("Cancel hides the edit form and returns to selection view", async () => {
+      render(<EntityMappingWizard {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Select or Create Object Type")).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByRole("combobox"), {
+        target: { value: "ot-employee" },
+      });
+      await waitFor(() => {
+        expect(screen.getByText("Edit display name")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Edit display name"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Edit Display Name")).toBeInTheDocument();
+      });
+
+      // Scope Cancel click to the edit form (not footer nav)
+      const editForm = screen.getByRole("heading", {
+        name: "Edit Display Name",
+      }).closest("div")!;
+      fireEvent.click(within(editForm).getByText("Cancel"));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Edit Display Name")).toBeNull();
+        expect(screen.getByText("Edit display name")).toBeInTheDocument();
       });
     });
   });
@@ -819,7 +991,6 @@ describe("EntityMappingWizard", () => {
           "v-1",
           expect.objectContaining({
             object_type_id: "ot-employee",
-            object_type_key: "employee",
             properties: expect.any(Array),
           })
         );

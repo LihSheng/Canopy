@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 from common.errors import NotFoundError, ValidationError
-from semantic.domain import EntityLink, ObjectType, PropertyMapping, SchemaColumn, SemanticMapping
+from semantic.domain import EntityLink, ObjectType, PropertyMapping, SchemaColumn, SemanticMapping, SourceNode
 from semantic.repository import ObjectTypeRepository, SemanticMappingRepository
 from semantic.schema_service import DatasetSchemaService
 from semantic.validation import (
@@ -112,6 +112,8 @@ class SemanticMappingService:
         object_type_key: str,
         properties: list[PropertyMapping],
         links: list[EntityLink] | None = None,
+        source_nodes: list[SourceNode] | None = None,
+        layout_state: dict | None = None,
         tenant_id: str | None = None,
     ) -> SemanticMapping:
         # Validate object type exists and belongs to the correct tenant
@@ -123,6 +125,8 @@ class SemanticMappingService:
         object_type_key = obj_type.object_type_key
 
         links = links or []
+        source_nodes = source_nodes or []
+        layout_state = layout_state or {}
         tenant_id = obj_type.tenant_id
 
         # Schema validation
@@ -171,6 +175,8 @@ class SemanticMappingService:
             object_type_key=object_type_key,
             properties=properties,
             links=resolved_links,
+            source_nodes=source_nodes,
+            layout_state=layout_state,
             created_at=now,
         )
         return self._mapping_repo.save(mapping)
@@ -183,6 +189,8 @@ class SemanticMappingService:
         object_type_key: str,
         properties: list[PropertyMapping],
         links: list[EntityLink] | None = None,
+        source_nodes: list[SourceNode] | None = None,
+        layout_state: dict | None = None,
         tenant_id: str | None = None,
     ) -> SemanticMapping:
         """Update creates a new version of the mapping."""
@@ -193,6 +201,8 @@ class SemanticMappingService:
             object_type_key,
             properties,
             links=links,
+            source_nodes=source_nodes,
+            layout_state=layout_state,
             tenant_id=tenant_id,
         )
 

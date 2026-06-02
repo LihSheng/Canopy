@@ -19,6 +19,7 @@
   "dependencies": {
     "@glideapps/glide-data-grid": "^6.0.3",
     "@testing-library/dom": "^10.4.1",
+    "@xyflow/react": "^12.11.0",
     "lodash": "^4.18.1",
     "marked": "^18.0.3",
     "next": "16.2.6",
