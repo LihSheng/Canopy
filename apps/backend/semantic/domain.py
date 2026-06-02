@@ -17,6 +17,37 @@ class Cardinality(StrEnum):
     MANY_TO_MANY = "many_to_many"
 
 
+class CompositionKind(StrEnum):
+    CONCAT = "concat"
+    TEMPLATE = "template"
+    LOOKUP = "lookup"
+
+
+@dataclass
+class FieldRef:
+    """Reference to a source field from a registered source node."""
+
+    source_id: str
+    source_name: str
+    field_name: str
+
+
+@dataclass
+class ComputedProperty:
+    """A derived Entity property composed from multiple source fields.
+
+    This is config-only; no runtime execution engine yet.
+    """
+
+    id: str
+    property_name: str
+    semantic_type: str = "string"
+    composition_kind: str = "concat"  # concat, template, lookup
+    expression: str = ""  # composition expression (e.g. "{first} {last}", "join(', ', ...)" for concat)
+    inputs: list[FieldRef] = field(default_factory=list)
+    included: bool = True
+
+
 @dataclass
 class ObjectType:
     id: str
@@ -68,6 +99,7 @@ class SemanticMapping:
     properties: list[PropertyMapping]
     links: list[EntityLink] = field(default_factory=list)
     source_nodes: list[SourceNode] = field(default_factory=list)
+    computed_properties: list[ComputedProperty] = field(default_factory=list)
     layout_state: dict = field(default_factory=dict)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = None

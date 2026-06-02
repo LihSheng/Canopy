@@ -115,6 +115,9 @@ const existingMapping: SemanticMapping = {
     },
   ],
   links: [],
+  source_nodes: [],
+  computed_properties: [],
+  layout_state: {},
   created_at: "2026-01-01T00:00:00Z",
   updated_at: null,
 };
@@ -597,6 +600,15 @@ describe("EntityMappingWizard", () => {
       expect(semanticSelect.value).toBe("integer");
     });
 
+    it("defaults semantic types from schema primitive types", async () => {
+      await navigateToStep3();
+
+      const typeSelects = screen.getAllByRole("combobox") as HTMLSelectElement[];
+      expect(typeSelects.map((s) => s.value)).toEqual(
+        schemaColumns.map((col) => col.primitive_type)
+      );
+    });
+
     it("lets user toggle include/exclude for non-PK columns", async () => {
       await navigateToStep3();
 
@@ -610,6 +622,23 @@ describe("EntityMappingWizard", () => {
 
       fireEvent.click(nonPkCheckbox);
       expect(nonPkCheckbox.checked).toBe(false);
+    });
+
+    it("toggles all non-PK columns from the header checkbox", async () => {
+      await navigateToStep3();
+
+      const headerCheckbox = screen.getByLabelText("Toggle all included columns");
+      expect(headerCheckbox).toBeChecked();
+
+      fireEvent.click(headerCheckbox);
+
+      const checkboxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
+      const enabledCheckboxes = checkboxes.filter((cb) => !cb.disabled);
+
+      enabledCheckboxes.forEach((cb) => {
+        expect(cb.checked).toBe(false);
+      });
+      expect(headerCheckbox).not.toBeChecked();
     });
 
     it("PK column checkbox is disabled (cannot be excluded)", async () => {

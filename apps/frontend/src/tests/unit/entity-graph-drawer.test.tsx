@@ -9,7 +9,7 @@ const entityNode = {
   type: "default",
   data: {
     label: "employee",
-    nodeType: "entity",
+    nodeType: "entity" as const,
     properties: [
       {
         source_column: "id",
@@ -34,7 +34,7 @@ const sourceNode = {
   type: "default",
   data: {
     label: "employees_raw",
-    nodeType: "source",
+    nodeType: "source" as const,
     sourceType: "dataset_table",
     fields: ["id", "name", "email", "dept_id"],
   },
@@ -45,7 +45,7 @@ const datasetNode = {
   type: "default",
   data: {
     label: "HR Dataset",
-    nodeType: "dataset",
+    nodeType: "dataset" as const,
   },
 };
 
@@ -54,7 +54,7 @@ const targetNode = {
   type: "default",
   data: {
     label: "Department",
-    nodeType: "target",
+    nodeType: "target" as const,
     linkInfo: {
       link_id: "dept_link",
       source_property_key: "dept_id",

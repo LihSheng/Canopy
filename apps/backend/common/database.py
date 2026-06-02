@@ -89,6 +89,13 @@ class _DatabaseManager:
 # Module-level default instance. Replaceable for testing or per-tenant routing.
 _db_manager = _DatabaseManager()
 
+# Track engines whose schemas have already been created so that init_db()
+# is idempotent per engine. This avoids PostgreSQL "pg_type_typname_nsp_index"
+# duplicate-type errors when init_db() is called more than once with the same
+# engine (e.g., once from a session-scoped fixture and once from the FastAPI
+# lifespan in TestClient-based tests).
+_initialized_engines: set[str] = set()
+
 
 # Public API delegates to the default instance so callers do not touch globals directly.
 
@@ -116,10 +123,13 @@ def fresh_session(factory: Callable[[], Session]) -> Session:
 
 def set_engine(eng: Engine, tenant_data_eng: Engine | None = None) -> None:
     _db_manager.set_engine(eng, tenant_data_eng)
+    # Clear initialization guard since engines have changed.
+    _initialized_engines.clear()
 
 
 def reset_engine() -> None:
     _db_manager.reset_engine()
+    _initialized_engines.clear()
 
 
 class Base(DeclarativeBase):
@@ -141,10 +151,22 @@ def init_db(engine_override: Engine | None = None):
 
     control_plane_eng = engine_override or engine()
     tenant_data_eng = engine_override or tenant_data_engine()
+
+    # Guard: skip if both engines have already been initialized in this process.
+    # This prevents PostgreSQL "pg_type_typname_nsp_index" duplicate-type errors
+    # that can occur when init_db() is called more than once (e.g., once from a
+    # test fixture and once from the FastAPI lifespan in TestClient).
+    cp_key = str(control_plane_eng.url)
+    td_key = str(tenant_data_eng.url)
+    if cp_key in _initialized_engines and td_key in _initialized_engines:
+        return
+
     Base.metadata.create_all(bind=control_plane_eng)
     _sync_missing_columns(control_plane_eng, Base.metadata)
     TenantDataBase.metadata.create_all(bind=tenant_data_eng)
     _sync_missing_columns(tenant_data_eng, TenantDataBase.metadata)
+    _initialized_engines.add(cp_key)
+    _initialized_engines.add(td_key)
 
 
 def _sync_missing_columns(engine: Engine, metadata) -> None:

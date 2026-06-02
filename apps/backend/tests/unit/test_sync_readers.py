@@ -461,6 +461,192 @@ class TestMysqlCdcReader:
             assert len(lines) == 2  # initial + 1 simulated (after error caught)
             assert mock_on_event.call_count == 2
 
+    # ------------------------------------------------------------------
+    # binlog streaming path (lines 54-112)
+    # ------------------------------------------------------------------
+
+    async def test_start_streaming_binlog_success_import(self):
+        """Cover lines 44-46, 54-107: mysql-replication import succeeds, binlog streaming loop runs."""
+        import sys
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import MagicMock, patch
+
+        # Build a fake mysqlreplication module so the dynamic import succeeds
+        fake_mysqlreplication = MagicMock()
+        fake_row_event = MagicMock()
+        fake_mysqlreplication.row_event = fake_row_event
+
+        mock_binlog_stream = MagicMock()
+        mock_binlog_stream.log_file = "mysql-bin.000001"
+        mock_binlog_stream.log_pos = 1234
+        mock_binlog_stream.close = MagicMock()
+
+        fake_mysqlreplication.BinLogStreamReader = MagicMock(return_value=mock_binlog_stream)
+        fake_row_event.WriteRowsEvent = MagicMock()
+        fake_row_event.UpdateRowsEvent = MagicMock()
+        fake_row_event.DeleteRowsEvent = MagicMock()
+
+        # Simulate one WriteRows event then stop
+        event_sent = [False]
+
+        def mock_fetchone():
+            if not event_sent[0]:
+                event_sent[0] = True
+                mock_event = MagicMock()
+                mock_event.rows = [{"values": {"id": 1, "name": "test"}}]
+                return mock_event
+            return None
+
+        mock_binlog_stream.fetchone = mock_fetchone
+
+        mock_on_event = MagicMock()
+
+        patched_modules = {
+            "mysqlreplication": fake_mysqlreplication,
+            "mysqlreplication.row_event": fake_row_event,
+        }
+        with patch.dict(sys.modules, patched_modules):
+            from sync.readers.mysql_cdc_reader import MysqlCdcReader
+
+            reader = MysqlCdcReader(
+                {"host": "myhost", "port": 3307, "database": "mydb", "username": "myuser", "password": "mypass"},
+                "ds-1",
+                "tbl",
+            )
+
+            # Stop the loop after first event
+            original_fetchone = mock_binlog_stream.fetchone
+
+            def fetchone_then_stop():
+                reader.running = False
+                return original_fetchone()
+
+            mock_binlog_stream.fetchone = fetchone_then_stop
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / "events.jsonl"
+                await reader.start_streaming(path, mock_on_event)
+
+            assert "mysql-bin.000001" in path.read_text(encoding="utf-8")
+            assert mock_on_event.called
+
+    async def test_start_streaming_binlog_exception_fallback(self):
+        """Cover lines 110-112: exception during binlog streaming falls back to simulation."""
+        import sys
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import MagicMock, patch
+
+        # Fake mysqlreplication module - BinLogStreamReader raises on init
+        fake_mysqlreplication = MagicMock()
+        fake_row_event = MagicMock()
+        fake_mysqlreplication.row_event = fake_row_event
+        fake_mysqlreplication.BinLogStreamReader = MagicMock(side_effect=ConnectionError("connection refused"))
+        fake_row_event.WriteRowsEvent = MagicMock()
+        fake_row_event.UpdateRowsEvent = MagicMock()
+        fake_row_event.DeleteRowsEvent = MagicMock()
+
+        patched_modules = {
+            "mysqlreplication": fake_mysqlreplication,
+            "mysqlreplication.row_event": fake_row_event,
+        }
+        with patch.dict(sys.modules, patched_modules):
+            from sync.readers.mysql_cdc_reader import MysqlCdcReader
+
+            reader = MysqlCdcReader(
+                {"host": "myhost", "port": 3307, "database": "mydb", "username": "myuser", "password": "mypass"},
+                "ds-1",
+                "tbl",
+            )
+
+            async def stop_loop(_duration):
+                reader.running = False
+
+            mock_on_event = MagicMock()
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / "events.jsonl"
+                with patch("asyncio.sleep", stop_loop):
+                    await reader.start_streaming(path, mock_on_event)
+
+            # Fallback simulation should have written initial seed event
+            assert "MySQL CDC Initial Seed" in path.read_text(encoding="utf-8")
+            assert mock_on_event.called
+
+    async def test_start_streaming_binlog_update_event(self):
+        """Cover lines 85-98: UpdateRowsEvent and DeleteRowsEvent branches in binlog loop."""
+        import json
+        import sys
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import MagicMock, patch
+
+        fake_mysqlreplication = MagicMock()
+        fake_row_event = MagicMock()
+        fake_mysqlreplication.row_event = fake_row_event
+        fake_mysqlreplication.BinLogStreamReader = MagicMock()
+        fake_row_event.WriteRowsEvent = MagicMock()
+        fake_row_event.UpdateRowsEvent = MagicMock()
+        fake_row_event.DeleteRowsEvent = MagicMock()
+
+        mock_binlog_stream = MagicMock()
+        mock_binlog_stream.log_file = "mysql-bin.000002"
+        mock_binlog_stream.log_pos = 5678
+        mock_binlog_stream.close = MagicMock()
+
+        # Events to return: Update, then Delete
+        update_event_data = [
+            {"type": "update", "rows": [{"after_values": {"id": 2, "name": "updated"}}]},
+            {"type": "delete", "rows": [{"values": {"id": 3, "name": "deleted"}}]},
+        ]
+        event_idx = [0]
+
+        def mock_fetchone():
+            idx = event_idx[0]
+            if idx >= len(update_event_data):
+                return None
+            event_idx[0] += 1
+            mock_event = MagicMock()
+            mock_event.rows = update_event_data[idx]["rows"]
+            return mock_event
+
+        mock_binlog_stream.fetchone = mock_fetchone
+        fake_mysqlreplication.BinLogStreamReader.return_value = mock_binlog_stream
+
+        mock_on_event = MagicMock()
+
+        patched_modules = {
+            "mysqlreplication": fake_mysqlreplication,
+            "mysqlreplication.row_event": fake_row_event,
+        }
+        with patch.dict(sys.modules, patched_modules):
+            from sync.readers.mysql_cdc_reader import MysqlCdcReader
+
+            reader = MysqlCdcReader(
+                {"host": "myhost", "port": 3307, "database": "mydb", "username": "myuser", "password": "mypass"},
+                "ds-1",
+                "tbl",
+            )
+            reader.running = True
+
+            def patched_fetchone():
+                if event_idx[0] >= len(update_event_data):
+                    reader.running = False
+                    return None
+                return mock_fetchone()
+
+            mock_binlog_stream.fetchone = patched_fetchone
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / "events.jsonl"
+                await reader.start_streaming(path, mock_on_event)
+
+            lines = path.read_text(encoding="utf-8").strip().split("\n")
+            assert len(lines) == 2
+            assert json.loads(lines[0])["op"] == "UPDATE"
+            assert json.loads(lines[1])["op"] == "DELETE"
+            assert mock_on_event.call_count == 2
+
 
 @pytest.mark.asyncio
 class TestPostgresCdcReader:
@@ -657,3 +843,270 @@ class TestPostgresCdcReader:
             lines = path.read_text(encoding="utf-8").strip().split("\n")
             assert len(lines) == 2  # initial + 1 simulated (after error caught)
             assert mock_on_event.call_count == 2
+
+    # ------------------------------------------------------------------
+    # replication streaming path (lines 58-108)
+    # ------------------------------------------------------------------
+
+    async def test_start_streaming_replication_success(self):
+        """Cover lines 54-103: full replication path with publication/slot creation and message streaming."""
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        # Mock cursor for check connection (publication/slot checks)
+        mock_check_cursor = AsyncMock()
+        mock_check_cursor.fetchone = AsyncMock(return_value=None)  # trigger creation branches
+        mock_check_cursor.execute = AsyncMock()
+
+        mock_check_conn = AsyncMock()
+        mock_check_conn.cursor = MagicMock(return_value=mock_check_cursor)
+        mock_check_conn.__aenter__ = AsyncMock(return_value=mock_check_conn)
+        mock_check_conn.__aexit__ = AsyncMock(return_value=None)
+
+        # Mock replication connection
+        mock_msg = MagicMock()
+        mock_msg.payload = b"table public.test: INSERT: id[integer]:1 name[character varying]:'Alice'"
+        mock_msg.wal_start = 42
+
+        call_count = [0]
+
+        async def mock_receive():
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return mock_msg
+            return None
+
+        mock_repl_conn = AsyncMock()
+        mock_repl_conn.receive = mock_receive
+        mock_repl_conn.send_feedback = MagicMock()
+        mock_repl_cursor = AsyncMock()
+        mock_repl_cursor.execute = AsyncMock()
+        mock_repl_conn.cursor = MagicMock(return_value=mock_repl_cursor)
+        mock_repl_conn.__aenter__ = AsyncMock(return_value=mock_repl_conn)
+        mock_repl_conn.__aexit__ = AsyncMock(return_value=None)
+
+        connect_calls = [mock_check_conn, mock_repl_conn]
+        call_idx = [0]
+
+        mock_connect = AsyncMock()
+        mock_connect.side_effect = lambda *a, **kw: (
+            connect_calls[call_idx[0]] if call_idx[0] < len(connect_calls) else None
+        )
+
+        # Increment call_idx AFTER the side_effect returns (since connect returns immediately after await)
+        # Actually the side_effect returns the mock, but we need to track call count.
+        # Use a wrapper.
+        async def mock_connect_fn(*args, **kwargs):
+            idx = call_idx[0]
+            call_idx[0] += 1
+            return connect_calls[idx]
+
+        mock_on_event = MagicMock()
+
+        with patch("sync.readers.pg_cdc_reader.psycopg.AsyncConnection.connect", mock_connect_fn):
+            from sync.readers.pg_cdc_reader import PostgresCdcReader
+
+            reader = PostgresCdcReader(
+                {"host": "realdb", "port": 5432, "database": "proddb", "username": "usr", "password": "pwd"},
+                "ds-1",
+                "tbl",
+            )
+
+            # Stop loop after first message: patch fetchone to stop the second iteration
+            first_call = [True]
+
+            async def patched_fetchone():
+                if first_call[0]:
+                    first_call[0] = False
+                    return None  # first call triggers creation path
+                reader.running = False  # stop the reader
+                return None
+
+            mock_check_cursor.fetchone = patched_fetchone
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / "events.jsonl"
+                await reader.start_streaming(path, mock_on_event)
+
+            assert path.exists()
+            content = path.read_text(encoding="utf-8")
+            assert "Alice" in content
+            assert mock_on_event.called
+
+    async def test_start_streaming_replication_publication_exists(self):
+        """Cover lines 60-61: publication already exists, skip creation."""
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        # Cursor returns a row (publication exists) → skip CREATE PUBLICATION
+        mock_check_cursor = AsyncMock()
+        mock_check_cursor.fetchone = AsyncMock(return_value=(1,))  # publication exists
+        mock_check_cursor.execute = AsyncMock()
+
+        mock_check_conn = AsyncMock()
+        mock_check_conn.cursor = MagicMock(return_value=mock_check_cursor)
+        mock_check_conn.__aenter__ = AsyncMock(return_value=mock_check_conn)
+        mock_check_conn.__aexit__ = AsyncMock(return_value=None)
+
+        # Replication connection that immediately stops
+        mock_repl_conn = AsyncMock()
+        mock_repl_conn.receive = AsyncMock(return_value=None)  # None → skip
+        mock_repl_conn.send_feedback = MagicMock()
+        mock_repl_cursor = AsyncMock()
+        mock_repl_cursor.execute = AsyncMock()
+        mock_repl_conn.cursor = MagicMock(return_value=mock_repl_cursor)
+        mock_repl_conn.__aenter__ = AsyncMock(return_value=mock_repl_conn)
+        mock_repl_conn.__aexit__ = AsyncMock(return_value=None)
+
+        connect_calls = [mock_check_conn, mock_repl_conn]
+        call_idx = [0]
+
+        async def mock_connect_fn(*args, **kwargs):
+            idx = call_idx[0]
+            call_idx[0] += 1
+            return connect_calls[idx]
+
+        mock_on_event = MagicMock()
+
+        with patch("sync.readers.pg_cdc_reader.psycopg.AsyncConnection.connect", mock_connect_fn):
+            from sync.readers.pg_cdc_reader import PostgresCdcReader
+
+            reader = PostgresCdcReader(
+                {"host": "realdb", "port": 5432, "database": "proddb", "username": "usr", "password": "pwd"},
+                "ds-1",
+                "tbl",
+            )
+            reader.running = False  # prevent infinite loop
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / "events.jsonl"
+                await reader.start_streaming(path, mock_on_event)
+
+            # No message written since receive() returned None and running was False
+            assert not path.exists() or path.read_text(encoding="utf-8").strip() == ""
+
+    async def test_start_streaming_replication_inner_error(self):
+        """Cover lines 106-108: inner exception in replication loop caught, continues."""
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        mock_check_cursor = AsyncMock()
+        mock_check_cursor.fetchone = AsyncMock(return_value=(1,))
+        mock_check_cursor.execute = AsyncMock()
+
+        mock_check_conn = AsyncMock()
+        mock_check_conn.cursor = MagicMock(return_value=mock_check_cursor)
+        mock_check_conn.__aenter__ = AsyncMock(return_value=mock_check_conn)
+        mock_check_conn.__aexit__ = AsyncMock(return_value=None)
+
+        # Replication connection - first call raises, second stops loop
+        receive_calls = [0]
+
+        async def mock_receive():
+            receive_calls[0] += 1
+            if receive_calls[0] == 1:
+                raise RuntimeError("replication read error")
+            return None
+
+        mock_repl_conn = AsyncMock()
+        mock_repl_conn.receive = mock_receive
+        mock_repl_conn.send_feedback = MagicMock()
+        mock_repl_cursor = AsyncMock()
+        mock_repl_cursor.execute = AsyncMock()
+        mock_repl_conn.cursor = MagicMock(return_value=mock_repl_cursor)
+        mock_repl_conn.__aenter__ = AsyncMock(return_value=mock_repl_conn)
+        mock_repl_conn.__aexit__ = AsyncMock(return_value=None)
+
+        connect_calls = [mock_check_conn, mock_repl_conn]
+        call_idx = [0]
+
+        async def mock_connect_fn(*args, **kwargs):
+            idx = call_idx[0]
+            call_idx[0] += 1
+            return connect_calls[idx]
+
+        mock_on_event = MagicMock()
+
+        with patch("sync.readers.pg_cdc_reader.psycopg.AsyncConnection.connect", mock_connect_fn):
+            from sync.readers.pg_cdc_reader import PostgresCdcReader
+
+            reader = PostgresCdcReader(
+                {"host": "realdb", "port": 5432, "database": "proddb", "username": "usr", "password": "pwd"},
+                "ds-1",
+                "tbl",
+            )
+
+            # After the error is caught, the second receive returns None and we stop
+            async def receive_stop_on_second():
+                receive_calls[0] += 1
+                if receive_calls[0] <= 1:
+                    raise RuntimeError("replication read error")
+                reader.running = False
+                return None
+
+            receive_calls[0] = 0
+            mock_repl_conn.receive = receive_stop_on_second
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / "events.jsonl"
+                await reader.start_streaming(path, mock_on_event)
+
+            # Should not have crashed
+            assert reader.running is False
+
+    async def test_start_streaming_replication_cancelled_error(self):
+        """Cover lines 104-105: CancelledError in replication loop breaks out."""
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        mock_check_cursor = AsyncMock()
+        mock_check_cursor.fetchone = AsyncMock(return_value=(1,))
+        mock_check_cursor.execute = AsyncMock()
+
+        mock_check_conn = AsyncMock()
+        mock_check_conn.cursor = MagicMock(return_value=mock_check_cursor)
+        mock_check_conn.__aenter__ = AsyncMock(return_value=mock_check_conn)
+        mock_check_conn.__aexit__ = AsyncMock(return_value=None)
+
+        async def raise_cancelled():
+            raise asyncio.CancelledError()
+
+        mock_repl_conn = AsyncMock()
+        mock_repl_conn.receive = raise_cancelled
+        mock_repl_conn.send_feedback = MagicMock()
+        mock_repl_cursor = AsyncMock()
+        mock_repl_cursor.execute = AsyncMock()
+        mock_repl_conn.cursor = MagicMock(return_value=mock_repl_cursor)
+        mock_repl_conn.__aenter__ = AsyncMock(return_value=mock_repl_conn)
+        mock_repl_conn.__aexit__ = AsyncMock(return_value=None)
+
+        connect_calls = [mock_check_conn, mock_repl_conn]
+        call_idx = [0]
+
+        async def mock_connect_fn(*args, **kwargs):
+            idx = call_idx[0]
+            call_idx[0] += 1
+            return connect_calls[idx]
+
+        mock_on_event = MagicMock()
+
+        with patch("sync.readers.pg_cdc_reader.psycopg.AsyncConnection.connect", mock_connect_fn):
+            from sync.readers.pg_cdc_reader import PostgresCdcReader
+
+            reader = PostgresCdcReader(
+                {"host": "realdb", "port": 5432, "database": "proddb", "username": "usr", "password": "pwd"},
+                "ds-1",
+                "tbl",
+            )
+
+            # CancelledError breaks the loop but doesn't crash the method
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / "events.jsonl"
+                await reader.start_streaming(path, mock_on_event)
+
+            # Should exit cleanly despite CancelledError in inner loop
+            assert reader.running is True  # was set True at start, CancelledError breaks loop but doesn't set False

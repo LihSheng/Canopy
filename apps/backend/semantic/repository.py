@@ -1,7 +1,15 @@
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from semantic.domain import EntityLink, ObjectType, PropertyMapping, SemanticMapping, SourceNode
+from semantic.domain import (
+    ComputedProperty,
+    EntityLink,
+    FieldRef,
+    ObjectType,
+    PropertyMapping,
+    SemanticMapping,
+    SourceNode,
+)
 from semantic.schema import ObjectTypeModel, SemanticMappingModel
 
 
@@ -193,6 +201,25 @@ class SemanticMappingRepository:
                 }
                 for sn in (d.source_nodes or [])
             ],
+            computed_properties=[
+                {
+                    "id": cp.id,
+                    "property_name": cp.property_name,
+                    "semantic_type": cp.semantic_type,
+                    "composition_kind": cp.composition_kind,
+                    "expression": cp.expression,
+                    "included": cp.included,
+                    "inputs": [
+                        {
+                            "source_id": inp.source_id,
+                            "source_name": inp.source_name,
+                            "field_name": inp.field_name,
+                        }
+                        for inp in (cp.inputs or [])
+                    ],
+                }
+                for cp in (d.computed_properties or [])
+            ],
             layout_state=d.layout_state or {},
             created_at=d.created_at,
             updated_at=d.updated_at,
@@ -237,6 +264,25 @@ class SemanticMappingRepository:
                     fields=sn.get("fields", []),
                 )
                 for sn in (m.source_nodes or [])
+            ],
+            computed_properties=[
+                ComputedProperty(
+                    id=cp.get("id", ""),
+                    property_name=cp["property_name"],
+                    semantic_type=cp.get("semantic_type", "string"),
+                    composition_kind=cp.get("composition_kind", "concat"),
+                    expression=cp.get("expression", ""),
+                    included=cp.get("included", True),
+                    inputs=[
+                        FieldRef(
+                            source_id=inp.get("source_id", ""),
+                            source_name=inp.get("source_name", ""),
+                            field_name=inp.get("field_name", ""),
+                        )
+                        for inp in (cp.get("inputs") or [])
+                    ],
+                )
+                for cp in (m.computed_properties or [])
             ],
             layout_state=m.layout_state or {},
             created_at=m.created_at,

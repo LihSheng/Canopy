@@ -38,6 +38,7 @@ class SemanticMappingModel(Base):
     properties: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     links: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     source_nodes: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
+    computed_properties: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     layout_state: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False

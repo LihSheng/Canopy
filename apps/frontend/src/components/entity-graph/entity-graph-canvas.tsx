@@ -86,6 +86,7 @@ function buildGraph(
       label: mapping.object_type_key,
       nodeType: "entity",
       properties: mapping.properties || [],
+      computedProperties: mapping.computed_properties || [],
     },
     style: {
       ...nodeBaseStyle,

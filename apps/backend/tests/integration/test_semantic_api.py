@@ -1086,3 +1086,336 @@ class TestObjectTypePrimaryKeyAPI:
             headers=auth_headers,
         )
         assert response.status_code == 404
+
+
+# ─── Computed Properties API ───
+
+
+class TestComputedPropertiesAPI:
+    """Integration tests for computed property creation, versioning, and coexistence."""
+
+    def test_create_mapping_with_computed_property(self, client, auth_headers, seed_object_type):
+        """Mapping can be created with computed_properties alongside ordinary properties."""
+        response = client.post(
+            "/api/semantic/datasets/cp-test-ds/versions/cp-test-v/mapping",
+            json={
+                "object_type_id": seed_object_type.id,
+                "object_type_key": seed_object_type.object_type_key,
+                "properties": [
+                    {
+                        "source_column": "id",
+                        "property_name": "ID",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": True,
+                    },
+                ],
+                "source_nodes": [
+                    {
+                        "source_id": "sn_emp",
+                        "source_type": "dataset_table",
+                        "name": "employees",
+                        "reference_id": "ref_1",
+                        "fields": ["first_name", "last_name"],
+                    },
+                ],
+                "computed_properties": [
+                    {
+                        "id": "cp_full_name",
+                        "property_name": "full_name",
+                        "semantic_type": "string",
+                        "composition_kind": "concat",
+                        "expression": "{first} {last}",
+                        "included": True,
+                        "inputs": [
+                            {"source_id": "sn_emp", "source_name": "employees", "field_name": "first_name"},
+                            {"source_id": "sn_emp", "source_name": "employees", "field_name": "last_name"},
+                        ],
+                    },
+                ],
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["version_number"] == 1
+        assert len(data["properties"]) == 1
+        assert len(data["computed_properties"]) == 1
+        cp = data["computed_properties"][0]
+        assert cp["id"] == "cp_full_name"
+        assert cp["property_name"] == "full_name"
+        assert cp["composition_kind"] == "concat"
+        assert cp["expression"] == "{first} {last}"
+        assert len(cp["inputs"]) == 2
+
+    def test_computed_property_survives_versioned_update(self, client, auth_headers, seed_object_type):
+        """Computed properties persist through versioned save/reload."""
+        # Create v1
+        create_resp = client.post(
+            "/api/semantic/datasets/cp-vers-ds/versions/cp-vers-v/mapping",
+            json={
+                "object_type_id": seed_object_type.id,
+                "object_type_key": seed_object_type.object_type_key,
+                "properties": [
+                    {
+                        "source_column": "id",
+                        "property_name": "ID",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": True,
+                    },
+                ],
+                "source_nodes": [
+                    {
+                        "source_id": "sn_1",
+                        "source_type": "dataset_table",
+                        "name": "t1",
+                        "reference_id": "r1",
+                        "fields": ["col_a"],
+                    },
+                ],
+                "computed_properties": [
+                    {
+                        "id": "cp_1",
+                        "property_name": "region_label",
+                        "semantic_type": "string",
+                        "composition_kind": "lookup",
+                        "expression": "",
+                        "included": True,
+                        "inputs": [
+                            {"source_id": "sn_1", "source_name": "t1", "field_name": "col_a"},
+                        ],
+                    },
+                ],
+            },
+            headers=auth_headers,
+        )
+        assert create_resp.status_code == 201
+        v1 = create_resp.json()
+        assert v1["version_number"] == 1
+        assert len(v1["computed_properties"]) == 1
+
+        # Update (creates v2)
+        update_resp = client.put(
+            "/api/semantic/datasets/cp-vers-ds/versions/cp-vers-v/mapping",
+            json={
+                "object_type_id": seed_object_type.id,
+                "object_type_key": seed_object_type.object_type_key,
+                "properties": [
+                    {
+                        "source_column": "id",
+                        "property_name": "ID",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": True,
+                    },
+                ],
+                "source_nodes": [
+                    {
+                        "source_id": "sn_1",
+                        "source_type": "dataset_table",
+                        "name": "t1",
+                        "reference_id": "r1",
+                        "fields": ["col_a", "col_b"],
+                    },
+                ],
+                "computed_properties": [
+                    {
+                        "id": "cp_1",
+                        "property_name": "region_label",
+                        "semantic_type": "string",
+                        "composition_kind": "lookup",
+                        "expression": "",
+                        "included": True,
+                        "inputs": [
+                            {"source_id": "sn_1", "source_name": "t1", "field_name": "col_a"},
+                        ],
+                    },
+                    {
+                        "id": "cp_2",
+                        "property_name": "plant_status",
+                        "semantic_type": "string",
+                        "composition_kind": "template",
+                        "expression": "status: {col_b}",
+                        "included": True,
+                        "inputs": [
+                            {"source_id": "sn_1", "source_name": "t1", "field_name": "col_b"},
+                        ],
+                    },
+                ],
+            },
+            headers=auth_headers,
+        )
+        assert update_resp.status_code == 200
+        v2 = update_resp.json()
+        assert v2["version_number"] == 2
+        assert len(v2["computed_properties"]) == 2
+
+        # Reload latest
+        get_resp = client.get(
+            "/api/semantic/datasets/cp-vers-ds/versions/cp-vers-v/mapping",
+            headers=auth_headers,
+        )
+        assert get_resp.status_code == 200
+        latest = get_resp.json()
+        assert latest["version_number"] == 2
+        assert len(latest["computed_properties"]) == 2
+
+    def test_computed_properties_coexist_with_ordinary_properties(self, client, auth_headers, seed_object_type):
+        """Ordinary and computed properties can coexist in the same mapping."""
+        response = client.post(
+            "/api/semantic/datasets/cp-coexist-ds/versions/cp-coexist-v/mapping",
+            json={
+                "object_type_id": seed_object_type.id,
+                "object_type_key": seed_object_type.object_type_key,
+                "properties": [
+                    {
+                        "source_column": "id",
+                        "property_name": "ID",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": True,
+                    },
+                    {
+                        "source_column": "first_name",
+                        "property_name": "first_name",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": False,
+                    },
+                    {
+                        "source_column": "last_name",
+                        "property_name": "last_name",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": False,
+                    },
+                ],
+                "source_nodes": [
+                    {
+                        "source_id": "sn_emp",
+                        "source_type": "dataset_table",
+                        "name": "employees",
+                        "reference_id": "ref_1",
+                        "fields": ["id", "first_name", "last_name"],
+                    },
+                ],
+                "computed_properties": [
+                    {
+                        "id": "cp_full_name",
+                        "property_name": "full_name",
+                        "semantic_type": "string",
+                        "composition_kind": "concat",
+                        "expression": "{first} {last}",
+                        "included": True,
+                        "inputs": [
+                            {"source_id": "sn_emp", "source_name": "employees", "field_name": "first_name"},
+                            {"source_id": "sn_emp", "source_name": "employees", "field_name": "last_name"},
+                        ],
+                    },
+                ],
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert len(data["properties"]) == 3
+        assert len(data["computed_properties"]) == 1
+
+    def test_computed_property_validation_empty_inputs_rejected(self, client, auth_headers, seed_object_type):
+        """Computed properties with no inputs should be rejected."""
+        response = client.post(
+            "/api/semantic/datasets/cp-val-empty-ds/versions/cp-val-empty-v/mapping",
+            json={
+                "object_type_id": seed_object_type.id,
+                "object_type_key": seed_object_type.object_type_key,
+                "properties": [
+                    {
+                        "source_column": "id",
+                        "property_name": "ID",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": True,
+                    },
+                ],
+                "computed_properties": [
+                    {
+                        "id": "cp_bad",
+                        "property_name": "bad_prop",
+                        "semantic_type": "string",
+                        "composition_kind": "concat",
+                        "expression": "",
+                        "included": True,
+                        "inputs": [],
+                    },
+                ],
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 400
+
+    def test_computed_property_duplicate_name_rejected(self, client, auth_headers, seed_object_type):
+        """Computed property name conflicting with ordinary property should be rejected."""
+        response = client.post(
+            "/api/semantic/datasets/cp-val-dup-ds/versions/cp-val-dup-v/mapping",
+            json={
+                "object_type_id": seed_object_type.id,
+                "object_type_key": seed_object_type.object_type_key,
+                "properties": [
+                    {
+                        "source_column": "id",
+                        "property_name": "full_name",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": True,
+                    },
+                ],
+                "source_nodes": [
+                    {
+                        "source_id": "sn_1",
+                        "source_type": "dataset_table",
+                        "name": "t1",
+                        "reference_id": "r1",
+                        "fields": ["col_a"],
+                    },
+                ],
+                "computed_properties": [
+                    {
+                        "id": "cp_dup",
+                        "property_name": "full_name",
+                        "semantic_type": "string",
+                        "composition_kind": "concat",
+                        "expression": "",
+                        "included": True,
+                        "inputs": [
+                            {"source_id": "sn_1", "source_name": "t1", "field_name": "col_a"},
+                        ],
+                    },
+                ],
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 400
+
+    def test_mapping_without_computed_properties_still_works(self, client, auth_headers, seed_object_type):
+        """Backward compatibility: creating mapping without computed_properties still works."""
+        response = client.post(
+            "/api/semantic/datasets/no-cp-ds/versions/no-cp-v/mapping",
+            json={
+                "object_type_id": seed_object_type.id,
+                "object_type_key": seed_object_type.object_type_key,
+                "properties": [
+                    {
+                        "source_column": "id",
+                        "property_name": "ID",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": True,
+                    },
+                ],
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["computed_properties"] == []

@@ -78,7 +78,7 @@ The source table column (auto-detected from schema, user-overridable) used by in
 The configuration section in the analytics shell sidebar where users manage Connections and Datasets. Separate from the consumption-oriented Dashboard, Departments, Anomalies, and Reports sections.
 
 ### Entity
-The business-object configuration a user defines for a dataset version inside Data Studio. Entity is the user-facing term for semantic mapping in the workspace.
+The business-object configuration a user defines for a dataset version inside the graph-based Data Studio workspace. Entity is the user-facing term for the semantic configuration model, and the canvas is the primary authoring surface.
 
 ### Object Type
 The tenant-scoped reusable business-object definition that an Entity mapping can select or create. Object Types are shared across dataset versions within the tenant.
@@ -156,6 +156,8 @@ The dataset-level circuit breaker state applied when breaking schema drift is de
 - An **Entity** selects or creates one **Object Type**.
 - A **Semantic Mapping** stores the versioned configuration for an **Entity**.
 - A **Relationship Link** connects one **Entity** to another tenant **Object Type**.
+- The **Entity Designer Graph Canvas** is the primary config surface; separate Entity and Graph tabs are not the target end state.
+- The legacy `Entity` tab can remain as an alias that routes into the graph surface during the transition period.
 - **Live Explorer** will host **direct_query** datasets in a separate module outside the snapshot pipeline.
 - The **SecretStore** encrypts third-party credentials stored in the **data connector** config.
 - A **Schema signature** is stored per **Source object** and compared during discovery and sync runs.

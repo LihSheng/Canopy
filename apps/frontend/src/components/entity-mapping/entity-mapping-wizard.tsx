@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchObjectTypes,
   createObjectType,
@@ -46,6 +46,20 @@ export const EntityMappingWizard = ({
     Record<string, string>
   >({});
 
+  const getDefaultSemanticType = (primitiveType?: string | null) => {
+    switch (primitiveType) {
+      case "integer":
+      case "number":
+      case "boolean":
+      case "datetime":
+      case "date":
+      case "string":
+        return primitiveType;
+      default:
+        return "string";
+    }
+  };
+
   // ─── Shared state ───
   const [schemaColumns, setSchemaColumns] = useState<SchemaColumn[]>([]);
   const [objectTypes, setObjectTypes] = useState<ObjectType[]>([]);
@@ -78,6 +92,7 @@ export const EntityMappingWizard = ({
   const [resolvedTargetKeys, setResolvedTargetKeys] = useState<
     Record<string, { property_name: string | null; semantic_type: string | null }>
   >({});
+  const includeAllCheckboxRef = useRef<HTMLInputElement | null>(null);
 
   // ─── Initial load ───
   useEffect(() => {
@@ -103,12 +118,12 @@ export const EntityMappingWizard = ({
             setPrimaryKeyColumn(pkProp.source_column);
           }
         } else {
-          // Initialize from schema: all columns included, default to string type
+          // Initialize from schema: all columns included, default to schema type
           setProperties(
             schema.map((col) => ({
               source_column: col.column_name,
               property_name: col.column_name,
-              semantic_type: "string",
+              semantic_type: getDefaultSemanticType(col.primitive_type),
               included: true,
               is_primary_key: false,
             }))
@@ -361,6 +376,29 @@ export const EntityMappingWizard = ({
       };
       return updated;
     });
+  };
+
+  const nonPrimaryKeyProperties = properties.filter((prop) => !prop.is_primary_key);
+  const allNonPrimaryIncluded =
+    nonPrimaryKeyProperties.length > 0 &&
+    nonPrimaryKeyProperties.every((prop) => prop.included);
+  const someNonPrimaryIncluded = nonPrimaryKeyProperties.some(
+    (prop) => prop.included
+  );
+
+  useEffect(() => {
+    if (includeAllCheckboxRef.current) {
+      includeAllCheckboxRef.current.indeterminate =
+        someNonPrimaryIncluded && !allNonPrimaryIncluded;
+    }
+  }, [allNonPrimaryIncluded, someNonPrimaryIncluded]);
+
+  const handleToggleAllIncluded = (checked: boolean) => {
+    setProperties((prev) =>
+      prev.map((prop) =>
+        prop.is_primary_key ? prop : { ...prop, included: checked }
+      )
+    );
   };
 
   // ─── Save ───
@@ -762,7 +800,19 @@ export const EntityMappingWizard = ({
                     Semantic Type
                   </th>
                   <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Include
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        ref={includeAllCheckboxRef}
+                        type="checkbox"
+                        aria-label="Toggle all included columns"
+                        checked={allNonPrimaryIncluded}
+                        onChange={(e) =>
+                          handleToggleAllIncluded(e.target.checked)
+                        }
+                        className="size-4 rounded border-zinc-300 accent-zinc-900"
+                      />
+                      <span>Include</span>
+                    </label>
                   </th>
                 </tr>
               </thead>

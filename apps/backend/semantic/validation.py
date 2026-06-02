@@ -3,7 +3,7 @@
 These functions have no I/O side effects and are fully testable.
 """
 
-from semantic.domain import EntityLink, PropertyMapping, SchemaColumn
+from semantic.domain import ComputedProperty, EntityLink, PropertyMapping, SchemaColumn, SourceNode
 
 
 def validate_pk_sample(column_values: list) -> list[dict]:
@@ -315,4 +315,216 @@ def validate_links(
     errors.extend(validate_link_duplicate_edges(links))
     errors.extend(validate_link_excluded_properties(links, properties))
     errors.extend(validate_link_cardinality(links))
+    return errors
+
+
+# ─── Computed Property Validation ───
+
+
+def validate_computed_property_names(
+    computed_props: list[ComputedProperty], properties: list[PropertyMapping]
+) -> list[dict]:
+    """Validate computed property names: non-empty, unique among themselves and vs ordinary properties.
+
+    Only included computed properties are validated — excluded ones are skipped.
+    """
+    errors: list[dict] = []
+    normalized_ord: dict[str, str] = {}  # normalized -> original name
+
+    # Build set of included ordinary property names
+    included_ord = {p.property_name.strip().lower(): p.property_name for p in properties if p.included}
+
+    for i, cp in enumerate(computed_props):
+        if not cp.included:
+            continue
+        norm = cp.property_name.strip().lower()
+        if not norm:
+            errors.append(
+                {
+                    "field": f"computed_properties[{i}].property_name",
+                    "value": cp.property_name,
+                    "message": "Computed property name must not be empty",
+                }
+            )
+            continue
+
+        # Check against ordinary properties
+        if norm in included_ord:
+            errors.append(
+                {
+                    "field": f"computed_properties[{i}].property_name",
+                    "value": cp.property_name,
+                    "message": (
+                        f"Computed property name '{cp.property_name}' conflicts with "
+                        f"ordinary property '{included_ord[norm]}'"
+                    ),
+                }
+            )
+            continue
+
+        # Check against other computed properties
+        if norm in normalized_ord:
+            errors.append(
+                {
+                    "field": f"computed_properties[{i}].property_name",
+                    "value": cp.property_name,
+                    "message": (
+                        f"Duplicate computed property name (after normalization): "
+                        f"'{cp.property_name}' matches '{normalized_ord[norm]}'"
+                    ),
+                }
+            )
+        else:
+            normalized_ord[norm] = cp.property_name
+
+    return errors
+
+
+def validate_computed_property_ids(computed_props: list[ComputedProperty]) -> list[dict]:
+    """Validate computed property IDs: non-empty and unique."""
+    errors: list[dict] = []
+    seen: set[str] = set()
+
+    for i, cp in enumerate(computed_props):
+        cp_id = (cp.id or "").strip()
+        if not cp_id:
+            errors.append(
+                {
+                    "field": f"computed_properties[{i}].id",
+                    "value": cp.id,
+                    "message": "Computed property ID must not be empty",
+                }
+            )
+            continue
+        if cp_id in seen:
+            errors.append(
+                {
+                    "field": f"computed_properties[{i}].id",
+                    "value": cp.id,
+                    "message": f"Duplicate computed property ID: '{cp.id}'",
+                }
+            )
+        else:
+            seen.add(cp_id)
+
+    return errors
+
+
+def validate_computed_property_inputs(
+    computed_props: list[ComputedProperty],
+    source_nodes: list[SourceNode],
+) -> list[dict]:
+    """Validate that each computed property has at least one input and all field
+    references resolve to a registered source node and field."""
+    errors: list[dict] = []
+
+    # Build lookup: source_id -> {field: True}
+    source_fields: dict[str, dict[str, bool]] = {}
+    for sn in source_nodes:
+        source_fields[sn.source_id] = {f: True for f in (sn.fields or [])}
+
+    for i, cp in enumerate(computed_props):
+        if not cp.inputs:
+            errors.append(
+                {
+                    "field": f"computed_properties[{i}].inputs",
+                    "value": None,
+                    "message": f"Computed property '{cp.property_name}' has no input fields",
+                }
+            )
+            continue
+
+        for j, inp in enumerate(cp.inputs):
+            # Check source node exists
+            if inp.source_id not in source_fields:
+                errors.append(
+                    {
+                        "field": f"computed_properties[{i}].inputs[{j}].source_id",
+                        "value": inp.source_id,
+                        "message": f"Source node '{inp.source_name or inp.source_id}' is not registered",
+                    }
+                )
+                continue
+
+            # Check field exists in source node
+            if inp.field_name not in source_fields.get(inp.source_id, {}):
+                errors.append(
+                    {
+                        "field": f"computed_properties[{i}].inputs[{j}].field_name",
+                        "value": inp.field_name,
+                        "message": (
+                            f"Field '{inp.field_name}' not found in source node '{inp.source_name or inp.source_id}'"
+                        ),
+                    }
+                )
+
+    return errors
+
+
+def validate_computed_property_ambiguous_refs(
+    computed_props: list[ComputedProperty],
+    source_nodes: list[SourceNode],
+) -> list[dict]:
+    """Detect ambiguous field references where a field name exists in multiple source nodes
+    but the reference doesn't specify a source_id."""
+    errors: list[dict] = []
+
+    # Build: field_name -> list of source_ids
+    field_owners: dict[str, list[str]] = {}
+    for sn in source_nodes:
+        for f in sn.fields or []:
+            norm = f.strip().lower()
+            if norm not in field_owners:
+                field_owners[norm] = []
+            field_owners[norm].append(sn.source_id)
+
+    for i, cp in enumerate(computed_props):
+        for j, inp in enumerate(cp.inputs):
+            norm = inp.field_name.strip().lower()
+            owners = field_owners.get(norm, [])
+            if len(owners) > 1 and not inp.source_id:
+                errors.append(
+                    {
+                        "field": f"computed_properties[{i}].inputs[{j}].field_name",
+                        "value": inp.field_name,
+                        "message": (
+                            f"Ambiguous field reference: '{inp.field_name}' exists in "
+                            f"multiple source nodes. Specify a source_id."
+                        ),
+                    }
+                )
+
+    return errors
+
+
+def validate_computed_property_semantic_types(computed_props: list[ComputedProperty]) -> list[dict]:
+    """Validate semantic types are from allowed set."""
+    allowed = {"string", "integer", "number", "boolean", "datetime", "date"}
+    errors: list[dict] = []
+
+    for i, cp in enumerate(computed_props):
+        if cp.semantic_type and cp.semantic_type not in allowed:
+            errors.append(
+                {
+                    "field": f"computed_properties[{i}].semantic_type",
+                    "value": cp.semantic_type,
+                    "message": f"Invalid semantic type '{cp.semantic_type}'. Allowed: {', '.join(sorted(allowed))}",
+                }
+            )
+
+    return errors
+
+
+def validate_computed_properties(
+    computed_props: list[ComputedProperty],
+    properties: list[PropertyMapping],
+    source_nodes: list[SourceNode],
+) -> list[dict]:
+    """Run all computed property validation rules and return combined errors."""
+    errors: list[dict] = []
+    errors.extend(validate_computed_property_ids(computed_props))
+    errors.extend(validate_computed_property_names(computed_props, properties))
+    errors.extend(validate_computed_property_semantic_types(computed_props))
+    errors.extend(validate_computed_property_inputs(computed_props, source_nodes))
+    errors.extend(validate_computed_property_ambiguous_refs(computed_props, source_nodes))
     return errors

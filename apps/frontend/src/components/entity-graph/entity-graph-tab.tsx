@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { Node } from "@xyflow/react";
 import { fetchMapping } from "@/lib/api/semantic";
-import type { Dataset, DatasetVersion, PropertyMapping, SemanticMapping, SourceNode } from "@/lib/api/types";
+import type { ComputedProperty, Dataset, DatasetVersion, PropertyMapping, SemanticMapping, SourceNode } from "@/lib/api/types";
 import { LoadingSpinner, useToast } from "@/components/shared";
 import { EntityMappingWizard } from "@/components/entity-mapping/entity-mapping-wizard";
 import { EntityGraphCanvas } from "./entity-graph-canvas";
 import { SourceRegistrationDrawer } from "./source-registration-drawer";
-import { NodeEditDrawer } from "./node-edit-drawer";
+import { NodeEditDrawer, type SelectedNode } from "./node-edit-drawer";
 
 type Props = {
   dataset: Dataset;
@@ -19,7 +20,7 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
   const [mapping, setMapping] = useState<SemanticMapping | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [showSourceDrawer, setShowSourceDrawer] = useState(false);
-  const [selectedNode, setSelectedNode] = useState<Record<string, unknown> | null>(null);
+  const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [layoutState, setLayoutState] = useState<Record<string, { x: number; y: number }>>({});
   const [saving, setSaving] = useState(false);
   const toast = useToast();
@@ -79,14 +80,20 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
     toast.info("Source removed", "Source node removed from graph.");
   };
 
-  const handleNodeClick = (node: Record<string, unknown>) => {
-    setSelectedNode(node);
+  const handleNodeClick = (node: Node) => {
+    setSelectedNode(node as unknown as SelectedNode);
     setShowSourceDrawer(false);
   };
 
   const handleUpdateProperties = (properties: PropertyMapping[]) => {
     setMapping((prev) =>
       prev ? { ...prev, properties } : prev
+    );
+  };
+
+  const handleUpdateComputedProperties = (computedProperties: ComputedProperty[]) => {
+    setMapping((prev) =>
+      prev ? { ...prev, computed_properties: computedProperties } : prev
     );
   };
 
@@ -104,6 +111,7 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
         properties: mapping.properties,
         links: mapping.links,
         source_nodes: mapping.source_nodes,
+        computed_properties: mapping.computed_properties,
         layout_state: layoutState,
       });
       setMapping(result);
@@ -218,7 +226,7 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
 
       {selectedNode && (
         <NodeEditDrawer
-          node={selectedNode as { id: string; type: string; data: Record<string, unknown> }}
+          node={selectedNode}
           sourceNodes={mapping.source_nodes?.map((sn) => ({
             source_id: sn.source_id,
             name: sn.name,
@@ -227,6 +235,7 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
           }))}
           onClose={() => setSelectedNode(null)}
           onUpdateProperties={handleUpdateProperties}
+          onUpdateComputedProperties={handleUpdateComputedProperties}
         />
       )}
 

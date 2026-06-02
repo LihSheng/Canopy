@@ -210,6 +210,30 @@ class TestSyncMissingColumns:
         assert "status" in cols
         engine.dispose()
 
+    def test_unique_column_backfill(self):
+        """line 192: Column with unique=True is backfilled via ALTER TABLE."""
+        from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine, inspect, text
+
+        from common.database import _sync_missing_columns
+
+        engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+        with engine.begin() as conn:
+            conn.execute(text("CREATE TABLE test_tbl (id INTEGER PRIMARY KEY)"))
+        metadata = MetaData()
+        Table(
+            "test_tbl",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("code", String(50), unique=True),
+            Column("label", String(100), index=True),
+        )
+        _sync_missing_columns(engine, metadata)
+        inspector = inspect(engine)
+        cols = {c["name"]: c for c in inspector.get_columns("test_tbl")}
+        assert "code" in cols
+        assert "label" in cols
+        engine.dispose()
+
 
 class TestLogging:
     """Cover setup_logging function (common/logging.py)."""

@@ -1,6 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import { ComputedPropertyComposer } from "./computed-property-composer";
+
+type FieldRef = {
+  source_id: string;
+  source_name: string;
+  field_name: string;
+};
+
+type ComputedProperty = {
+  id: string;
+  property_name: string;
+  semantic_type: string;
+  composition_kind: string;
+  expression: string;
+  inputs: FieldRef[];
+  included: boolean;
+};
 
 type Property = {
   source_column: string;
@@ -28,12 +45,13 @@ type NodeData = {
   label: string;
   nodeType?: "entity" | "source" | "dataset" | "target";
   properties?: Property[];
+  computedProperties?: ComputedProperty[];
   sourceType?: string;
   fields?: string[];
   linkInfo?: LinkInfo;
 };
 
-type SelectedNode = {
+export type SelectedNode = {
   id: string;
   type: string;
   data: NodeData;
@@ -44,6 +62,7 @@ type Props = {
   sourceNodes?: SourceNodeData[];
   onClose: () => void;
   onUpdateProperties?: (properties: Property[]) => void;
+  onUpdateComputedProperties?: (computedProperties: ComputedProperty[]) => void;
 };
 
 const SEMANTIC_TYPES = ["string", "integer", "number", "boolean", "datetime", "date"];
@@ -53,6 +72,7 @@ export const NodeEditDrawer = ({
   sourceNodes,
   onClose,
   onUpdateProperties,
+  onUpdateComputedProperties,
 }: Props) => {
   const data = node.data;
   const isEntity = data.nodeType === "entity";
@@ -60,6 +80,7 @@ export const NodeEditDrawer = ({
   const isTarget = data.nodeType === "target";
   const [editedProperties, setEditedProperties] = useState<Property[] | null>(null);
   const [showFieldMapper, setShowFieldMapper] = useState(false);
+  const [showComposer, setShowComposer] = useState(false);
   const [newPropSourceColumn, setNewPropSourceColumn] = useState("");
   const [newPropName, setNewPropName] = useState("");
   const [newPropType, setNewPropType] = useState("string");
@@ -117,6 +138,19 @@ export const NodeEditDrawer = ({
     const updated = properties.filter((_, i) => i !== idx);
     setEditedProperties(updated);
     onUpdateProperties?.(updated);
+  };
+
+  const handleAddComputedProperty = (cp: ComputedProperty) => {
+    const current = data.computedProperties || [];
+    const updated = [...current, cp];
+    onUpdateComputedProperties?.(updated);
+    setShowComposer(false);
+  };
+
+  const handleRemoveComputedProperty = (idx: number) => {
+    const current = data.computedProperties || [];
+    const updated = current.filter((_, i) => i !== idx);
+    onUpdateComputedProperties?.(updated);
   };
 
   const headerLabel = isEntity ? "Entity: "
@@ -308,6 +342,104 @@ export const NodeEditDrawer = ({
               ))}
             </ul>
           )}
+
+          {/* Computed Properties */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Computed Properties ({(data.computedProperties || []).length})
+              </h4>
+              <button
+                type="button"
+                onClick={() => setShowComposer(!showComposer)}
+                className="text-xs font-medium text-purple-600 hover:text-purple-800"
+              >
+                {showComposer ? "Hide composer" : "+ Compose property"}
+              </button>
+            </div>
+
+            {/* Composer form */}
+            {showComposer && (
+              <div className="mb-4">
+                <ComputedPropertyComposer
+                  sourceNodes={(sourceNodes || []).map((sn) => ({
+                    source_id: sn.source_id,
+                    name: sn.name,
+                    fields: sn.fields || [],
+                  }))}
+                  existingProps={[
+                    ...properties.map((p) => ({ name: p.property_name })),
+                    ...(data.computedProperties || []).map((cp) => ({ name: cp.property_name })),
+                  ]}
+                  onAdd={handleAddComputedProperty}
+                  onCancel={() => setShowComposer(false)}
+                />
+              </div>
+            )}
+
+            {(data.computedProperties || []).length === 0 && !showComposer ? (
+              <p className="text-xs text-zinc-400">
+                No computed properties defined. Click &quot;+ Compose property&quot; to create one from multiple source fields.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {(data.computedProperties || []).map((cp, idx) => (
+                  <li
+                    key={cp.id || idx}
+                    className="rounded border border-purple-200 bg-purple-50 p-3 text-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-zinc-900">
+                        {cp.property_name}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
+                          {cp.composition_kind}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveComputedProperty(idx)}
+                          className="rounded px-1 py-0.5 text-xs text-rose-400 hover:text-rose-600 hover:bg-rose-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
+                      <span>{cp.semantic_type}</span>
+                      {cp.expression && (
+                        <>
+                          <span>&middot;</span>
+                          <span className="text-zinc-400 font-mono">{cp.expression}</span>
+                        </>
+                      )}
+                    </div>
+                    {(cp.inputs || []).length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {(cp.inputs || []).map((inp, j) => (
+                          <span
+                            key={j}
+                            className="inline-block rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-700"
+                          >
+                            {inp.source_name && `${inp.source_name}.`}{inp.field_name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-2">
+                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
+                        cp.included
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-zinc-100 text-zinc-400"
+                      }`}>
+                        {cp.included ? "Included" : "Excluded"}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
 

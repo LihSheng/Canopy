@@ -265,6 +265,36 @@ class TestDefaultExportDir:
             result = _default_export_dir()
             assert result == "/home/testuser/.canopy-intelligence/exports"
 
+    def test_windows_fallback_uses_localappdata(self):
+        """lines 23-25: Windows (nt) fallback reads LOCALAPPDATA env."""
+
+        with (
+            patch("exports.service.os.name", "nt"),
+            patch("exports.service.settings") as mock_s,
+            patch.dict("exports.service.os.environ", {"LOCALAPPDATA": "C:\\Users\\test\\AppData\\Local"}, clear=True),
+        ):
+            mock_s.export_storage_dir = None
+            from exports.service import _default_export_dir
+
+            result = _default_export_dir()
+            assert result == "C:\\Users\\test\\AppData\\Local\\Canopy Intelligence\\exports"
+
+    def test_windows_no_localappdata_falls_back_to_home(self):
+        """lines 23-27: Windows with no LOCALAPPDATA falls to posix-style home."""
+        import pathlib
+
+        with (
+            patch("exports.service.os.name", "nt"),
+            patch("exports.service.settings") as mock_s,
+            patch.dict("exports.service.os.environ", {}, clear=True),
+            patch.object(pathlib.Path, "home", return_value=pathlib.PureWindowsPath("C:\\Users\\test")),
+        ):
+            mock_s.export_storage_dir = None
+            from exports.service import _default_export_dir
+
+            result = _default_export_dir()
+            assert result == "C:\\Users\\test\\.canopy-intelligence\\exports"
+
 
 class TestRunExportEdgeCases:
     """Cover _run_export edge cases (service.py lines 131, 161-166)."""

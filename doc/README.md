@@ -8,6 +8,7 @@ Use the versioned folders for planning and design docs.
 - [Task Index](../doc/tasks/progress.md): entrypoint to the versioned task trackers
 - [Dataset Entity Mapping PRD](../doc/prd/0010-dataset-entity-mapping.md): draft PRD for dataset-scoped Entity mapping, property curation, and versioned save flow
 - [Entity Designer Graph Canvas PRD](../doc/prd/0011-entity-designer-graph-canvas.md): draft PRD for graph-first Entity design with source nodes, field-to-property edges, and versioned canvas layout
+- [Entity Computed Property Composition PRD](../doc/prd/0012-entity-computed-property-composition.md): draft PRD for multi-field, multi-source computed Entity properties in the graph designer
 - [Entity Mapping and Relationship Links PRD](../doc/prd/0009-entity-mapping-and-relationship-links.md): draft PRD for tenant-scoped entity mapping, property curation, and relationship link declarations
 - [Lineage-Aware Data Retention PRD](../doc/prd/0008-lineage-aware-data-retention.md): draft PRD for dataset lifetime policies, lineage impact preview, scheduled retention evaluation, and purge auditability
 - [Lineage-Aware Data Retention Issues](../doc/issues/0011-lineage-aware-data-retention-vertical-slices.md): draft vertical-slice issue breakdown for the retention PRD

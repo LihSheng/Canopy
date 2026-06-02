@@ -8,7 +8,15 @@ from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError
 from context.tenant_context import TenantContext
-from semantic.domain import Cardinality, EntityLink, PropertyMapping, SemanticMapping, SourceNode
+from semantic.domain import (
+    Cardinality,
+    ComputedProperty,
+    EntityLink,
+    FieldRef,
+    PropertyMapping,
+    SemanticMapping,
+    SourceNode,
+)
 from semantic.repository import ObjectTypeRepository, SemanticMappingRepository
 from semantic.schema_service import DatasetSchemaService
 from semantic.service import ObjectTypeService, SemanticMappingService
@@ -95,12 +103,45 @@ class SourceNodeResponse(BaseModel):
     fields: list[str] = []
 
 
+class FieldRefRequest(BaseModel):
+    source_id: str = ""
+    source_name: str = ""
+    field_name: str = Field(..., min_length=1)
+
+
+class FieldRefResponse(BaseModel):
+    source_id: str
+    source_name: str
+    field_name: str
+
+
+class ComputedPropertyRequest(BaseModel):
+    id: str = Field(..., min_length=1)
+    property_name: str = Field(..., min_length=1)
+    semantic_type: str = "string"
+    composition_kind: str = "concat"
+    expression: str = ""
+    inputs: list[FieldRefRequest] = []
+    included: bool = True
+
+
+class ComputedPropertyResponse(BaseModel):
+    id: str
+    property_name: str
+    semantic_type: str
+    composition_kind: str
+    expression: str
+    inputs: list[FieldRefResponse] = []
+    included: bool
+
+
 class CreateMappingRequest(BaseModel):
     object_type_id: str
     object_type_key: str = ""
     properties: list[PropertyMappingRequest]
     links: list[EntityLinkRequest] = []
     source_nodes: list[SourceNodeRequest] = []
+    computed_properties: list[ComputedPropertyRequest] = []
     layout_state: dict = {}
 
 
@@ -115,6 +156,7 @@ class MappingResponse(BaseModel):
     properties: list[PropertyMappingResponse]
     links: list[EntityLinkResponse] = []
     source_nodes: list[SourceNodeResponse] = []
+    computed_properties: list[ComputedPropertyResponse] = []
     layout_state: dict = {}
     created_at: str
     updated_at: str | None
@@ -182,6 +224,25 @@ def _mapping_to_response(m: SemanticMapping) -> MappingResponse:
                 fields=sn.fields,
             )
             for sn in (m.source_nodes or [])
+        ],
+        computed_properties=[
+            ComputedPropertyResponse(
+                id=cp.id,
+                property_name=cp.property_name,
+                semantic_type=cp.semantic_type,
+                composition_kind=cp.composition_kind,
+                expression=cp.expression,
+                included=cp.included,
+                inputs=[
+                    FieldRefResponse(
+                        source_id=inp.source_id,
+                        source_name=inp.source_name,
+                        field_name=inp.field_name,
+                    )
+                    for inp in (cp.inputs or [])
+                ],
+            )
+            for cp in (m.computed_properties or [])
         ],
         layout_state=m.layout_state or {},
         created_at=m.created_at.isoformat() if m.created_at else "",
@@ -368,6 +429,26 @@ async def create_mapping(
         for sn in body.source_nodes
     ]
 
+    computed_properties = [
+        ComputedProperty(
+            id=cp.id,
+            property_name=cp.property_name,
+            semantic_type=cp.semantic_type,
+            composition_kind=cp.composition_kind,
+            expression=cp.expression,
+            included=cp.included,
+            inputs=[
+                FieldRef(
+                    source_id=inp.source_id,
+                    source_name=inp.source_name,
+                    field_name=inp.field_name,
+                )
+                for inp in (cp.inputs or [])
+            ],
+        )
+        for cp in body.computed_properties
+    ]
+
     mapping = await service.create(
         dataset_id=dataset_id,
         dataset_version_id=version_id,
@@ -376,6 +457,7 @@ async def create_mapping(
         properties=properties,
         links=links,
         source_nodes=source_nodes,
+        computed_properties=computed_properties,
         layout_state=body.layout_state,
         tenant_id=ctx.tenant_id,
     )
@@ -429,6 +511,26 @@ async def update_mapping(
         for sn in body.source_nodes
     ]
 
+    computed_properties = [
+        ComputedProperty(
+            id=cp.id,
+            property_name=cp.property_name,
+            semantic_type=cp.semantic_type,
+            composition_kind=cp.composition_kind,
+            expression=cp.expression,
+            included=cp.included,
+            inputs=[
+                FieldRef(
+                    source_id=inp.source_id,
+                    source_name=inp.source_name,
+                    field_name=inp.field_name,
+                )
+                for inp in (cp.inputs or [])
+            ],
+        )
+        for cp in body.computed_properties
+    ]
+
     mapping = await service.update(
         dataset_id=dataset_id,
         dataset_version_id=version_id,
@@ -437,6 +539,7 @@ async def update_mapping(
         properties=properties,
         links=links,
         source_nodes=source_nodes,
+        computed_properties=computed_properties,
         layout_state=body.layout_state,
         tenant_id=ctx.tenant_id,
     )
@@ -479,12 +582,45 @@ async def validate_mapping_endpoint(
         for ln in body.links
     ]
 
+    computed_properties = [
+        ComputedProperty(
+            id=cp.id,
+            property_name=cp.property_name,
+            semantic_type=cp.semantic_type,
+            composition_kind=cp.composition_kind,
+            expression=cp.expression,
+            included=cp.included,
+            inputs=[
+                FieldRef(
+                    source_id=inp.source_id,
+                    source_name=inp.source_name,
+                    field_name=inp.field_name,
+                )
+                for inp in (cp.inputs or [])
+            ],
+        )
+        for cp in body.computed_properties
+    ]
+
+    source_nodes = [
+        SourceNode(
+            source_id=sn.source_id,
+            source_type=sn.source_type,
+            name=sn.name,
+            reference_id=sn.reference_id,
+            fields=sn.fields,
+        )
+        for sn in body.source_nodes
+    ]
+
     result = await service.validate(
         dataset_id,
         version_id,
         properties,
         object_type_id=body.object_type_id,
         links=links,
+        computed_properties=computed_properties,
+        source_nodes=source_nodes,
         tenant_id=ctx.tenant_id,
     )
     return ValidationResponse(

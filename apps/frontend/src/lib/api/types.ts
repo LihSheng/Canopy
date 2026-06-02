@@ -382,6 +382,22 @@ export interface SourceNode {
   fields: string[];
 }
 
+export interface FieldRef {
+  source_id: string;
+  source_name: string;
+  field_name: string;
+}
+
+export interface ComputedProperty {
+  id: string;
+  property_name: string;
+  semantic_type: string;
+  composition_kind: string;
+  expression: string;
+  inputs: FieldRef[];
+  included: boolean;
+}
+
 export interface SemanticMapping {
   id: string;
   dataset_id: string;
@@ -392,6 +408,7 @@ export interface SemanticMapping {
   properties: PropertyMapping[];
   links: EntityLink[];
   source_nodes: SourceNode[];
+  computed_properties: ComputedProperty[];
   layout_state: Record<string, unknown>;
   created_at: string;
   updated_at: string | null;

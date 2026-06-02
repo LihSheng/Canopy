@@ -2,10 +2,19 @@ import uuid
 from datetime import UTC, datetime
 
 from common.errors import NotFoundError, ValidationError
-from semantic.domain import EntityLink, ObjectType, PropertyMapping, SchemaColumn, SemanticMapping, SourceNode
+from semantic.domain import (
+    ComputedProperty,
+    EntityLink,
+    ObjectType,
+    PropertyMapping,
+    SchemaColumn,
+    SemanticMapping,
+    SourceNode,
+)
 from semantic.repository import ObjectTypeRepository, SemanticMappingRepository
 from semantic.schema_service import DatasetSchemaService
 from semantic.validation import (
+    validate_computed_properties,
     validate_links,
     validate_mapping,
     validate_pk_sample,
@@ -113,6 +122,7 @@ class SemanticMappingService:
         properties: list[PropertyMapping],
         links: list[EntityLink] | None = None,
         source_nodes: list[SourceNode] | None = None,
+        computed_properties: list[ComputedProperty] | None = None,
         layout_state: dict | None = None,
         tenant_id: str | None = None,
     ) -> SemanticMapping:
@@ -126,6 +136,7 @@ class SemanticMappingService:
 
         links = links or []
         source_nodes = source_nodes or []
+        computed_properties = computed_properties or []
         layout_state = layout_state or {}
         tenant_id = obj_type.tenant_id
 
@@ -141,6 +152,7 @@ class SemanticMappingService:
         # Run all validation (stateless + I/O-bound)
         errors = validate_mapping(properties, schema_columns)
         errors.extend(validate_links(links, properties))
+        errors.extend(validate_computed_properties(computed_properties, properties, source_nodes))
         link_type_errors = await self._validate_link_type_compatibility(links, properties, tenant_id)
         errors.extend(link_type_errors)
 
@@ -176,6 +188,7 @@ class SemanticMappingService:
             properties=properties,
             links=resolved_links,
             source_nodes=source_nodes,
+            computed_properties=computed_properties,
             layout_state=layout_state,
             created_at=now,
         )
@@ -190,6 +203,7 @@ class SemanticMappingService:
         properties: list[PropertyMapping],
         links: list[EntityLink] | None = None,
         source_nodes: list[SourceNode] | None = None,
+        computed_properties: list[ComputedProperty] | None = None,
         layout_state: dict | None = None,
         tenant_id: str | None = None,
     ) -> SemanticMapping:
@@ -202,6 +216,7 @@ class SemanticMappingService:
             properties,
             links=links,
             source_nodes=source_nodes,
+            computed_properties=computed_properties,
             layout_state=layout_state,
             tenant_id=tenant_id,
         )
@@ -213,6 +228,8 @@ class SemanticMappingService:
         properties: list[PropertyMapping],
         object_type_id: str | None = None,
         links: list[EntityLink] | None = None,
+        computed_properties: list[ComputedProperty] | None = None,
+        source_nodes: list[SourceNode] | None = None,
         tenant_id: str | None = None,
     ) -> dict:
         """Validate mapping properties without persisting. Returns validation result."""
@@ -248,6 +265,9 @@ class SemanticMappingService:
 
         # Link validation (stateless + type compatibility)
         errors.extend(validate_links(links, properties))
+
+        # Computed property validation
+        errors.extend(validate_computed_properties(computed_properties or [], properties, source_nodes or []))
 
         # Type compatibility check requires tenant context
         if tenant_id:
