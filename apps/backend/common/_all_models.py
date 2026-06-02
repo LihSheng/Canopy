@@ -10,6 +10,7 @@ import control_plane.schemas.memberships  # noqa: F401
 import control_plane.schemas.tenants  # noqa: F401
 import dataset.schema  # noqa: F401
 import exports.schema  # noqa: F401
+import feature_flags.schema  # noqa: F401
 import health.schema  # noqa: F401
 import ingestion.schema  # noqa: F401
 import insights.schema  # noqa: F401

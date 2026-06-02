@@ -30,9 +30,10 @@ class RealTimeStrategy(StrEnum):
 @dataclass
 class Dataset:
     id: str
-    project_id: str
     connection_id: str
     name: str
+    project_id: str = ""
+    tenant_id: str | None = None
     source_object_name: str = ""
     status: str = DatasetStatus.ACTIVE.value
     active_version_id: str | None = None

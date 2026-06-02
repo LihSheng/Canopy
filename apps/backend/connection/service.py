@@ -21,6 +21,7 @@ class ConnectionService:
 
     def create_connection(
         self,
+        tenant_id: str,
         project_id: str,
         source_type: str,
         name: str,
@@ -30,6 +31,7 @@ class ConnectionService:
         config = self._encrypt_config(config_json or {})
         connection = Connection(
             id=str(uuid.uuid4()),
+            tenant_id=tenant_id,
             project_id=project_id,
             source_type=source_type,
             name=name,
@@ -39,41 +41,43 @@ class ConnectionService:
         )
         return self._repo.save(connection)
 
-    def get_connection(self, id: str) -> Connection | None:
-        return self._repo.get(id)
+    def get_connection(self, id: str, tenant_id: str | None = None) -> Connection | None:
+        return self._repo.get(id, tenant_id=tenant_id)
 
-    def list_connections(self, project_id: str) -> list[Connection]:
-        return self._repo.list_by_project(project_id)
+    def list_connections(self, project_id: str, tenant_id: str | None = None) -> list[Connection]:
+        return self._repo.list_by_project(project_id, tenant_id=tenant_id)
 
-    def list_all_connections(self) -> list[Connection]:
-        return self._repo.list_all()
+    def list_all_connections(self, tenant_id: str | None = None) -> list[Connection]:
+        return self._repo.list_all(tenant_id=tenant_id)
 
     def create_static_file_connection(
         self,
+        tenant_id: str,
         project_id: str,
         name: str,
         allowed_extensions: list[str] | None = None,
     ) -> Connection:
         config = {"allowed_extensions": allowed_extensions or [".csv", ".xlsx", ".json", ".parquet"]}
-        return self.create_connection(project_id, "static_file", name, config)
+        return self.create_connection(tenant_id, project_id, "static_file", name, config)
 
-    def update_connection_name(self, id: str, name: str) -> Connection:
-        self._require_connection(id)
+    def update_connection_name(self, id: str, name: str, tenant_id: str | None = None) -> Connection:
+        self._require_connection(id, tenant_id=tenant_id)
         updated = self._repo.update_name(id, name.strip())
         if updated is None:
             raise NotFoundError("Connection not found")
         return updated
 
-    def pause_connection(self, id: str, actor_user_id: str) -> Connection:
+    def pause_connection(self, id: str, actor_user_id: str, tenant_id: str | None = None) -> Connection:
         return self._transition(
             id=id,
             target_status=ConnectionStatus.PAUSED.value,
             allowed_statuses=[ConnectionStatus.ACTIVE.value, ConnectionStatus.ERROR.value],
             actor_user_id=actor_user_id,
             event_type="connection.paused",
+            tenant_id=tenant_id,
         )
 
-    def archive_connection(self, id: str, actor_user_id: str) -> Connection:
+    def archive_connection(self, id: str, actor_user_id: str, tenant_id: str | None = None) -> Connection:
         return self._transition(
             id=id,
             target_status=ConnectionStatus.ARCHIVED.value,
@@ -84,9 +88,10 @@ class ConnectionService:
             ],
             actor_user_id=actor_user_id,
             event_type="connection.archived",
+            tenant_id=tenant_id,
         )
 
-    def restore_connection(self, id: str, actor_user_id: str) -> Connection:
+    def restore_connection(self, id: str, actor_user_id: str, tenant_id: str | None = None) -> Connection:
         return self._transition(
             id=id,
             target_status=ConnectionStatus.ACTIVE.value,
@@ -97,9 +102,10 @@ class ConnectionService:
             ],
             actor_user_id=actor_user_id,
             event_type="connection.restored",
+            tenant_id=tenant_id,
         )
 
-    def soft_delete_connection(self, id: str, actor_user_id: str) -> Connection:
+    def soft_delete_connection(self, id: str, actor_user_id: str, tenant_id: str | None = None) -> Connection:
         self._ensure_no_active_dependencies(id)
         return self._transition(
             id=id,
@@ -113,10 +119,11 @@ class ConnectionService:
             ],
             actor_user_id=actor_user_id,
             event_type="connection.soft_deleted",
+            tenant_id=tenant_id,
         )
 
-    def permanently_delete_connection(self, id: str, actor_user_id: str) -> dict:
-        connection = self._require_connection(id)
+    def permanently_delete_connection(self, id: str, actor_user_id: str, tenant_id: str | None = None) -> dict:
+        connection = self._require_connection(id, tenant_id=tenant_id)
         self._ensure_no_active_dependencies(id)
         deleted = self._repo.delete(id)
         if not deleted:
@@ -126,11 +133,12 @@ class ConnectionService:
             connection=connection,
             actor_user_id=actor_user_id,
             event_type="connection.permanently_deleted",
+            tenant_id=tenant_id,
         )
         return {"deleted": True, "id": id}
 
-    def get_dependency_summary(self, id: str) -> dict:
-        self._require_connection(id)
+    def get_dependency_summary(self, id: str, tenant_id: str | None = None) -> dict:
+        self._require_connection(id, tenant_id=tenant_id)
         active_datasets = self._repo.count_active_datasets(id)
         active_runs = self._repo.count_active_runs(id)
         return {
@@ -147,8 +155,9 @@ class ConnectionService:
         allowed_statuses: list[str],
         actor_user_id: str,
         event_type: str,
+        tenant_id: str | None = None,
     ) -> Connection:
-        connection = self._require_connection(id)
+        connection = self._require_connection(id, tenant_id=tenant_id)
         if connection.status not in allowed_statuses:
             raise ValidationError(f"Cannot move connection from '{connection.status}' to '{target_status}'")
 
@@ -156,11 +165,11 @@ class ConnectionService:
         if updated is None:
             raise NotFoundError("Connection not found")
 
-        self._record_event(connection=updated, actor_user_id=actor_user_id, event_type=event_type)
+        self._record_event(connection=updated, actor_user_id=actor_user_id, event_type=event_type, tenant_id=tenant_id)
         return updated
 
-    def _require_connection(self, id: str) -> Connection:
-        connection = self._repo.get(id)
+    def _require_connection(self, id: str, tenant_id: str | None = None) -> Connection:
+        connection = self._repo.get(id, tenant_id=tenant_id)
         if connection is None:
             raise NotFoundError("Connection not found")
         return connection
@@ -196,8 +205,8 @@ class ConnectionService:
 
         return AesGcmSecretStore()
 
-    async def test_connection(self, id: str) -> dict:
-        connection = self._require_connection(id)
+    async def test_connection(self, id: str, tenant_id: str | None = None) -> dict:
+        connection = self._require_connection(id, tenant_id=tenant_id)
         config = self._decrypt_config(connection)
 
         from connection.database_adapter import get_adapter
@@ -215,8 +224,8 @@ class ConnectionService:
             )
         return result
 
-    async def discover_tables(self, id: str) -> list[dict]:
-        connection = self._require_connection(id)
+    async def discover_tables(self, id: str, tenant_id: str | None = None) -> list[dict]:
+        connection = self._require_connection(id, tenant_id=tenant_id)
         config = self._decrypt_config(connection)
 
         from connection.cursor_detection import detect_cursor_column
@@ -254,8 +263,8 @@ class ConnectionService:
 
         return tables
 
-    async def preview_table(self, id: str, table: str) -> dict:
-        connection = self._require_connection(id)
+    async def preview_table(self, id: str, table: str, tenant_id: str | None = None) -> dict:
+        connection = self._require_connection(id, tenant_id=tenant_id)
         config = self._decrypt_config(connection)
 
         from connection.cursor_detection import detect_cursor_column
@@ -268,12 +277,15 @@ class ConnectionService:
         preview["detected_cursor_column"] = cursor
         return preview
 
-    def _record_event(self, connection: Connection, actor_user_id: str, event_type: str) -> None:
+    def _record_event(
+        self, connection: Connection, actor_user_id: str, event_type: str, tenant_id: str | None = None
+    ) -> None:
         if self._audit is None:
             return
 
+        effective_tenant_id = tenant_id or connection.tenant_id
         self._audit.record_event(
-            tenant_id=None,
+            tenant_id=effective_tenant_id,
             actor_user_id=actor_user_id,
             event_type=event_type,
             payload={

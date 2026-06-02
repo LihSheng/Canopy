@@ -15,16 +15,28 @@ class ProjectRepository:
         self._db.refresh(model)
         return self._to_domain(model)
 
-    def get(self, id: str) -> Project | None:
-        model = self._db.query(ProjectModel).filter(ProjectModel.id == id).first()
+    def get(self, id: str, tenant_id: str | None = None) -> Project | None:
+        q = self._db.query(ProjectModel).filter(ProjectModel.id == id)
+        if tenant_id is not None:
+            q = q.filter(ProjectModel.tenant_id == tenant_id)
+        model = q.first()
         return self._to_domain(model) if model else None
 
-    def list_all(self) -> list[Project]:
-        models = self._db.query(ProjectModel).order_by(ProjectModel.created_at.desc()).all()
+    def list_all(self, tenant_id: str | None = None) -> list[Project]:
+        q = self._db.query(ProjectModel)
+        if tenant_id is not None:
+            q = q.filter(ProjectModel.tenant_id == tenant_id)
+        models = q.order_by(ProjectModel.created_at.desc()).all()
         return [self._to_domain(m) for m in models]
 
-    def delete(self, id: str) -> bool:
-        model = self._db.query(ProjectModel).filter(ProjectModel.id == id).first()
+    def list_by_tenant(self, tenant_id: str) -> list[Project]:
+        return self.list_all(tenant_id=tenant_id)
+
+    def delete(self, id: str, tenant_id: str | None = None) -> bool:
+        q = self._db.query(ProjectModel).filter(ProjectModel.id == id)
+        if tenant_id is not None:
+            q = q.filter(ProjectModel.tenant_id == tenant_id)
+        model = q.first()
         if model is None:
             return False
         self._db.delete(model)

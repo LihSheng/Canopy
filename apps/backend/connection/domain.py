@@ -16,9 +16,10 @@ class ConnectionStatus(StrEnum):
 @dataclass
 class Connection:
     id: str
-    project_id: str
     source_type: str
     name: str
+    project_id: str = ""
+    tenant_id: str | None = None
     status: str = ConnectionStatus.ACTIVE.value
     config_json: dict = field(default_factory=dict)
     test_status: str | None = None

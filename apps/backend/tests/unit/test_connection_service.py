@@ -24,6 +24,7 @@ def _make_store() -> AesGcmSecretStore:
 def _make_connection(config_json: dict | None = None) -> Connection:
     return Connection(
         id="conn-1",
+        tenant_id="tenant-1",
         project_id="proj-1",
         source_type="postgresql",
         name="test-db",
@@ -181,7 +182,7 @@ class TestCreateConnectionEncrypts:
         repo.save.side_effect = lambda c: saved.append(c) or c
 
         service = ConnectionService(repo=repo, secret_store=store)
-        service.create_connection("proj-1", "postgresql", "test-db", config_in)
+        service.create_connection("tenant-1", "proj-1", "postgresql", "test-db", config_in)
 
         assert len(saved) == 1
         persisted_config = saved[0].config_json
@@ -205,7 +206,7 @@ class TestCreateConnectionEncrypts:
         repo.save.side_effect = lambda c: saved.append(c) or c
 
         service = ConnectionService(repo=repo, secret_store=store)
-        service.create_connection("proj-1", "postgresql", "noauth-db", config_in)
+        service.create_connection("tenant-1", "proj-1", "postgresql", "noauth-db", config_in)
 
         assert saved[0].config_json == {"host": "no-auth-db.example.com", "port": 5432}
 
@@ -217,7 +218,7 @@ class TestCreateConnectionEncrypts:
         repo.save.side_effect = lambda c: saved.append(c) or c
 
         service = ConnectionService(repo=repo, secret_store=store)
-        service.create_static_file_connection("proj-1", "My Upload")
+        service.create_static_file_connection("tenant-1", "proj-1", "My Upload")
 
         config = saved[0].config_json
         assert "password" not in config

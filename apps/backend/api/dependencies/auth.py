@@ -8,6 +8,16 @@ from api.schemas.auth import SessionUser
 from auth.service import AuthService
 from common.database import get_db
 from common.errors import AuthError
+from context.authorization import (
+    require_governance_actor as _require_governance_actor,
+)
+from context.authorization import (
+    require_platform_admin as _require_platform_admin,
+)
+from context.authorization import (
+    require_tenant_admin as _require_tenant_admin,
+)
+from context.membership_validator import MembershipValidator
 from context.tenant_context import (
     TenantContext,
     get_current_tenant_context,
@@ -40,13 +50,11 @@ async def get_current_user(
         raise AuthError("Invalid or expired session")
 
     if result.tenant_id:
-        ctx = TenantContext(
-            tenant_id=result.tenant_id,
-            tenant_role=result.tenant_role or "",
-            membership_status="active",
-            is_impersonated=False,
-        )
-        set_current_tenant_context(ctx)
+        # Re-validate membership against current database state (stale-token guard)
+        validator = MembershipValidator()
+        stale_ctx = validator.validate_membership(result.user.id, result.tenant_id, db)
+        # Use freshly-validated context (not the token-embedded one)
+        set_current_tenant_context(stale_ctx)
     else:
         reset_tenant_context()
 
@@ -65,4 +73,27 @@ async def require_tenant_context(
 ) -> TenantContext:
     if ctx is None:
         raise AuthError("No tenant selected")
+    return ctx
+
+
+async def require_platform_admin(
+    user: SessionUser = Depends(get_current_user),
+) -> SessionUser:
+    _require_platform_admin(user.is_admin)
+    return user
+
+
+async def require_tenant_admin(
+    ctx: TenantContext = Depends(require_tenant_context),
+    user: SessionUser = Depends(get_current_user),
+) -> TenantContext:
+    _require_tenant_admin(ctx)
+    return ctx
+
+
+async def require_governance_actor(
+    ctx: TenantContext = Depends(require_tenant_context),
+    user: SessionUser = Depends(get_current_user),
+) -> TenantContext:
+    _require_governance_actor(ctx, user.is_admin)
     return ctx

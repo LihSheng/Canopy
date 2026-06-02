@@ -26,6 +26,7 @@ class DatasetService:
 
     def create_dataset(
         self,
+        tenant_id: str,
         project_id: str,
         connection_id: str,
         name: str,
@@ -38,6 +39,7 @@ class DatasetService:
     ) -> Dataset:
         return asyncio.run(
             self.create_dataset_async(
+                tenant_id=tenant_id,
                 project_id=project_id,
                 connection_id=connection_id,
                 name=name,
@@ -52,6 +54,7 @@ class DatasetService:
 
     async def create_dataset_async(
         self,
+        tenant_id: str,
         project_id: str,
         connection_id: str,
         name: str,
@@ -67,7 +70,9 @@ class DatasetService:
 
         if defer_materialization:
             existing = self._repo.get_by_connection_and_source_object_name(
-                connection_id=connection_id, source_object_name=resolved_source_object_name
+                connection_id=connection_id,
+                source_object_name=resolved_source_object_name,
+                tenant_id=tenant_id,
             )
             if existing is not None:
                 existing.name = name
@@ -80,6 +85,7 @@ class DatasetService:
 
         dataset = Dataset(
             id=str(uuid.uuid4()),
+            tenant_id=tenant_id,
             project_id=project_id,
             connection_id=connection_id,
             name=name,
@@ -154,10 +160,10 @@ class DatasetService:
 
         return dataset
 
-    def update_dataset_name(self, id: str, name: str) -> Dataset:
+    def update_dataset_name(self, id: str, name: str, tenant_id: str | None = None) -> Dataset:
         import re
 
-        dataset = self._repo.get(id)
+        dataset = self._repo.get(id, tenant_id=tenant_id)
         if dataset is None:
             raise NotFoundError("Dataset not found")
 
@@ -176,17 +182,17 @@ class DatasetService:
         dataset.updated_at = datetime.now(UTC)
         return self._repo.save(dataset)
 
-    def get_dataset(self, id: str) -> Dataset | None:
-        return self._repo.get(id)
+    def get_dataset(self, id: str, tenant_id: str | None = None) -> Dataset | None:
+        return self._repo.get(id, tenant_id=tenant_id)
 
-    def list_datasets(self, project_id: str) -> list[Dataset]:
-        return self._repo.list_by_project(project_id)
+    def list_datasets(self, project_id: str, tenant_id: str | None = None) -> list[Dataset]:
+        return self._repo.list_by_project(project_id, tenant_id=tenant_id)
 
-    def list_all_datasets(self) -> list[Dataset]:
-        return self._repo.list_all()
+    def list_all_datasets(self, tenant_id: str | None = None) -> list[Dataset]:
+        return self._repo.list_all(tenant_id=tenant_id)
 
-    def get_delete_summary(self, dataset_id: str) -> dict:
-        dataset = self._repo.get(dataset_id)
+    def get_delete_summary(self, dataset_id: str, tenant_id: str | None = None) -> dict:
+        dataset = self._repo.get(dataset_id, tenant_id=tenant_id)
         if dataset is None:
             raise NotFoundError("Dataset not found")
 
@@ -201,8 +207,8 @@ class DatasetService:
             "blocking_reason": (None if active_run_count == 0 else f"Dataset has {active_run_count} active run(s)"),
         }
 
-    def delete_dataset(self, dataset_id: str) -> dict:
-        dataset = self._repo.get(dataset_id)
+    def delete_dataset(self, dataset_id: str, tenant_id: str | None = None) -> dict:
+        dataset = self._repo.get(dataset_id, tenant_id=tenant_id)
         if dataset is None:
             raise NotFoundError("Dataset not found")
 
@@ -222,8 +228,8 @@ class DatasetService:
 
         return {"deleted": True, "id": dataset_id}
 
-    def get_dataset_health(self, dataset_id: str) -> dict:
-        dataset = self._repo.get(dataset_id)
+    def get_dataset_health(self, dataset_id: str, tenant_id: str | None = None) -> dict:
+        dataset = self._repo.get(dataset_id, tenant_id=tenant_id)
         if dataset is None:
             return {}
 
@@ -268,10 +274,11 @@ class DatasetService:
         real_time_strategy: str | None = None,
         cursor_column: str | None = None,
         frequency_minutes: int | None = None,
+        tenant_id: str | None = None,
     ) -> Dataset:
         from dataset.domain import BatchStrategy, RealTimeStrategy, SyncMode
 
-        dataset = self._repo.get(dataset_id)
+        dataset = self._repo.get(dataset_id, tenant_id=tenant_id)
         if dataset is None:
             raise NotFoundError("Dataset not found")
 
@@ -298,8 +305,8 @@ class DatasetService:
         dataset.updated_at = datetime.now(UTC)
         return self._repo.save(dataset)
 
-    def refresh_dataset_version(self, dataset_id: str) -> DatasetVersion:
-        dataset = self._repo.get(dataset_id)
+    def refresh_dataset_version(self, dataset_id: str, tenant_id: str | None = None) -> DatasetVersion:
+        dataset = self._repo.get(dataset_id, tenant_id=tenant_id)
         if dataset is None:
             raise NotFoundError("Dataset not found")
 
@@ -440,8 +447,9 @@ class DatasetService:
         page: int = 1,
         page_size: int = 100,
         search: str = "",
+        tenant_id: str | None = None,
     ) -> dict:
-        dataset = self._repo.get(id)
+        dataset = self._repo.get(id, tenant_id=tenant_id)
         if dataset is None:
             raise NotFoundError("Dataset not found")
 
@@ -477,8 +485,8 @@ class DatasetService:
             search=search or None,
         )
 
-    def get_lineage(self, id: str) -> dict:
-        dataset = self._repo.get(id)
+    def get_lineage(self, id: str, tenant_id: str | None = None) -> dict:
+        dataset = self._repo.get(id, tenant_id=tenant_id)
         if dataset is None:
             raise NotFoundError("Dataset not found")
 

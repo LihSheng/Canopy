@@ -34,6 +34,21 @@ type LinkInfo = {
   cardinality: string;
 };
 
+type EntityLinkShape = {
+  link_id: string;
+  display_name: string;
+  source_property_key: string;
+  target_object_type_id: string;
+  target_property_key: string;
+  cardinality: string;
+};
+
+type ObjectTypeOption = {
+  id: string;
+  display_name: string;
+  object_type_key: string;
+};
+
 type SourceNodeData = {
   source_id: string;
   name: string;
@@ -63,6 +78,9 @@ type Props = {
   onClose: () => void;
   onUpdateProperties?: (properties: Property[]) => void;
   onUpdateComputedProperties?: (computedProperties: ComputedProperty[]) => void;
+  links?: EntityLinkShape[];
+  onUpdateLinks?: (links: EntityLinkShape[]) => void;
+  objectTypes?: ObjectTypeOption[];
 };
 
 const SEMANTIC_TYPES = ["string", "integer", "number", "boolean", "datetime", "date"];
@@ -73,6 +91,9 @@ export const NodeEditDrawer = ({
   onClose,
   onUpdateProperties,
   onUpdateComputedProperties,
+  links,
+  onUpdateLinks,
+  objectTypes,
 }: Props) => {
   const data = node.data;
   const isEntity = data.nodeType === "entity";
@@ -140,6 +161,17 @@ export const NodeEditDrawer = ({
     onUpdateProperties?.(updated);
   };
 
+  const handleSetPrimaryKey = (idx: number) => {
+    if (!isEntity) return;
+    const updated = properties.map((p, i) => ({
+      ...p,
+      is_primary_key: i === idx,
+      included: i === idx ? true : p.included,
+    }));
+    setEditedProperties(updated);
+    onUpdateProperties?.(updated);
+  };
+
   const handleAddComputedProperty = (cp: ComputedProperty) => {
     const current = data.computedProperties || [];
     const updated = [...current, cp];
@@ -151,6 +183,40 @@ export const NodeEditDrawer = ({
     const current = data.computedProperties || [];
     const updated = current.filter((_, i) => i !== idx);
     onUpdateComputedProperties?.(updated);
+  };
+
+  // ─── Link editing (entity node only) ───
+  const [editedLinks, setEditedLinks] = useState<EntityLinkShape[] | null>(null);
+  const currentLinks = editedLinks ?? links ?? [];
+
+  const handleLinkChange = (idx: number, field: keyof EntityLinkShape, value: string) => {
+    const updated = currentLinks.map((ln, i) =>
+      i === idx ? { ...ln, [field]: value } : ln
+    );
+    setEditedLinks(updated);
+    onUpdateLinks?.(updated);
+  };
+
+  const handleAddLink = () => {
+    const updated = [
+      ...currentLinks,
+      {
+        link_id: "",
+        display_name: "",
+        source_property_key: "",
+        target_object_type_id: "",
+        target_property_key: "",
+        cardinality: "many_to_one",
+      },
+    ];
+    setEditedLinks(updated);
+    onUpdateLinks?.(updated);
+  };
+
+  const handleRemoveLink = (idx: number) => {
+    const updated = currentLinks.filter((_, i) => i !== idx);
+    setEditedLinks(updated);
+    onUpdateLinks?.(updated);
   };
 
   const headerLabel = isEntity ? "Entity: "
@@ -311,6 +377,16 @@ export const NodeEditDrawer = ({
                           PK
                         </span>
                       )}
+                      {!prop.is_primary_key && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetPrimaryKey(idx)}
+                          title="Set as primary key"
+                          className="rounded px-1.5 py-0.5 text-xs text-zinc-400 hover:bg-amber-50 hover:text-amber-700"
+                        >
+                          PK?
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
@@ -434,6 +510,135 @@ export const NodeEditDrawer = ({
                       }`}>
                         {cp.included ? "Included" : "Excluded"}
                       </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {/* ─── Entity Links ─── */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Links ({currentLinks.length})
+              </h4>
+              <button
+                type="button"
+                onClick={handleAddLink}
+                className="text-xs font-medium text-blue-600 hover:text-blue-800"
+              >
+                + Add Link
+              </button>
+            </div>
+
+            {currentLinks.length === 0 ? (
+              <p className="text-xs text-zinc-400">
+                No relationship links defined. Click &quot;+ Add Link&quot; to connect to another entity.
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {currentLinks.map((link, idx) => (
+                  <li
+                    key={idx}
+                    className="rounded border border-blue-200 bg-blue-50 p-3 text-sm"
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-blue-700">
+                        Link #{idx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLink(idx)}
+                        className="rounded px-1 py-0.5 text-xs text-rose-400 hover:text-rose-600 hover:bg-rose-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-blue-700">Link ID</label>
+                          <input
+                            type="text"
+                            value={link.link_id}
+                            onChange={(e) => handleLinkChange(idx, "link_id", e.target.value)}
+                            placeholder="e.g. reports_to"
+                            className="mt-0.5 w-full rounded border border-blue-300 px-2 py-1 text-xs text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-blue-700">Display Name</label>
+                          <input
+                            type="text"
+                            value={link.display_name}
+                            onChange={(e) => handleLinkChange(idx, "display_name", e.target.value)}
+                            placeholder="e.g. Reports To"
+                            className="mt-0.5 w-full rounded border border-blue-300 px-2 py-1 text-xs text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-blue-700">Source Property</label>
+                          <select
+                            value={link.source_property_key}
+                            onChange={(e) => handleLinkChange(idx, "source_property_key", e.target.value)}
+                            className="mt-0.5 w-full rounded border border-blue-300 px-2 py-1 text-xs text-zinc-900 focus:border-blue-500 focus:outline-none"
+                          >
+                            <option value="">-- Select property --</option>
+                            {properties
+                              .filter((p) => p.included)
+                              .map((p) => (
+                                <option key={p.property_name} value={p.property_name}>
+                                  {p.property_name} ({p.semantic_type})
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-blue-700">Target Object Type</label>
+                          <select
+                            value={link.target_object_type_id}
+                            onChange={(e) => handleLinkChange(idx, "target_object_type_id", e.target.value)}
+                            className="mt-0.5 w-full rounded border border-blue-300 px-2 py-1 text-xs text-zinc-900 focus:border-blue-500 focus:outline-none"
+                          >
+                            <option value="">-- Select object type --</option>
+                            {(objectTypes || []).map((ot) => (
+                              <option key={ot.id} value={ot.id}>
+                                {ot.display_name} ({ot.object_type_key})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-blue-700">Target Property Key</label>
+                        <input
+                          type="text"
+                          value={link.target_property_key}
+                          onChange={(e) => handleLinkChange(idx, "target_property_key", e.target.value)}
+                          placeholder="e.g. id"
+                          className="mt-0.5 w-full rounded border border-blue-300 px-2 py-1 text-xs text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-blue-700">Cardinality</label>
+                        <select
+                          value={link.cardinality}
+                          onChange={(e) => handleLinkChange(idx, "cardinality", e.target.value)}
+                          className="mt-0.5 w-full rounded border border-blue-300 px-2 py-1 text-xs text-zinc-900 focus:border-blue-500 focus:outline-none"
+                        >
+                          <option value="many_to_one">many_to_one</option>
+                          <option value="many_to_many">many_to_many</option>
+                        </select>
+                      </div>
+                      {link.cardinality === "many_to_many" && (
+                        <div className="rounded border border-amber-200 bg-amber-50 p-2">
+                          <p className="text-xs text-amber-800">
+                            many-to-many is metadata-only in v1. No executable join guarantees.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}

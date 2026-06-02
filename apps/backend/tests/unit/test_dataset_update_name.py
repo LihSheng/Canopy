@@ -17,6 +17,7 @@ def _create_test_dataset(session) -> str:
     conn_repo.save(
         Connection(
             id="conn-1",
+            tenant_id="tenant-test",
             project_id="proj-1",
             source_type="mysql",
             name="MySQL",
@@ -25,6 +26,7 @@ def _create_test_dataset(session) -> str:
     )
     service = DatasetService(DatasetRepository(session), DatasetVersionRepository(session))
     dataset = service.create_dataset(
+        tenant_id="tenant-test",
         project_id="proj-1",
         connection_id="conn-1",
         name="employees",

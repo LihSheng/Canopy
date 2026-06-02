@@ -8,21 +8,22 @@ class DatasetRepository:
     def __init__(self, db: Session):
         self._db = db
 
-    def get_by_connection_and_source_object_name(self, connection_id: str, source_object_name: str) -> Dataset | None:
-        model = (
-            self._db.query(DatasetModel)
-            .filter(DatasetModel.connection_id == connection_id, DatasetModel.source_object_name == source_object_name)
-            .first()
+    def get_by_connection_and_source_object_name(
+        self, connection_id: str, source_object_name: str, tenant_id: str | None = None
+    ) -> Dataset | None:
+        q = self._db.query(DatasetModel).filter(
+            DatasetModel.connection_id == connection_id, DatasetModel.source_object_name == source_object_name
         )
+        if tenant_id is not None:
+            q = q.filter(DatasetModel.tenant_id == tenant_id)
+        model = q.first()
         return self._to_domain(model) if model else None
 
-    def list_by_connection(self, connection_id: str) -> list[Dataset]:
-        models = (
-            self._db.query(DatasetModel)
-            .filter(DatasetModel.connection_id == connection_id)
-            .order_by(DatasetModel.created_at.desc())
-            .all()
-        )
+    def list_by_connection(self, connection_id: str, tenant_id: str | None = None) -> list[Dataset]:
+        q = self._db.query(DatasetModel).filter(DatasetModel.connection_id == connection_id)
+        if tenant_id is not None:
+            q = q.filter(DatasetModel.tenant_id == tenant_id)
+        models = q.order_by(DatasetModel.created_at.desc()).all()
         return [self._to_domain(m) for m in models]
 
     def save(self, domain: Dataset) -> Dataset:
@@ -32,21 +33,28 @@ class DatasetRepository:
         self._db.refresh(merged)
         return self._to_domain(merged)
 
-    def get(self, id: str) -> Dataset | None:
-        model = self._db.query(DatasetModel).filter(DatasetModel.id == id).first()
+    def get(self, id: str, tenant_id: str | None = None) -> Dataset | None:
+        q = self._db.query(DatasetModel).filter(DatasetModel.id == id)
+        if tenant_id is not None:
+            q = q.filter(DatasetModel.tenant_id == tenant_id)
+        model = q.first()
         return self._to_domain(model) if model else None
 
-    def list_all(self) -> list[Dataset]:
-        models = self._db.query(DatasetModel).order_by(DatasetModel.created_at.desc()).all()
+    def list_all(self, tenant_id: str | None = None) -> list[Dataset]:
+        q = self._db.query(DatasetModel)
+        if tenant_id is not None:
+            q = q.filter(DatasetModel.tenant_id == tenant_id)
+        models = q.order_by(DatasetModel.created_at.desc()).all()
         return [self._to_domain(m) for m in models]
 
-    def list_by_project(self, project_id: str) -> list[Dataset]:
-        models = (
-            self._db.query(DatasetModel)
-            .filter(DatasetModel.project_id == project_id)
-            .order_by(DatasetModel.created_at.desc())
-            .all()
-        )
+    def list_by_tenant(self, tenant_id: str) -> list[Dataset]:
+        return self.list_all(tenant_id=tenant_id)
+
+    def list_by_project(self, project_id: str, tenant_id: str | None = None) -> list[Dataset]:
+        q = self._db.query(DatasetModel).filter(DatasetModel.project_id == project_id)
+        if tenant_id is not None:
+            q = q.filter(DatasetModel.tenant_id == tenant_id)
+        models = q.order_by(DatasetModel.created_at.desc()).all()
         return [self._to_domain(m) for m in models]
 
     def update_active_version(self, dataset_id: str, version_id: str) -> Dataset | None:
@@ -58,8 +66,11 @@ class DatasetRepository:
         self._db.refresh(model)
         return self._to_domain(model)
 
-    def delete(self, id: str) -> bool:
-        model = self._db.query(DatasetModel).filter(DatasetModel.id == id).first()
+    def delete(self, id: str, tenant_id: str | None = None) -> bool:
+        q = self._db.query(DatasetModel).filter(DatasetModel.id == id)
+        if tenant_id is not None:
+            q = q.filter(DatasetModel.tenant_id == tenant_id)
+        model = q.first()
         if model is None:
             return False
         self._db.delete(model)

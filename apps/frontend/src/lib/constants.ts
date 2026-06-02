@@ -27,6 +27,7 @@ export const ROUTES = {
   admin: {
     home: "/dashboard/admin",
     dataHealth: "/dashboard/admin/data-health",
+    featureFlags: "/dashboard/admin/feature-flags",
   },
 } as const;
 
@@ -130,6 +131,7 @@ export const DEFAULT_CURRENCY = "USD";
 export const UI_LABELS = {
   loading: "Loading...",
   loadingDashboard: "Loading dashboard...",
+  loadingFeatureFlags: "Loading feature flags...",
   loadingRunDetails: "Loading run details...",
   noData: "No data available",
   noRunsYet: "No runs yet",

@@ -71,19 +71,34 @@ const ITEMS = [
   },
 ];
 
-const ADMIN_ITEM = {
-  href: ROUTES.admin.dataHealth,
-  label: "Data Health",
-  icon: (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-      <path
-        fillRule="evenodd"
-        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-};
+const ADMIN_ITEMS = [
+  {
+    href: ROUTES.admin.dataHealth,
+    label: "Data Health",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+        <path
+          fillRule="evenodd"
+          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+          clipRule="evenodd"
+        />
+      </svg>
+    ),
+  },
+  {
+    href: ROUTES.admin.featureFlags,
+    label: "Feature Flags",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+        <path
+          fillRule="evenodd"
+          d="M3.5 2A1.5 1.5 0 002 3.5v13A1.5 1.5 0 003.5 18h13a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-.44-1.06l-3.56-3.56A1.5 1.5 0 0012.94 1H6.5A1.5 1.5 0 005 2.5v2a.75.75 0 001.5 0v-2A.75.75 0 005 1.5h6.94l.12.06.09.09 3.56 3.56.06.12v.17h.04V4h.01v9.5a.75.75 0 01-.75.75H4.75A.75.75 0 014 13.5V4a.75.75 0 01.75-.75h2a.75.75 0 000-1.5h-2z"
+          clipRule="evenodd"
+        />
+      </svg>
+    ),
+  },
+];
 
 type Props = {
   onNavigate?: () => void;
@@ -100,7 +115,7 @@ export const AnalyticsSidebar = ({ onNavigate, isAdmin = false }: Props) => {
       ? pathname === ROUTES.dashboard
       : pathname.startsWith(href);
 
-  const allItems = isAdmin ? [...ITEMS, ADMIN_ITEM] : ITEMS;
+  const allItems = isAdmin ? [...ITEMS, ...ADMIN_ITEMS] : ITEMS;
 
   return (
     <aside

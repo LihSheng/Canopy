@@ -37,6 +37,7 @@ def test_init_db_backfills_missing_connection_columns(tmp_path):
 
         service = ConnectionService(ConnectionRepository(session_handle))
         saved = service.create_connection(
+            tenant_id="tenant-test",
             project_id="project-1",
             source_type="static_file",
             name="legacy.xlsx",

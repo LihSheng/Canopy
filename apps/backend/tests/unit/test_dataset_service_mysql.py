@@ -33,6 +33,7 @@ def test_create_mysql_dataset_materializes_initial_version(tmp_path, monkeypatch
         conn_repo.save(
             Connection(
                 id="conn-1",
+                tenant_id="tenant-test",
                 project_id="proj-1",
                 source_type="mysql",
                 name="MySQL",
@@ -44,6 +45,7 @@ def test_create_mysql_dataset_materializes_initial_version(tmp_path, monkeypatch
         monkeypatch.setattr(settings, "export_storage_dir", str(tmp_path), raising=False)
         with patch("dataset.service.get_adapter", return_value=_MockMySqlAdapter()):
             dataset = service.create_dataset(
+                tenant_id="tenant-test",
                 project_id="proj-1",
                 connection_id="conn-1",
                 name="org_leave_type",

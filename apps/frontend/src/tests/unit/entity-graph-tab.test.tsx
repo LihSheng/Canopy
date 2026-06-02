@@ -6,9 +6,17 @@ import type { Dataset, DatasetVersion } from "@/lib/api/types";
 // Mock the API module
 const mockFetchMapping = vi.fn();
 const mockUpdateMapping = vi.fn();
+const mockFetchObjectTypes = vi.fn();
+const mockCreateObjectType = vi.fn();
+const mockFetchDatasetVersionSchema = vi.fn();
+const mockCreateMapping = vi.fn();
 vi.mock("@/lib/api/semantic", () => ({
   fetchMapping: (...args: unknown[]) => mockFetchMapping(...args),
   updateMapping: (...args: unknown[]) => mockUpdateMapping(...args),
+  fetchObjectTypes: (...args: unknown[]) => mockFetchObjectTypes(...args),
+  createObjectType: (...args: unknown[]) => mockCreateObjectType(...args),
+  fetchDatasetVersionSchema: (...args: unknown[]) => mockFetchDatasetVersionSchema(...args),
+  createMapping: (...args: unknown[]) => mockCreateMapping(...args),
 }));
 
 // Mock data-source API (used by SourceRegistrationDrawer)
@@ -28,29 +36,6 @@ vi.mock("@/components/shared", async () => {
     }),
   };
 });
-
-// Mock EntityMappingWizard
-vi.mock("@/components/entity-mapping/entity-mapping-wizard", () => ({
-  EntityMappingWizard: ({
-    onComplete,
-    onCancel,
-  }: {
-    datasetId: string;
-    datasetVersionId: string;
-    existingMapping: unknown;
-    onComplete: () => void;
-    onCancel: () => void;
-  }) => (
-    <div data-testid="entity-mapping-wizard">
-      <button data-testid="wizard-complete" onClick={onComplete}>
-        Complete
-      </button>
-      <button data-testid="wizard-cancel" onClick={onCancel}>
-        Cancel
-      </button>
-    </div>
-  ),
-}));
 
 // Mock ReactFlow to render a simple testable canvas
 vi.mock("@xyflow/react", () => ({
@@ -175,8 +160,10 @@ describe("EntityGraphTab", () => {
 
   // ─── Empty State (No Mapping) ───
 
-  it("shows empty state with prompt when no mapping exists", async () => {
+  it("shows empty state with inline creation panel when no mapping exists", async () => {
     mockFetchMapping.mockResolvedValue(null);
+    mockFetchObjectTypes.mockResolvedValue([]);
+    mockFetchDatasetVersionSchema.mockResolvedValue([{ column_name: "id", primitive_type: "integer" }]);
     render(<EntityGraphTab dataset={baseDataset} versions={[baseVersion]} />);
 
     await waitFor(() => {
@@ -189,21 +176,27 @@ describe("EntityGraphTab", () => {
       )
     ).toBeInTheDocument();
 
-    const createBtn = screen.getByText("Configure Entity Mapping");
-    expect(createBtn).toBeInTheDocument();
+    // Inline creation panel is visible, not a wizard button
+    expect(screen.getByText("Create Entity Mapping")).toBeInTheDocument();
+    expect(screen.getByText("+ Create new Object Type")).toBeInTheDocument();
   });
 
-  it("opens entity mapping wizard when 'Configure Entity Mapping' is clicked from empty state", async () => {
+  it("shows object type selector when types are available", async () => {
     mockFetchMapping.mockResolvedValue(null);
+    mockFetchObjectTypes.mockResolvedValue([
+      { id: "ot-1", object_type_key: "employee", display_name: "Employee", tenant_id: "t1", description: "", created_at: "", updated_at: null },
+    ]);
+    mockFetchDatasetVersionSchema.mockResolvedValue([{ column_name: "id", primitive_type: "integer" }]);
     render(<EntityGraphTab dataset={baseDataset} versions={[baseVersion]} />);
 
     await waitFor(() => {
       expect(screen.getByText("No entity mapping yet")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("Configure Entity Mapping"));
-
-    expect(screen.getByTestId("entity-mapping-wizard")).toBeInTheDocument();
+    // Object type dropdown shows available types
+    expect(screen.getByText("Object Type")).toBeInTheDocument();
+    // Select or create new type button still present
+    expect(screen.getByText("+ Create new Object Type")).toBeInTheDocument();
   });
 
   // ─── Graph Canvas with Entity Node ───
@@ -241,6 +234,7 @@ describe("EntityGraphTab", () => {
     // Entity node shows the object type key as label
     expect(screen.getByTestId("node-entity")).toBeInTheDocument();
     expect(screen.getByTestId("node-entity")).toHaveTextContent("employee");
+    expect(screen.queryByText("Edit Mapping")).not.toBeInTheDocument();
   });
 
   it("shows dataset lineage nodes on graph", async () => {

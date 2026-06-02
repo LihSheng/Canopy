@@ -11,6 +11,7 @@ class RunModel(Base):
     __tablename__ = "runs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     project_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     connection_id: Mapped[str] = mapped_column(String(36), nullable=False)
     dataset_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)

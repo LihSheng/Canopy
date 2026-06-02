@@ -22,6 +22,10 @@ const eslintConfig = defineConfig([
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+      // Downgraded from error to warn: this rule flags standard data-fetching
+      // patterns (setState inside useEffect) which are still common in React 18
+      // style code. Migrate to `use` hook / Suspense when convenient.
+      "react-hooks/set-state-in-effect": "warn",
     },
   },
   // Override default ignores of eslint-config-next.

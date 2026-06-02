@@ -19,29 +19,37 @@ class ConnectionRepository:
         self._db.refresh(model)
         return self._to_domain(model)
 
-    def get(self, id: str) -> Connection | None:
-        model = self._db.query(ConnectionModel).filter(ConnectionModel.id == id).first()
+    def get(self, id: str, tenant_id: str | None = None) -> Connection | None:
+        q = self._db.query(ConnectionModel).filter(ConnectionModel.id == id)
+        if tenant_id is not None:
+            q = q.filter(ConnectionModel.tenant_id == tenant_id)
+        model = q.first()
         return self._to_domain(model) if model else None
 
-    def list_all(self) -> list[Connection]:
-        models = (
+    def list_all(self, tenant_id: str | None = None) -> list[Connection]:
+        q = (
             self._db.query(ConnectionModel)
             .filter(ConnectionModel.status != "soft_deleted")
             .filter(ConnectionModel.status != "deleted")
-            .order_by(ConnectionModel.created_at.desc())
-            .all()
         )
+        if tenant_id is not None:
+            q = q.filter(ConnectionModel.tenant_id == tenant_id)
+        models = q.order_by(ConnectionModel.created_at.desc()).all()
         return [self._to_domain(m) for m in models]
 
-    def list_by_project(self, project_id: str) -> list[Connection]:
-        models = (
+    def list_by_tenant(self, tenant_id: str) -> list[Connection]:
+        return self.list_all(tenant_id=tenant_id)
+
+    def list_by_project(self, project_id: str, tenant_id: str | None = None) -> list[Connection]:
+        q = (
             self._db.query(ConnectionModel)
             .filter(ConnectionModel.project_id == project_id)
             .filter(ConnectionModel.status != "soft_deleted")
             .filter(ConnectionModel.status != "deleted")
-            .order_by(ConnectionModel.created_at.desc())
-            .all()
         )
+        if tenant_id is not None:
+            q = q.filter(ConnectionModel.tenant_id == tenant_id)
+        models = q.order_by(ConnectionModel.created_at.desc()).all()
         return [self._to_domain(m) for m in models]
 
     def update_status(self, id: str, status: str) -> Connection | None:

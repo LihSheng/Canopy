@@ -77,6 +77,14 @@ The source table column (auto-detected from schema, user-overridable) used by in
 
 The configuration section in the analytics shell sidebar where users manage Connections and Datasets. Separate from the consumption-oriented Dashboard, Departments, Anomalies, and Reports sections.
 
+### Feature Flag
+A server-backed rollout control that can change product behavior for all users in a given environment. Feature flags are managed from an Admin surface and are intended for operational release control, not end-user configuration.
+For now, feature flags are administered by a single internal admin role; tighter production gating can be added later.
+The first Admin page version is a simple list of global on/off toggles with descriptions.
+
+### Admin
+The internal management surface and role used to configure operational settings such as global feature flags.
+
 ### Entity
 The business-object configuration a user defines for a dataset version inside the graph-based Data Studio workspace. Entity is the user-facing term for the semantic configuration model, and the canvas is the primary authoring surface.
 
@@ -144,12 +152,33 @@ An immutable record of a schema drift detection with before/after details and a 
 
 The dataset-level circuit breaker state applied when breaking schema drift is detected. While blocked, affected datasets are skipped by sync/materialization until reviewed and cleared.
 
+### Tenant-owned object
+
+An app-owned record that carries direct `tenant_id` ownership for authorization, auditing, telemetry, and tenant-safe querying. In current scope this applies to `Project`, `Data connector`, and `Dataset` records, while `project_id` and other foreign keys remain for navigation and grouping.
+_Avoid_: global object, implicit tenant inheritance only
+
+### Platform action
+
+An explicit Canopy-owned operation that reads or mutates platform-managed state inside Canopy Intelligence. In current scope this includes governance and operational actions such as refresh, export, connector lifecycle changes, retention policy updates, schema drift review/clear actions, semantic validate/publish actions, and admin tenant-management actions.
+_Avoid_: upstream business transaction, source-system callback, ontology runtime mutation
+
+### Audited action
+
+An action that must be written to the audit log because it is either state-changing or sensitive enough to matter for governance. This includes privileged reads such as export download, impersonation, semantic validation, and admin health access when those reads reveal or manipulate sensitive platform state.
+_Avoid_: anonymous page render, generic UI navigation, low-value client-side noise
+
+### Operational health dashboard
+
+The admin-only platform-ops surface used to inspect persisted telemetry, rollups, recent failures, and other health signals. It is separate from tenant-facing analytics.
+_Avoid_: general analytics dashboard, tenant-facing reporting page
+
 ## Relationships
 
 - A **Data connector** produces one or more datasets.
 - A **Dataset** carries a **sync mode** and optional **batch strategy** and **cursor column**.
 - A **Dataset** references a **Source object** via `connection_id + source_object_name`.
 - A **Connection Wizard** creates a **data connector** and its associated **datasets** through a 3-step flow.
+- An **Admin** surface manages **Feature Flag** rollout controls for the whole app.
 - A **Connector lifecycle** changes the app-owned connector record and related Canopy Intelligence resources, not the upstream system or host machine.
 - **Data Studio** hosts the **Connection Wizard** and presents the connection/dataset catalog to the user.
 - A **Dataset** can carry an **Entity** mapping for one dataset version.
@@ -157,11 +186,15 @@ The dataset-level circuit breaker state applied when breaking schema drift is de
 - A **Semantic Mapping** stores the versioned configuration for an **Entity**.
 - A **Relationship Link** connects one **Entity** to another tenant **Object Type**.
 - The **Entity Designer Graph Canvas** is the primary config surface; separate Entity and Graph tabs are not the target end state.
-- The legacy `Entity` tab can remain as an alias that routes into the graph surface during the transition period.
+- The legacy `Entity` tab is a route alias that opens the graph surface during the transition period, not a separate editor path.
 - **Live Explorer** will host **direct_query** datasets in a separate module outside the snapshot pipeline.
 - The **SecretStore** encrypts third-party credentials stored in the **data connector** config.
 - A **Schema signature** is stored per **Source object** and compared during discovery and sync runs.
 - A breaking **Schema drift** triggers a **Schema drift block** on affected datasets and emits a **Schema drift event**.
+- A **Tenant-owned object** carries direct `tenant_id` ownership even when it also belongs to a project or other group.
+- A **Platform action** operates on Canopy-owned state and never writes back to the upstream source system.
+- An **Audited action** is either state-changing or a sensitive governance read that should leave a structured trail.
+- The **Operational health dashboard** is admin-only and focuses on persisted telemetry and rollups, not tenant-facing analytics.
 
 ## Example dialogue
 

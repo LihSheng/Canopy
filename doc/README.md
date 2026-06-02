@@ -4,6 +4,7 @@ Use the versioned folders for planning and design docs.
 
 ## Live References
 
+- [Foundry / Ontology Platform Hardening PRD](../doc/prd/0014-foundry-ontology-platform-hardening.md): draft umbrella PRD for permissions, audit, telemetry, ontology contract, relationship, action API, and cleaning/lineage hardening
 - [Codebase Map](../doc/codebase-map.md): current snapshot and navigation aid
 - [Task Index](../doc/tasks/progress.md): entrypoint to the versioned task trackers
 - [Dataset Entity Mapping PRD](../doc/prd/0010-dataset-entity-mapping.md): draft PRD for dataset-scoped Entity mapping, property curation, and versioned save flow

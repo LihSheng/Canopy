@@ -13,9 +13,10 @@ class RunStatus(StrEnum):
 @dataclass
 class Run:
     id: str
-    project_id: str
     connection_id: str
     dataset_id: str
+    project_id: str = ""
+    tenant_id: str | None = None
     status: str = RunStatus.QUEUED.value
     started_by: str = ""
     started_at: datetime | None = None

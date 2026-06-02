@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from api.dependencies.auth import get_current_user
+from api.dependencies.auth import get_current_user, require_platform_admin, require_tenant_context
 from api.schemas.auth import SessionUser
 from common.database import get_db
-from common.errors import AuthError, NotFoundError
+from common.errors import NotFoundError
+from context.authorization import verify_tenant_ownership
+from context.tenant_context import TenantContext
 from control_plane.audit_service import AuditService
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from dataset.service import DatasetService, DatasetVersionService
@@ -75,27 +77,36 @@ class DatasetVersionDeleteSummaryResponse(BaseModel):
     blocking_reason: str | None = None
 
 
+def _build_service(db: Session) -> DatasetService:
+    version_repo = DatasetVersionRepository(db)
+    return DatasetService(DatasetRepository(db), version_repo)
+
+
 @router.get("/")
 def list_datasets(
-    project_id: str = Query(""), db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)
+    project_id: str = Query(""),
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
 ):
-    version_repo = DatasetVersionRepository(db)
-    service = DatasetService(DatasetRepository(db), version_repo)
+    service = _build_service(db)
     if project_id:
-        return service.list_datasets(project_id)
-    return service.list_all_datasets()
+        return service.list_datasets(project_id, tenant_id=ctx.tenant_id)
+    return service.list_all_datasets(tenant_id=ctx.tenant_id)
 
 
 @router.post("/", status_code=201)
 async def create_dataset(
     body: CreateDatasetRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
     raw_body: dict = Depends(_raw_json),
 ):
     reject_transform_keys(raw_body, label="dataset")
-    service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
+    service = _build_service(db)
     return await service.create_dataset_async(
+        tenant_id=ctx.tenant_id,
         project_id=body.project_id,
         connection_id=body.connection_id,
         name=body.name,
@@ -109,12 +120,17 @@ async def create_dataset(
 
 
 @router.get("/{id}")
-def get_dataset(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
-    version_repo = DatasetVersionRepository(db)
-    service = DatasetService(DatasetRepository(db), version_repo)
-    dataset = service.get_dataset(id)
+def get_dataset(
+    id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = _build_service(db)
+    dataset = service.get_dataset(id, tenant_id=ctx.tenant_id)
     if dataset is None:
         raise NotFoundError("Dataset not found")
+    verify_tenant_ownership(ctx, dataset.tenant_id, "Dataset")
     return dataset
 
 
@@ -122,30 +138,41 @@ def get_dataset(id: str, db: Session = Depends(get_db), user: SessionUser = Depe
 def update_dataset(
     id: str,
     body: UpdateDatasetNameRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
-    service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
-    return service.update_dataset_name(id=id, name=body.name)
+    service = _build_service(db)
+    return service.update_dataset_name(id=id, name=body.name, tenant_id=ctx.tenant_id)
 
 
 @router.get("/{id}/versions")
-def list_versions(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
+def list_versions(
+    id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
     repo = DatasetVersionRepository(db)
     return repo.list_by_dataset(id)
 
 
 @router.get("/{id}/dependencies")
-def get_delete_summary(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
-    version_repo = DatasetVersionRepository(db)
-    service = DatasetService(DatasetRepository(db), version_repo)
-    return DatasetDeleteSummaryResponse(**service.get_delete_summary(id))
+def get_delete_summary(
+    id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = _build_service(db)
+    return DatasetDeleteSummaryResponse(**service.get_delete_summary(id, tenant_id=ctx.tenant_id))
 
 
 @router.get("/{dataset_id}/versions/{version_id}/dependencies")
 def get_version_delete_summary(
     dataset_id: str,
     version_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
@@ -156,7 +183,11 @@ def get_version_delete_summary(
 
 @router.post("/{id}/versions", status_code=201)
 def create_version(
-    id: str, body: CreateVersionRequest, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)
+    id: str,
+    body: CreateVersionRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
 ):
     repo = DatasetVersionRepository(db)
     dataset_repo = DatasetRepository(db)
@@ -168,6 +199,7 @@ def create_version(
 async def reimport_dataset_version(
     id: str,
     body: ReimportRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
     raw_body: dict = Depends(_raw_json),
@@ -187,24 +219,30 @@ async def reimport_dataset_version(
 @router.post("/{id}/refresh", status_code=201)
 def refresh_dataset_version(
     id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
-    service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
-    return service.refresh_dataset_version(dataset_id=id)
+    service = _build_service(db)
+    return service.refresh_dataset_version(dataset_id=id, tenant_id=ctx.tenant_id)
 
 
 @router.delete("/{id}")
-def delete_dataset(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
-    version_repo = DatasetVersionRepository(db)
-    service = DatasetService(DatasetRepository(db), version_repo)
-    return service.delete_dataset(id)
+def delete_dataset(
+    id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = _build_service(db)
+    return service.delete_dataset(id, tenant_id=ctx.tenant_id)
 
 
 @router.delete("/{dataset_id}/versions/{version_id}")
 def delete_version(
     dataset_id: str,
     version_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
@@ -219,30 +257,41 @@ def preview_dataset(
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=1000),
     search: str = Query(""),
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
-    service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
-    return service.preview_dataset(id, page, page_size, search)
+    service = _build_service(db)
+    return service.preview_dataset(id, page, page_size, search, tenant_id=ctx.tenant_id)
 
 
 @router.get("/{id}/lineage")
-def get_lineage(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
-    service = DatasetService(DatasetRepository(db), DatasetVersionRepository(db))
-    return service.get_lineage(id)
+def get_lineage(
+    id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = _build_service(db)
+    return service.get_lineage(id, tenant_id=ctx.tenant_id)
 
 
 @router.get("/{id}/health")
-def get_dataset_health(id: str, db: Session = Depends(get_db), user: SessionUser = Depends(get_current_user)):
-    version_repo = DatasetVersionRepository(db)
-    service = DatasetService(DatasetRepository(db), version_repo)
-    return service.get_dataset_health(id)
+def get_dataset_health(
+    id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = _build_service(db)
+    return service.get_dataset_health(id, tenant_id=ctx.tenant_id)
 
 
 @router.get("/{id}/drift-events")
 def get_drift_events(
     id: str,
     limit: int = Query(20, ge=1, le=100),
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
@@ -260,6 +309,7 @@ class ClearBlockRequest(BaseModel):
 def clear_drift_block(
     id: str,
     body: ClearBlockRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
@@ -273,11 +323,11 @@ def clear_drift_block(
 def update_sync_policy(
     id: str,
     body: SyncPolicyUpdateRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
-    version_repo = DatasetVersionRepository(db)
-    service = DatasetService(DatasetRepository(db), version_repo)
+    service = _build_service(db)
     return service.update_sync_policy(
         dataset_id=id,
         sync_mode=body.sync_mode,
@@ -285,6 +335,7 @@ def update_sync_policy(
         real_time_strategy=body.real_time_strategy,
         cursor_column=body.cursor_column,
         frequency_minutes=body.frequency_minutes,
+        tenant_id=ctx.tenant_id,
     )
 
 
@@ -294,14 +345,10 @@ class RetentionPolicyRequest(BaseModel):
     horizon_days: int | None = None
 
 
-def _require_admin_for_retention(user: SessionUser) -> None:
-    if not user.is_admin:
-        raise AuthError("Admin access required")
-
-
 @router.get("/{id}/retention-policy")
 def get_retention_policy(
     id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
@@ -314,22 +361,17 @@ def get_retention_policy(
 def save_retention_policy(
     id: str,
     body: RetentionPolicyRequest,
+    admin: SessionUser = Depends(require_platform_admin),
+    ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
-    _require_admin_for_retention(user)
     repo = RetentionPolicyRepository(db)
     audit = AuditService(db)
     service = RetentionPolicyService(repo, audit_service=audit)
-
-    from context.tenant_context import get_current_tenant_context
-
-    ctx = get_current_tenant_context()
-    tenant_id = ctx.tenant_id if ctx else ""
-
     return service.save_policy(
         dataset_id=id,
-        tenant_id=tenant_id,
+        tenant_id=ctx.tenant_id,
         actor_user_id=user.id,
         preset=body.preset,
         mode=body.mode,
