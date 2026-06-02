@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from api.dependencies.auth import get_current_user, require_tenant_context
@@ -188,9 +187,9 @@ def create_object_type(
             display_name=body.display_name,
             description=body.description,
         )
-    except IntegrityError:
+    except ValueError:
         return JSONResponse(
-            status_code=500,
+            status_code=409,
             content={"detail": f"Object type key '{body.object_type_key}' already exists for this tenant"},
         )
     return _obj_to_response(obj)
@@ -204,7 +203,7 @@ def get_object_type(
     user: SessionUser = Depends(get_current_user),
 ):
     service = ObjectTypeService(ObjectTypeRepository(db))
-    obj = service.get(id)
+    obj = service.get(id, tenant_id=ctx.tenant_id)
     if obj is None:
         raise NotFoundError("Object type not found")
     return _obj_to_response(obj)
@@ -219,8 +218,38 @@ def update_object_type(
     user: SessionUser = Depends(get_current_user),
 ):
     service = ObjectTypeService(ObjectTypeRepository(db))
-    obj = service.update(id, display_name=body.display_name, description=body.description)
+    obj = service.update(id, tenant_id=ctx.tenant_id, display_name=body.display_name, description=body.description)
     return _obj_to_response(obj)
+
+
+# ─── Object Type Primary Key Resolution ───
+
+
+class ResolvedPrimaryKeyResponse(BaseModel):
+    property_name: str | None
+    semantic_type: str | None
+
+
+@router.get("/object-types/{id}/primary-key", response_model=ResolvedPrimaryKeyResponse)
+def get_object_type_primary_key(
+    id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    object_type_repo = ObjectTypeRepository(db)
+    mapping_repo = SemanticMappingRepository(db)
+
+    # Verify the object type exists and belongs to this tenant
+    obj_type = object_type_repo.get(id, tenant_id=ctx.tenant_id)
+    if obj_type is None:
+        raise NotFoundError("Object type not found")
+
+    # Find the latest mapping with a PK for this object type
+    from semantic.service import _resolve_target_key
+
+    pk_name, pk_type = _resolve_target_key(mapping_repo, ctx.tenant_id, id)
+    return ResolvedPrimaryKeyResponse(property_name=pk_name, semantic_type=pk_type)
 
 
 # ─── Schema Endpoint ───
@@ -256,7 +285,7 @@ async def get_mapping(
     object_type_repo = ObjectTypeRepository(db)
     schema_service = DatasetSchemaService(db)
     service = SemanticMappingService(mapping_repo, object_type_repo, schema_service)
-    mapping = service.get_current(dataset_id, version_id)
+    mapping = service.get_current(dataset_id, version_id, tenant_id=ctx.tenant_id)
     if mapping is None:
         return None
     return _mapping_to_response(mapping)
@@ -305,6 +334,7 @@ async def create_mapping(
         object_type_key=body.object_type_key,
         properties=properties,
         links=links,
+        tenant_id=ctx.tenant_id,
     )
     return _mapping_to_response(mapping)
 
@@ -352,6 +382,7 @@ async def update_mapping(
         object_type_key=body.object_type_key,
         properties=properties,
         links=links,
+        tenant_id=ctx.tenant_id,
     )
     return _mapping_to_response(mapping)
 
@@ -392,7 +423,14 @@ async def validate_mapping_endpoint(
         for ln in body.links
     ]
 
-    result = await service.validate(dataset_id, version_id, properties, links=links)
+    result = await service.validate(
+        dataset_id,
+        version_id,
+        properties,
+        object_type_id=body.object_type_id,
+        links=links,
+        tenant_id=ctx.tenant_id,
+    )
     return ValidationResponse(
         valid=result["valid"],
         errors=[ValidationErrorItem(**e) for e in result["errors"]],

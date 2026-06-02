@@ -53,6 +53,10 @@ class ObjectTypeService:
         self._repo = repo
 
     def create(self, tenant_id: str, object_type_key: str, display_name: str, description: str = "") -> ObjectType:
+        # Pre-check for duplicate key (avoids IntegrityError → proper 409)
+        existing = self._repo.get_by_key(tenant_id, object_type_key)
+        if existing is not None:
+            raise ValueError(f"Object type key '{object_type_key}' already exists for this tenant")
         now = datetime.now(UTC)
         obj_type = ObjectType(
             id=str(uuid.uuid4()),
@@ -64,14 +68,16 @@ class ObjectTypeService:
         )
         return self._repo.save(obj_type)
 
-    def get(self, id: str) -> ObjectType | None:
-        return self._repo.get(id)
+    def get(self, id: str, tenant_id: str) -> ObjectType | None:
+        return self._repo.get(id, tenant_id=tenant_id)
 
     def list_by_tenant(self, tenant_id: str) -> list[ObjectType]:
         return self._repo.list_by_tenant(tenant_id)
 
-    def update(self, id: str, display_name: str | None = None, description: str | None = None) -> ObjectType:
-        obj = self._repo.get(id)
+    def update(
+        self, id: str, tenant_id: str, display_name: str | None = None, description: str | None = None
+    ) -> ObjectType:
+        obj = self._repo.get(id, tenant_id=tenant_id)
         if obj is None:
             raise NotFoundError("Object type not found")
         if display_name is not None:
@@ -93,8 +99,10 @@ class SemanticMappingService:
         self._object_type_repo = object_type_repo
         self._schema_service = schema_service
 
-    def get_current(self, dataset_id: str, dataset_version_id: str) -> SemanticMapping | None:
-        return self._mapping_repo.get_current(dataset_id, dataset_version_id)
+    def get_current(
+        self, dataset_id: str, dataset_version_id: str, tenant_id: str | None = None
+    ) -> SemanticMapping | None:
+        return self._mapping_repo.get_current(dataset_id, dataset_version_id, tenant_id=tenant_id)
 
     async def create(
         self,
@@ -104,11 +112,15 @@ class SemanticMappingService:
         object_type_key: str,
         properties: list[PropertyMapping],
         links: list[EntityLink] | None = None,
+        tenant_id: str | None = None,
     ) -> SemanticMapping:
-        # Validate object type exists
-        obj_type = self._object_type_repo.get(object_type_id)
+        # Validate object type exists and belongs to the correct tenant
+        obj_type = self._object_type_repo.get(object_type_id, tenant_id=tenant_id)
         if obj_type is None:
             raise NotFoundError("Object type not found")
+
+        # Derive object_type_key from the validated Object Type (never trust client)
+        object_type_key = obj_type.object_type_key
 
         links = links or []
         tenant_id = obj_type.tenant_id
@@ -171,10 +183,17 @@ class SemanticMappingService:
         object_type_key: str,
         properties: list[PropertyMapping],
         links: list[EntityLink] | None = None,
+        tenant_id: str | None = None,
     ) -> SemanticMapping:
         """Update creates a new version of the mapping."""
         return await self.create(
-            dataset_id, dataset_version_id, object_type_id, object_type_key, properties, links=links
+            dataset_id,
+            dataset_version_id,
+            object_type_id,
+            object_type_key,
+            properties,
+            links=links,
+            tenant_id=tenant_id,
         )
 
     async def validate(
@@ -182,16 +201,31 @@ class SemanticMappingService:
         dataset_id: str,
         dataset_version_id: str,
         properties: list[PropertyMapping],
+        object_type_id: str | None = None,
         links: list[EntityLink] | None = None,
+        tenant_id: str | None = None,
     ) -> dict:
         """Validate mapping properties without persisting. Returns validation result."""
         links = links or []
+        errors: list[dict] = []
+
+        # Validate object type exists and belongs to tenant when provided
+        if object_type_id:
+            obj_type = self._object_type_repo.get(object_type_id, tenant_id=tenant_id)
+            if obj_type is None:
+                errors.append(
+                    {
+                        "field": "object_type_id",
+                        "value": object_type_id,
+                        "message": "Object type not found or does not belong to this tenant",
+                    }
+                )
 
         schema_columns: list[SchemaColumn] | None = None
         if self._schema_service:
             schema_columns = await self._schema_service.get_schema(dataset_id, dataset_version_id)
 
-        errors = validate_mapping(properties, schema_columns)
+        errors.extend(validate_mapping(properties, schema_columns))
 
         # Also check PK sample (only when schema is available)
         if self._schema_service and schema_columns is not None:
@@ -205,30 +239,12 @@ class SemanticMappingService:
         # Link validation (stateless + type compatibility)
         errors.extend(validate_links(links, properties))
 
-        # Need tenant_id for type compatibility check
-        tenant_id = await self._resolve_tenant_for_validate(links, properties)
+        # Type compatibility check requires tenant context
         if tenant_id:
             link_type_errors = await self._validate_link_type_compatibility(links, properties, tenant_id)
             errors.extend(link_type_errors)
 
         return {"valid": len(errors) == 0, "errors": errors}
-
-    async def _resolve_tenant_for_validate(
-        self,
-        links: list[EntityLink],
-        properties: list[PropertyMapping],
-    ) -> str | None:
-        """Resolve tenant_id for validate endpoint (no obj_type param available)."""
-        if properties:
-            pk_props = [p for p in properties if p.is_primary_key]
-            if pk_props:
-                # Try to find tenant from the first link's target
-                pass
-        if links:
-            target_obj = self._object_type_repo.get(links[0].target_object_type_id)
-            if target_obj:
-                return target_obj.tenant_id
-        return None
 
     async def _resolve_link_targets(
         self,

@@ -63,6 +63,60 @@ def auth_headers(client, seed_user, seed_tenant_and_membership):
 
 
 @pytest.fixture
+def seed_tenant_2_and_membership(db_session, seed_user):
+    """Create a second tenant with membership for cross-tenant isolation tests."""
+    tenant2 = TenantModel(
+        id="test-tenant-2",
+        tenant_uuid="tuuid-test-2",
+        name="Tenant Two",
+        slug="test-tenant-2",
+        lifecycle_state="active",
+        status="active",
+    )
+    db_session.add(tenant2)
+    membership2 = TenantMembershipModel(
+        user_id=seed_user.id,
+        tenant_id="test-tenant-2",
+        role="admin",
+        status="active",
+    )
+    db_session.add(membership2)
+    db_session.commit()
+    return tenant2, membership2
+
+
+@pytest.fixture
+def auth_headers_tenant2(client, seed_user, seed_tenant_2_and_membership):
+    """Auth headers for a user who belongs to tenant-2."""
+    # Override tenant context to tenant-2 for the login to resolve correctly
+    from context.tenant_context import set_current_tenant_context
+
+    ctx2 = TenantContext(
+        tenant_id="test-tenant-2",
+        tenant_role="admin",
+        membership_status="active",
+    )
+    set_current_tenant_context(ctx2)
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "admin@canopy.dev", "password": "admin123"},
+    )
+    assert response.status_code == 200, response.text
+    token = response.json()["token"]
+
+    # Restore tenant-1 context
+    ctx1 = TenantContext(
+        tenant_id="test-tenant-1",
+        tenant_role="admin",
+        membership_status="active",
+    )
+    set_current_tenant_context(ctx1)
+
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
 def object_type_service(db_session):
     return ObjectTypeService(ObjectTypeRepository(db_session))
 
@@ -140,7 +194,7 @@ class TestObjectTypesAPI:
             },
             headers=auth_headers,
         )
-        assert response.status_code == 500  # Integrity error
+        assert response.status_code == 409  # Conflict, not 500
 
     def test_get_object_type(self, client, auth_headers, tenant_context, seed_object_type):
         response = client.get(
@@ -165,6 +219,39 @@ class TestObjectTypesAPI:
         )
         assert response.status_code == 200
         assert response.json()["display_name"] == "Updated Name"
+
+    # ─── Cross-tenant isolation ───
+
+    def test_cross_tenant_get_returns_404(self, client, auth_headers_tenant2, tenant_context, seed_object_type):
+        """Tenant-2 cannot read an object type owned by tenant-1."""
+        response = client.get(
+            f"/api/semantic/object-types/{seed_object_type.id}",
+            headers=auth_headers_tenant2,
+        )
+        assert response.status_code == 404
+
+    def test_cross_tenant_update_returns_404(self, client, auth_headers_tenant2, tenant_context, seed_object_type):
+        """Tenant-2 cannot update an object type owned by tenant-1."""
+        response = client.patch(
+            f"/api/semantic/object-types/{seed_object_type.id}",
+            json={"display_name": "Hacked"},
+            headers=auth_headers_tenant2,
+        )
+        assert response.status_code == 404
+
+    # ─── Duplicate key returns 409 ───
+
+    def test_create_duplicate_key_returns_409(self, client, auth_headers, tenant_context, seed_object_type):
+        """Duplicate object_type_key should return 409 Conflict, not 500."""
+        response = client.post(
+            "/api/semantic/object-types",
+            json={
+                "object_type_key": "test_employee",
+                "display_name": "Another Employee",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 409
 
 
 # ─── Schema API ───
@@ -292,6 +379,60 @@ class TestMappingValidationAPI:
         assert data["valid"] is False
         error_messages = [e["message"].lower() for e in data["errors"]]
         assert any("duplicate" in msg for msg in error_messages)
+
+    # ─── P2: Validate must check object_type_id exists ───
+
+    def test_validate_with_nonexistent_object_type(self, client, auth_headers):
+        """Validate should fail when object_type_id doesn't exist."""
+        response = client.post(
+            "/api/semantic/datasets/test-ds/versions/test-version/mapping/validate",
+            json={
+                "object_type_id": "nonexistent-id",
+                "object_type_key": "fake",
+                "properties": [
+                    {
+                        "source_column": "col_a",
+                        "property_name": "Column A",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": True,
+                    },
+                ],
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["valid"] is False
+        error_messages = [e["message"].lower() for e in data["errors"]]
+        assert any("object type" in msg for msg in error_messages)
+
+    def test_validate_with_cross_tenant_object_type(
+        self, client, auth_headers_tenant2, tenant_context, seed_object_type
+    ):
+        """Validate should fail when object_type_id belongs to another tenant."""
+        response = client.post(
+            "/api/semantic/datasets/test-ds/versions/test-version/mapping/validate",
+            json={
+                "object_type_id": seed_object_type.id,
+                "object_type_key": seed_object_type.object_type_key,
+                "properties": [
+                    {
+                        "source_column": "col_a",
+                        "property_name": "Column A",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": True,
+                    },
+                ],
+            },
+            headers=auth_headers_tenant2,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["valid"] is False
+        error_messages = [e["message"].lower() for e in data["errors"]]
+        assert any("object type" in msg for msg in error_messages)
 
 
 # ─── Entity Link Fixtures ───
@@ -884,3 +1025,64 @@ class TestMappingCRUDAPI:
         )
         assert response.status_code == 200
         assert response.json() is None
+
+    def test_create_mapping_derives_key_from_object_type(self, client, auth_headers, seed_object_type):
+        """Server must derive object_type_key from the validated Object Type, not trust client input."""
+        # Client sends a mismatched object_type_key
+        response = client.post(
+            "/api/semantic/datasets/test-ds-key/versions/test-v-key/mapping",
+            json={
+                "object_type_id": seed_object_type.id,
+                "object_type_key": "wrong_key_hacked",  # Client lied
+                "properties": [
+                    {
+                        "source_column": "id",
+                        "property_name": "ID",
+                        "semantic_type": "string",
+                        "included": True,
+                        "is_primary_key": True,
+                    },
+                ],
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+        data = response.json()
+        # Should use the Object Type's actual key, not the client-supplied one
+        assert data["object_type_key"] == seed_object_type.object_type_key
+
+
+# ─── P3: Object Type Primary Key Resolution ───
+
+
+class TestObjectTypePrimaryKeyAPI:
+    """Tests for object type primary key resolution endpoint."""
+
+    def test_resolve_pk_returns_primary_key(self, client, auth_headers, seed_target_object_type, seed_target_mapping):
+        """When object type has a mapping with PK, return the PK property name."""
+        response = client.get(
+            f"/api/semantic/object-types/{seed_target_object_type.id}/primary-key",
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["property_name"] == "id"
+        assert data["semantic_type"] == "string"
+
+    def test_resolve_pk_returns_none_when_no_mapping(self, client, auth_headers, seed_object_type):
+        """When object type has no mapping, return null PK."""
+        response = client.get(
+            f"/api/semantic/object-types/{seed_object_type.id}/primary-key",
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["property_name"] is None
+
+    def test_resolve_pk_not_found(self, client, auth_headers):
+        """Non-existent object type returns 404."""
+        response = client.get(
+            "/api/semantic/object-types/nonexistent/primary-key",
+            headers=auth_headers,
+        )
+        assert response.status_code == 404

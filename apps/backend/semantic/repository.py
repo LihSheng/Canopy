@@ -16,8 +16,11 @@ class ObjectTypeRepository:
         self._db.refresh(merged)
         return self._to_domain(merged)
 
-    def get(self, id: str) -> ObjectType | None:
-        model = self._db.query(ObjectTypeModel).filter(ObjectTypeModel.id == id).first()
+    def get(self, id: str, tenant_id: str | None = None) -> ObjectType | None:
+        q = self._db.query(ObjectTypeModel).filter(ObjectTypeModel.id == id)
+        if tenant_id is not None:
+            q = q.filter(ObjectTypeModel.tenant_id == tenant_id)
+        model = q.first()
         return self._to_domain(model) if model else None
 
     def get_by_key(self, tenant_id: str, key: str) -> ObjectType | None:
@@ -40,8 +43,11 @@ class ObjectTypeRepository:
         )
         return [self._to_domain(m) for m in models]
 
-    def delete(self, id: str) -> bool:
-        model = self._db.query(ObjectTypeModel).filter(ObjectTypeModel.id == id).first()
+    def delete(self, id: str, tenant_id: str | None = None) -> bool:
+        q = self._db.query(ObjectTypeModel).filter(ObjectTypeModel.id == id)
+        if tenant_id is not None:
+            q = q.filter(ObjectTypeModel.tenant_id == tenant_id)
+        model = q.first()
         if model is None:
             return False
         self._db.delete(model)
@@ -82,21 +88,24 @@ class SemanticMappingRepository:
         self._db.refresh(merged)
         return self._to_domain(merged)
 
-    def get(self, id: str) -> SemanticMapping | None:
-        model = self._db.query(SemanticMappingModel).filter(SemanticMappingModel.id == id).first()
+    def get(self, id: str, tenant_id: str | None = None) -> SemanticMapping | None:
+        q = self._db.query(SemanticMappingModel).filter(SemanticMappingModel.id == id)
+        if tenant_id is not None:
+            q = q.filter(SemanticMappingModel.tenant_id == tenant_id)
+        model = q.first()
         return self._to_domain(model) if model else None
 
-    def get_current(self, dataset_id: str, dataset_version_id: str) -> SemanticMapping | None:
+    def get_current(
+        self, dataset_id: str, dataset_version_id: str, tenant_id: str | None = None
+    ) -> SemanticMapping | None:
         """Get the latest mapping version for a dataset version."""
-        model = (
-            self._db.query(SemanticMappingModel)
-            .filter(
-                SemanticMappingModel.dataset_id == dataset_id,
-                SemanticMappingModel.dataset_version_id == dataset_version_id,
-            )
-            .order_by(desc(SemanticMappingModel.version_number))
-            .first()
+        q = self._db.query(SemanticMappingModel).filter(
+            SemanticMappingModel.dataset_id == dataset_id,
+            SemanticMappingModel.dataset_version_id == dataset_version_id,
         )
+        if tenant_id is not None:
+            q = q.filter(SemanticMappingModel.tenant_id == tenant_id)
+        model = q.order_by(desc(SemanticMappingModel.version_number)).first()
         return self._to_domain(model) if model else None
 
     def get_max_version(self, dataset_id: str, dataset_version_id: str) -> int:
@@ -133,8 +142,11 @@ class SemanticMappingRepository:
         )
         return [self._to_domain(m) for m in models]
 
-    def delete(self, id: str) -> bool:
-        model = self._db.query(SemanticMappingModel).filter(SemanticMappingModel.id == id).first()
+    def delete(self, id: str, tenant_id: str | None = None) -> bool:
+        q = self._db.query(SemanticMappingModel).filter(SemanticMappingModel.id == id)
+        if tenant_id is not None:
+            q = q.filter(SemanticMappingModel.tenant_id == tenant_id)
+        model = q.first()
         if model is None:
             return False
         self._db.delete(model)

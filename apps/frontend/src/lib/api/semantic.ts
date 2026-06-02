@@ -39,6 +39,21 @@ export const updateObjectType = (
   });
 };
 
+// ─── Object Type Primary Key Resolution ───
+
+export type ResolvedPrimaryKey = {
+  property_name: string | null;
+  semantic_type: string | null;
+};
+
+export const fetchObjectTypePrimaryKey = (
+  id: string
+): Promise<ResolvedPrimaryKey> => {
+  return request<ResolvedPrimaryKey>(
+    `/api/semantic/object-types/${id}/primary-key`
+  );
+};
+
 // ─── Schema ───
 
 export const fetchDatasetVersionSchema = (

@@ -6,6 +6,7 @@ Use the versioned folders for planning and design docs.
 
 - [Codebase Map](../doc/codebase-map.md): current snapshot and navigation aid
 - [Task Index](../doc/tasks/progress.md): entrypoint to the versioned task trackers
+- [Entity Mapping and Relationship Links PRD](../doc/prd/0009-entity-mapping-and-relationship-links.md): draft PRD for tenant-scoped entity mapping, property curation, and relationship link declarations
 - [Lineage-Aware Data Retention PRD](../doc/prd/0008-lineage-aware-data-retention.md): draft PRD for dataset lifetime policies, lineage impact preview, scheduled retention evaluation, and purge auditability
 - [Lineage-Aware Data Retention Issues](../doc/issues/0011-lineage-aware-data-retention-vertical-slices.md): draft vertical-slice issue breakdown for the retention PRD
 

@@ -23,7 +23,7 @@ export const EntityTab = ({ dataset, versions }: Props) => {
   const activeVersion = versions.find(
     (v) => v.id === dataset.active_version_id
   );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mapping, setMapping] = useState<SemanticMapping | null>(null);
   const [showWizard, setShowWizard] = useState(false);
@@ -31,6 +31,8 @@ export const EntityTab = ({ dataset, versions }: Props) => {
 
   useEffect(() => {
     if (!activeVersion) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
+    setLoading(true);
     cancelledRef.current = false;
 
     fetchMapping(dataset.id, activeVersion.id)
@@ -51,6 +53,7 @@ export const EntityTab = ({ dataset, versions }: Props) => {
 
     return () => {
       cancelledRef.current = true;
+      setLoading(false);
     };
   }, [dataset.id, activeVersion]);
 

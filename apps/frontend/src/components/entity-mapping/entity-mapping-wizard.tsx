@@ -8,6 +8,7 @@ import {
   createMapping,
   updateMapping,
   validateMapping,
+  fetchObjectTypePrimaryKey,
 } from "@/lib/api/semantic";
 import type {
   EntityLink,
@@ -67,6 +68,11 @@ export const EntityMappingWizard = ({
 
   // ─── Entity links (Step 4) ───
   const [links, setLinks] = useState<EntityLink[]>([]);
+
+  // ─── Resolved target PKs ───
+  const [resolvedTargetKeys, setResolvedTargetKeys] = useState<
+    Record<string, { property_name: string | null; semantic_type: string | null }>
+  >({});
 
   // ─── Initial load ───
   useEffect(() => {
@@ -225,6 +231,20 @@ export const EntityMappingWizard = ({
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
+
+    // When target object type changes, resolve its primary key
+    if (field === "target_object_type_id" && value) {
+      fetchObjectTypePrimaryKey(value)
+        .then((pk) => {
+          setResolvedTargetKeys((prev) => ({
+            ...prev,
+            [value]: pk,
+          }));
+        })
+        .catch(() => {
+          // Silently ignore — keep "(resolved on save)" fallback
+        });
+    }
   };
 
   const handleRemoveLink = (index: number) => {
@@ -893,7 +913,7 @@ export const EntityMappingWizard = ({
                     )}
                   </div>
 
-                  {/* target_property_key (read-only) */}
+                  {/* target_property_key (read-only, resolved live) */}
                   <div>
                     <label className="block text-xs font-medium text-zinc-600 mb-1">
                       Target Key (resolved)
@@ -902,6 +922,8 @@ export const EntityMappingWizard = ({
                       type="text"
                       value={
                         link.target_property_key ||
+                        resolvedTargetKeys[link.target_object_type_id]
+                          ?.property_name ||
                         "(resolved on save)"
                       }
                       readOnly
