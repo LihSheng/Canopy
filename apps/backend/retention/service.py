@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from common.errors import ValidationError
 from retention.domain import (
@@ -40,11 +40,10 @@ class RetentionPolicyService:
         resolved_mode, resolved_horizon = self._resolve_policy_params(preset, mode, horizon_days)
 
         existing = self._repo.get_by_dataset(dataset_id)
-        is_update = existing is not None
 
         now = datetime.now(UTC)
 
-        if is_update:
+        if existing is not None:
             existing.mode = resolved_mode
             existing.horizon_days = resolved_horizon
             existing.preset = preset
@@ -180,7 +179,5 @@ class RetentionPolicyService:
         )
 
 
-def _days_to_timedelta(days: int):
-    from datetime import timedelta
-
+def _days_to_timedelta(days: int) -> timedelta:
     return timedelta(days=days)

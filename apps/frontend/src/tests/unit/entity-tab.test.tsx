@@ -43,9 +43,8 @@ const baseVersion: DatasetVersion = {
   row_count: 100,
   column_count: 5,
   storage_path: "/test",
-  raw_storage_path: null,
-  cleaning_issues: null,
-  failure_reason: null,
+  cleaning_issues: [],
+  failure_reason: undefined,
   created_at: "2026-01-01T00:00:00Z",
 };
 
