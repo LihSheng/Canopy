@@ -1,6 +1,6 @@
 import os
 import uuid
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from sqlalchemy.orm import Session
 
@@ -22,7 +22,7 @@ def _default_export_dir() -> str:
     if os.name == "nt":
         app_data_dir = os.environ.get("LOCALAPPDATA")
         if app_data_dir:
-            return str(Path(app_data_dir) / "Canopy Intelligence" / "exports")
+            return str(PureWindowsPath(app_data_dir) / "Canopy Intelligence" / "exports")
 
     return str(Path.home() / ".canopy-intelligence" / "exports")
 

@@ -2,7 +2,16 @@ import time
 
 import pytest
 
+from common.executor import SameThreadRunner
+
 pytestmark = pytest.mark.api_schema
+
+
+@pytest.fixture(autouse=True)
+def _sync_refresh_background(monkeypatch):
+    import refresh.service as refresh_service
+
+    monkeypatch.setattr(refresh_service, "background", SameThreadRunner())
 
 
 class TestRefresh:

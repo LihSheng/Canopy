@@ -16,6 +16,7 @@ def test_refresh_dataset_version_api(client, auth_headers, db_session, monkeypat
             source_type="postgresql",
             name="Payroll DB",
             config_json={},
+            tenant_id="test-tenant-1",
         ),
     )
     dataset_repo.save(
@@ -26,6 +27,7 @@ def test_refresh_dataset_version_api(client, auth_headers, db_session, monkeypat
             name="Payroll",
             source_object_name="payroll",
             status=DatasetStatus.ACTIVE.value,
+            tenant_id="test-tenant-1",
         ),
     )
 

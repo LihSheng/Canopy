@@ -166,6 +166,7 @@ def test_preview_backfills_legacy_dataset_without_active_version(
             connection_id=connection_id,
             name="Payroll Legacy",
             source_object_name="Payroll",
+            tenant_id="test-tenant-1",
         ),
     )
 
@@ -251,6 +252,7 @@ def test_preview_backfills_upload_id_connection_without_active_version(
             connection_id=connection_id,
             name="Payroll Upload Legacy",
             source_object_name="Payroll",
+            tenant_id="test-tenant-1",
         ),
     )
 
