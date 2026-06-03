@@ -61,6 +61,19 @@ const ITEMS = [
     ),
   },
   {
+    href: ROUTES.entities,
+    label: "Entities",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+        <path
+          fillRule="evenodd"
+          d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2a1 1 0 011-1h6a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1V6zm1 5a1 1 0 000 2h2a1 1 0 000-2H7zm4 0a1 1 0 000 2h2a1 1 0 000-2h-2zm-4 3a1 1 0 000 2h2a1 1 0 000-2H7zm4 0a1 1 0 000 2h2a1 1 0 000-2h-2z"
+          clipRule="evenodd"
+        />
+      </svg>
+    ),
+  },
+  {
     href: ROUTES.connections.home,
     label: "Data Studio",
     icon: (

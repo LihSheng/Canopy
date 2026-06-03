@@ -12,6 +12,7 @@ from api.routes.connection import router as connection_router
 from api.routes.dashboard import router as dashboard_router
 from api.routes.dataset import router as dataset_router
 from api.routes.departments import router as departments_router
+from api.routes.entities import router as entities_router
 from api.routes.exports import router as exports_router
 from api.routes.feature_flags import admin_router as feature_flags_admin_router
 from api.routes.feature_flags import public_router as feature_flags_router
@@ -114,6 +115,7 @@ def create_app() -> FastAPI:
     app.include_router(dataset_router, prefix="/api")
     app.include_router(run_router, prefix="/api")
     app.include_router(semantic_router, prefix="/api")
+    app.include_router(entities_router, prefix="/api")
     app.include_router(feature_flags_router)
     app.include_router(feature_flags_admin_router)
 

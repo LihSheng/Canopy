@@ -10,6 +10,7 @@ export const ROUTES = {
   departments: "/dashboard/departments",
   reports: "/dashboard/reports",
   profile: "/dashboard/profile",
+  entities: "/dashboard/entities",
   connections: {
     home: "/dashboard/connections",
     sources: "/dashboard/connections/sources",
@@ -23,6 +24,8 @@ export const ROUTES = {
     connectionLineage: (id: string) => `/dashboard/connections/lineage/${id}`,
     setupWithSource: (source: string) => `/dashboard/connections/setup?source=${encodeURIComponent(source)}`,
   },
+  entityDetail: (id: string) => `/dashboard/entities/${encodeURIComponent(id)}`,
+  entityEditor: (datasetId: string) => `/dashboard/connections/datasets/${datasetId}?tab=Entity`,
   departmentDetail: (id: string) => `/dashboard/departments/${encodeURIComponent(id)}`,
   admin: {
     home: "/dashboard/admin",

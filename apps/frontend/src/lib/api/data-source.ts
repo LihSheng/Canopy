@@ -18,6 +18,8 @@ import type {
   TablePreview,
   RetentionPolicy,
   RetentionPolicyUpdate,
+  DatasetBulkDeleteSummaryItem,
+  DatasetBulkDeleteResult,
 } from "./types";
 
 export interface DatasetPreviewResponse {
@@ -205,6 +207,20 @@ export const fetchDatasetVersionDeleteSummary = (
 export const deleteDataset = (datasetId: string): Promise<{ deleted: boolean; id: string }> => {
   return request<{ deleted: boolean; id: string }>(`/api/datasets/${datasetId}`, {
     method: "DELETE",
+  });
+}
+
+export const fetchBulkDeleteSummary = (datasetIds: string[]): Promise<DatasetBulkDeleteSummaryItem[]> => {
+  return request<DatasetBulkDeleteSummaryItem[]>("/api/datasets/bulk-delete-summary", {
+    method: "POST",
+    body: JSON.stringify({ dataset_ids: datasetIds }),
+  });
+}
+
+export const bulkDeleteDatasets = (datasetIds: string[]): Promise<DatasetBulkDeleteResult> => {
+  return request<DatasetBulkDeleteResult>("/api/datasets/bulk-delete", {
+    method: "POST",
+    body: JSON.stringify({ dataset_ids: datasetIds }),
   });
 }
 

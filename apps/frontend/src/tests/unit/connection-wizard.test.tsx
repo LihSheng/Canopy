@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
 const mockPush = vi.fn();
+const mockCreateConnection = vi.fn();
+const mockFetchConnectionTest = vi.fn();
+const mockFetchTableDiscovery = vi.fn();
+const mockCreateDataset = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
   useSearchParams: () => ({
@@ -12,40 +16,44 @@ vi.mock("next/navigation", () => ({
 import { ConnectionWizard } from "@/components/data-studio/connection-wizard";
 
 vi.mock("@/lib/api/data-source", () => ({
-  createConnection: vi.fn().mockResolvedValue({
-    id: "conn-1",
-    project_id: "proj-1",
-    source_type: "postgresql",
-    name: "test",
-    status: "active",
-  }),
-  fetchConnectionTest: vi.fn().mockResolvedValue({ success: true }),
-  fetchTableDiscovery: vi.fn().mockResolvedValue([
-    {
-      table_name: "users",
-      row_count_estimate: 1000,
-      columns: [
-        { name: "id", data_type: "bigint" },
-        { name: "updated_at", data_type: "timestamp" },
-      ],
-      detected_cursor_column: "updated_at",
-    },
-    {
-      table_name: "orders",
-      row_count_estimate: 50000,
-      columns: [
-        { name: "id", data_type: "bigint" },
-        { name: "created_at", data_type: "timestamp" },
-      ],
-      detected_cursor_column: null,
-    },
-  ]),
-  createDataset: vi.fn().mockResolvedValue({ id: "ds-1" }),
+  createConnection: (...args: unknown[]) => mockCreateConnection(...args),
+  fetchConnectionTest: (...args: unknown[]) => mockFetchConnectionTest(...args),
+  fetchTableDiscovery: (...args: unknown[]) => mockFetchTableDiscovery(...args),
+  createDataset: (...args: unknown[]) => mockCreateDataset(...args),
 }));
 
 describe("ConnectionWizard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCreateConnection.mockResolvedValue({
+      id: "conn-1",
+      project_id: "proj-1",
+      source_type: "postgresql",
+      name: "test",
+      status: "active",
+    });
+    mockFetchConnectionTest.mockResolvedValue({ success: true });
+    mockFetchTableDiscovery.mockResolvedValue([
+      {
+        table_name: "users",
+        row_count_estimate: 1000,
+        columns: [
+          { name: "id", data_type: "bigint" },
+          { name: "updated_at", data_type: "timestamp" },
+        ],
+        detected_cursor_column: "updated_at",
+      },
+      {
+        table_name: "orders",
+        row_count_estimate: 50000,
+        columns: [
+          { name: "id", data_type: "bigint" },
+          { name: "created_at", data_type: "timestamp" },
+        ],
+        detected_cursor_column: null,
+      },
+    ]);
+    mockCreateDataset.mockResolvedValue({ id: "ds-1" });
   });
 
   it("shows step 1 (Authenticate) by default", () => {
@@ -113,6 +121,66 @@ describe("ConnectionWizard", () => {
     await waitFor(() => {
       expect(screen.getByText("users")).toBeInTheDocument();
       expect(screen.getByText("orders")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an in-wizard progress state while loading table discovery", async () => {
+    let resolveDiscovery: (value: Array<{
+      table_name: string;
+      row_count_estimate: number;
+      columns: Array<{ name: string; data_type: string }>;
+      detected_cursor_column: string | null;
+    }>) => void = () => undefined;
+
+    mockFetchTableDiscovery.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveDiscovery = resolve;
+      }) as Promise<
+        Array<{
+          table_name: string;
+          row_count_estimate: number;
+          columns: Array<{ name: string; data_type: string }>;
+          detected_cursor_column: string | null;
+        }>
+      >,
+    );
+
+    render(<ConnectionWizard />);
+
+    fireEvent.change(screen.getByPlaceholderText("localhost"), {
+      target: { value: "host" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("mydb"), {
+      target: { value: "db" },
+    });
+    fireEvent.click(screen.getByText("Test Connection"));
+    await waitFor(() => expect(screen.getByText("Connection successful")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText("Next"));
+    expect(
+      screen.getByText("Loading tables...", {
+        selector: "p.text-base.font-semibold.text-zinc-900",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Select Tables")).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveDiscovery([
+        {
+          table_name: "users",
+          row_count_estimate: 1000,
+          columns: [
+            { name: "id", data_type: "bigint" },
+            { name: "updated_at", data_type: "timestamp" },
+          ],
+          detected_cursor_column: "updated_at",
+        },
+      ]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Select Tables")).toBeInTheDocument();
+      expect(screen.getByText("users")).toBeInTheDocument();
     });
   });
 });

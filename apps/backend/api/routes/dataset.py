@@ -52,6 +52,14 @@ class UpdateDatasetNameRequest(BaseModel):
     name: str
 
 
+class BulkDeleteSummaryRequest(BaseModel):
+    dataset_ids: list[str]
+
+
+class BulkDeleteRequest(BaseModel):
+    dataset_ids: list[str]
+
+
 class SyncPolicyUpdateRequest(BaseModel):
     sync_mode: str | None = None
     batch_strategy: str | None = None
@@ -117,6 +125,28 @@ async def create_dataset(
         real_time_strategy=body.real_time_strategy,
         cursor_column=body.cursor_column,
     )
+
+
+@router.post("/bulk-delete-summary")
+def get_bulk_delete_summary(
+    body: BulkDeleteSummaryRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = _build_service(db)
+    return service.get_bulk_delete_summary(body.dataset_ids, tenant_id=ctx.tenant_id)
+
+
+@router.post("/bulk-delete")
+def bulk_delete_datasets(
+    body: BulkDeleteRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    service = _build_service(db)
+    return service.bulk_delete_datasets(body.dataset_ids, tenant_id=ctx.tenant_id)
 
 
 @router.get("/{id}")

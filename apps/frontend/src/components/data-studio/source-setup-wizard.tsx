@@ -31,6 +31,20 @@ const isDbSource = (source: string): boolean => {
   return source === "postgresql" || source === "mysql";
 }
 
+type ProgressStage = {
+  title: string;
+  description: string;
+  stepLabel: string;
+};
+
+const progressDotClass = (active: boolean): string =>
+  `flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
+    active ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-400"
+  }`;
+
+const progressTextClass = (active: boolean): string =>
+  active ? "font-medium text-zinc-900" : "text-zinc-400";
+
 export const SourceSetupWizard = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -357,6 +371,44 @@ export const SourceSetupWizard = () => {
   const maxStep: Step = isDb ? 3 : 2;
   const stepLabel = (s: Step) =>
     s === 1 ? (isDb ? "Authenticate" : "Upload") : s === 2 ? "Select Objects" : "Sync Policy";
+  const busyStage: ProgressStage | null = testing
+    ? {
+        title: "Initiating connection...",
+        description: "Verifying credentials and creating the connection record.",
+        stepLabel: "Authenticate",
+      }
+    : loadingTables
+      ? {
+          title: "Loading tables...",
+          description: "Discovering table names, row counts, and schemas.",
+          stepLabel: "Select Objects",
+        }
+      : deploying
+        ? {
+            title: "Preparing datasets...",
+            description: "Saving sync policies and creating datasets.",
+            stepLabel: "Sync Policy",
+          }
+        : null;
+  const busyStages: ProgressStage[] = isDb
+    ? [
+        {
+          title: "Initiating connection...",
+          description: "Verifying credentials and creating the connection record.",
+          stepLabel: "Authenticate",
+        },
+        {
+          title: "Loading tables...",
+          description: "Discovering table names, row counts, and schemas.",
+          stepLabel: "Select Objects",
+        },
+        {
+          title: "Preparing datasets...",
+          description: "Saving sync policies and creating datasets.",
+          stepLabel: "Sync Policy",
+        },
+      ]
+    : [];
 
   // ---- Active sheet for preview (static files) ----
   const activeSheet = preview?.sheet_profiles.find((s) => s.sheet_name === activeSheetName) ?? null;
@@ -396,116 +448,145 @@ export const SourceSetupWizard = () => {
       {step === 1 && (
         <div className="rounded-lg border border-zinc-200 bg-white p-6">
           {isDb ? (
-            <>
-              <h3 className="mb-4 text-lg font-semibold text-zinc-900">Connect Database</h3>
-
-              <div className="mb-4">
-                <label className="block text-xs font-medium text-zinc-500">Source type</label>
-                <input
-                  value={sourceType === "postgresql" ? "PostgreSQL" : "MySQL"}
-                  disabled
-                  className="mt-1 w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-zinc-500">Host</label>
-                  <input
-                    value={host}
-                    onChange={(e) => setHost(e.target.value)}
-                    placeholder="localhost"
-                    className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
-                  />
+            busyStage ? (
+              <div className="flex min-h-[280px] flex-col items-center justify-center gap-5 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-zinc-500">Port</label>
-                  <input
-                    value={port}
-                    onChange={(e) => setPort(e.target.value)}
-                    placeholder={sourceType === "mysql" ? "3306" : "5432"}
-                    className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
-                  />
+                  <p className="text-base font-semibold text-zinc-900">{busyStage.title}</p>
+                  <p className="mt-1 text-sm text-zinc-500">{busyStage.description}</p>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-zinc-500">Database</label>
-                  <input
-                    value={database}
-                    onChange={(e) => setDatabase(e.target.value)}
-                    placeholder="mydb"
-                    className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-zinc-500">Username</label>
-                  <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="user"
-                    className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-zinc-500">Password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-zinc-500">Connection name</label>
-                  <input
-                    value={connectionName}
-                    onChange={(e) => setConnectionName(e.target.value)}
-                    placeholder="Optional"
-                    className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
-                  />
+                <div className="w-full max-w-md space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-left">
+                  {busyStages.map((stage, index) => {
+                    const active = stage.stepLabel === busyStage.stepLabel;
+                    const completed = busyStages.findIndex((item) => item.stepLabel === busyStage.stepLabel) > index;
+                    return (
+                      <div key={stage.stepLabel} className="flex items-start gap-3">
+                        <div className={progressDotClass(active || completed)}>
+                          {completed ? "✓" : index + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-sm ${progressTextClass(active || completed)}`}>{stage.title}</p>
+                          <p className="text-xs text-zinc-500">{stage.description}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
+            ) : (
+              <>
+                <h3 className="mb-4 text-lg font-semibold text-zinc-900">Connect Database</h3>
 
-              {error && (
-                <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {error}
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-zinc-500">Source type</label>
+                  <input
+                    value={sourceType === "postgresql" ? "PostgreSQL" : "MySQL"}
+                    disabled
+                    className="mt-1 w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500"
+                  />
                 </div>
-              )}
 
-              {testSuccess && (
-                <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                  Connection successful
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500">Host</label>
+                    <input
+                      value={host}
+                      onChange={(e) => setHost(e.target.value)}
+                      placeholder="localhost"
+                      className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500">Port</label>
+                    <input
+                      value={port}
+                      onChange={(e) => setPort(e.target.value)}
+                      placeholder={sourceType === "mysql" ? "3306" : "5432"}
+                      className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500">Database</label>
+                    <input
+                      value={database}
+                      onChange={(e) => setDatabase(e.target.value)}
+                      placeholder="mydb"
+                      className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500">Username</label>
+                    <input
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="user"
+                      className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500">Password</label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500">Connection name</label>
+                    <input
+                      value={connectionName}
+                      onChange={(e) => setConnectionName(e.target.value)}
+                      placeholder="Optional"
+                      className="mt-1 w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none"
+                    />
+                  </div>
                 </div>
-              )}
 
-              <div className="mt-6 flex justify-between">
-                <button
-                  type="button"
-                  onClick={() => router.push(ROUTES.connections.sources)}
-                  className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-                >
-                  Back to Sources
-                </button>
-                <div className="flex gap-2">
+                {error && (
+                  <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {error}
+                  </div>
+                )}
+
+                {testSuccess && (
+                  <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    Connection successful
+                  </div>
+                )}
+
+                <div className="mt-6 flex justify-between">
                   <button
                     type="button"
-                    onClick={handleTestConnection}
-                    disabled={testing || !host || !database}
-                    className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => router.push(ROUTES.connections.sources)}
+                    className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
                   >
-                    {testing ? UI_LABELS.testing : UI_LABELS.testConnection}
+                    Back to Sources
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleDbNext}
-                    disabled={!canProceedToStep2 || loadingTables}
-                    className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {loadingTables ? UI_LABELS.loading : UI_LABELS.next}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleTestConnection}
+                      disabled={testing || !host || !database}
+                      className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {testing ? UI_LABELS.testing : UI_LABELS.testConnection}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDbNext}
+                      disabled={!canProceedToStep2 || loadingTables}
+                      className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {loadingTables ? UI_LABELS.loading : UI_LABELS.next}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </>
+              </>
+            )
           ) : (
             <>
               <h3 className="mb-4 text-lg font-semibold text-zinc-900">Upload File</h3>
@@ -789,90 +870,105 @@ export const SourceSetupWizard = () => {
       {/* --- Step 3: Configure Sync Policy --- */}
       {step === 3 && isDb && (
         <div className="rounded-lg border border-zinc-200 bg-white p-6">
-          <h3 className="mb-4 text-lg font-semibold text-zinc-900">Configure Sync Policy</h3>
-          <p className="mb-4 text-sm text-zinc-500">
-            Choose how each selected object should be synchronized.
-          </p>
-
-          <div className="space-y-4">
-            {isDb ? (
-              Array.from(selectedTables).map((tableName) => {
-                const table = tables.find((t) => t.table_name === tableName);
-                const policy = tablePolicies[tableName] ?? DEFAULT_POLICY;
-                return (
-                  <SyncPolicyEditor
-                    key={tableName}
-                    tableName={tableName}
-                    schemaColumns={table?.columns ?? []}
-                    detectedCursorColumn={table?.detected_cursor_column ?? null}
-                    supportsCdc={supportsCdc}
-                    sourceType={sourceType}
-                    value={policy}
-                    onChange={(p) => _updatePolicy(tableName, p)}
-                  />
-                );
-              })
-            ) : (
-              Array.from(selectedSheets).map((sheetName) => {
-                const policy = tablePolicies[sheetName] ?? DEFAULT_POLICY;
-                return (
-                  <SyncPolicyEditor
-                    key={sheetName}
-                    tableName={sheetName}
-                    schemaColumns={[]}
-                    detectedCursorColumn={null}
-                    supportsCdc={false}
-                    sourceType="static_file"
-                    value={policy}
-                    onChange={(p) => _updatePolicy(sheetName, p)}
-                  />
-                );
-              })
-            )}
-          </div>
-
-          {error && (
-            <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {error}
+          {deploying ? (
+            <div className="flex min-h-[280px] flex-col items-center justify-center gap-5 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-zinc-900">Preparing datasets...</p>
+                <p className="mt-1 text-sm text-zinc-500">Saving sync policies and creating datasets.</p>
+              </div>
+              <div className="text-xs text-zinc-400">Do not close this page while deployment is running.</div>
             </div>
+          ) : (
+            <>
+              <h3 className="mb-4 text-lg font-semibold text-zinc-900">Configure Sync Policy</h3>
+              <p className="mb-4 text-sm text-zinc-500">
+                Choose how each selected object should be synchronized.
+              </p>
+
+              <div className="space-y-4">
+                {isDb ? (
+                  Array.from(selectedTables).map((tableName) => {
+                    const table = tables.find((t) => t.table_name === tableName);
+                    const policy = tablePolicies[tableName] ?? DEFAULT_POLICY;
+                    return (
+                      <SyncPolicyEditor
+                        key={tableName}
+                        tableName={tableName}
+                        schemaColumns={table?.columns ?? []}
+                        detectedCursorColumn={table?.detected_cursor_column ?? null}
+                        supportsCdc={supportsCdc}
+                        sourceType={sourceType}
+                        value={policy}
+                        onChange={(p) => _updatePolicy(tableName, p)}
+                      />
+                    );
+                  })
+                ) : (
+                  Array.from(selectedSheets).map((sheetName) => {
+                    const policy = tablePolicies[sheetName] ?? DEFAULT_POLICY;
+                    return (
+                      <SyncPolicyEditor
+                        key={sheetName}
+                        tableName={sheetName}
+                        schemaColumns={[]}
+                        detectedCursorColumn={null}
+                        supportsCdc={false}
+                        sourceType="static_file"
+                        value={policy}
+                        onChange={(p) => _updatePolicy(sheetName, p)}
+                      />
+                    );
+                  })
+                )}
+              </div>
+
+              {error && (
+                <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="mt-6 rounded-lg bg-zinc-50 p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-zinc-500">
+                    {selectedCount} object{selectedCount !== 1 ? "s" : ""} configured
+                  </span>
+                  <span className="text-zinc-400">
+                    {isDb
+                      ? Array.from(selectedTables).map((name) => {
+                          const p = tablePolicies[name];
+                          return `${name} (${p?.syncMode ?? "batch"})`;
+                        }).join(", ")
+                      : Array.from(selectedSheets).map((name) => {
+                          const p = tablePolicies[name];
+                          return `${name} (${p?.syncMode ?? "batch"})`;
+                        }).join(", ")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-between">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+                >
+                  {UI_LABELS.back}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleFinish()}
+                  disabled={deploying}
+                  className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deploying ? UI_LABELS.deploying : UI_LABELS.finishAndDeploy}
+                </button>
+              </div>
+            </>
           )}
-
-          <div className="mt-6 rounded-lg bg-zinc-50 p-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-500">
-                {selectedCount} object{selectedCount !== 1 ? "s" : ""} configured
-              </span>
-              <span className="text-zinc-400">
-                {isDb
-                  ? Array.from(selectedTables).map((name) => {
-                      const p = tablePolicies[name];
-                      return `${name} (${p?.syncMode ?? "batch"})`;
-                    }).join(", ")
-                  : Array.from(selectedSheets).map((name) => {
-                      const p = tablePolicies[name];
-                      return `${name} (${p?.syncMode ?? "batch"})`;
-                    }).join(", ")}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-6 flex justify-between">
-            <button
-              type="button"
-              onClick={() => setStep(2)}
-              className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-            >
-              {UI_LABELS.back}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleFinish()}
-              disabled={deploying}
-              className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {deploying ? UI_LABELS.deploying : UI_LABELS.finishAndDeploy}
-            </button>
-          </div>
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
 const mockPush = vi.fn();
 const mockSearchParamsGet = vi.fn();
@@ -59,6 +59,85 @@ describe("SourceSetupWizard — DB source (postgresql)", () => {
     ]);
     mockCreateDataset.mockResolvedValue({ id: "ds-1" });
     mockRefreshDatasetVersion.mockResolvedValue({ id: "v-1", version_number: 1 });
+  });
+
+  it("shows an in-wizard progress state while initiating the connection", async () => {
+    let resolveConnection: (value: { id: string; project_id: string }) => void = () => undefined;
+    mockCreateConnection.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveConnection = resolve;
+      }) as Promise<{ id: string; project_id: string }>,
+    );
+
+    render(<SourceSetupWizard />);
+    fireEvent.change(screen.getByPlaceholderText("localhost"), { target: { value: "host" } });
+    fireEvent.change(screen.getByPlaceholderText("mydb"), { target: { value: "db" } });
+    fireEvent.click(screen.getByText("Test Connection"));
+
+    expect(
+      screen.getByText("Initiating connection...", {
+        selector: "p.text-base.font-semibold.text-zinc-900",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Connect Database")).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveConnection({ id: "conn-1", project_id: "proj-1" });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Connection successful")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an in-wizard progress state while loading discovered tables", async () => {
+    let resolveDiscovery: (value: Array<{ table_name: string; row_count_estimate: number; columns: Array<{ name: string; data_type: string }>; detected_cursor_column: string | null }>) => void = () => undefined;
+    mockFetchTableDiscovery.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveDiscovery = resolve;
+      }) as Promise<
+        Array<{
+          table_name: string;
+          row_count_estimate: number;
+          columns: Array<{ name: string; data_type: string }>;
+          detected_cursor_column: string | null;
+        }>
+      >,
+    );
+
+    render(<SourceSetupWizard />);
+    fireEvent.change(screen.getByPlaceholderText("localhost"), { target: { value: "host" } });
+    fireEvent.change(screen.getByPlaceholderText("mydb"), { target: { value: "db" } });
+    fireEvent.click(screen.getByText("Test Connection"));
+
+    await waitFor(() => expect(screen.getByText("Connection successful")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Next"));
+
+    expect(
+      screen.getByText("Loading tables...", {
+        selector: "p.text-base.font-semibold.text-zinc-900",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Select Tables")).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveDiscovery([
+        {
+          table_name: "users",
+          row_count_estimate: 1000,
+          columns: [
+            { name: "id", data_type: "bigint" },
+            { name: "updated_at", data_type: "timestamp" },
+          ],
+          detected_cursor_column: "updated_at",
+        },
+      ]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Select Tables")).toBeInTheDocument();
+      expect(screen.getByText("users")).toBeInTheDocument();
+    });
   });
 
   it("shows DB connection form with PostgreSQL as source type", () => {

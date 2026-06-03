@@ -262,6 +262,32 @@ export interface DatasetDeleteSummary {
   blocking_reason: string | null;
 }
 
+export interface DatasetBulkDeleteSummaryItem {
+  dataset_id: string;
+  version_count: number;
+  active_run_count: number;
+  can_delete: boolean;
+  blocking_reason: string | null;
+  dataset_name: string | null;
+}
+
+export interface DatasetBulkDeleteSkippedItem {
+  dataset_id: string;
+  dataset_name: string | null;
+  reason: string;
+}
+
+export interface DatasetBulkDeleteDeletedItem {
+  dataset_id: string;
+  dataset_name: string;
+}
+
+export interface DatasetBulkDeleteResult {
+  deleted: DatasetBulkDeleteDeletedItem[];
+  skipped: DatasetBulkDeleteSkippedItem[];
+  total_requested: number;
+}
+
 export interface DatasetVersionDeleteSummary {
   dataset_id: string;
   version_id: string;
@@ -423,4 +449,47 @@ export interface ValidationErrorItem {
 export interface ValidationResult {
   valid: boolean;
   errors: ValidationErrorItem[];
+}
+
+// ─── Entity Registry (central entity area) ───
+
+export interface EntityRegistryItem {
+  id: string;
+  object_type_key: string;
+  display_name: string;
+  description: string;
+  created_at: string;
+  updated_at: string | null;
+  dataset_name: string | null;
+  dataset_id: string | null;
+  mapping_version: number | null;
+  property_count: number;
+  link_count: number;
+  computed_property_count: number;
+  mapping_updated_at: string | null;
+}
+
+export interface EntityDetail {
+  id: string;
+  object_type_key: string;
+  display_name: string;
+  description: string;
+  created_at: string;
+  updated_at: string | null;
+  dataset_name: string | null;
+  mapping: EntityMappingDetail | null;
+}
+
+export interface EntityMappingDetail {
+  id: string;
+  dataset_id: string;
+  dataset_version_id: string;
+  version_number: number;
+  properties: PropertyMapping[];
+  links: EntityLink[];
+  source_nodes: SourceNode[];
+  computed_properties: ComputedProperty[];
+  layout_state: Record<string, unknown>;
+  created_at: string;
+  updated_at: string | null;
 }

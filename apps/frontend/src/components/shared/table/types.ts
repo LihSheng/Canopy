@@ -15,6 +15,14 @@ export interface TablePage {
   total: number;
 }
 
+export interface TableSelection {
+  selectedIds: Set<string>;
+  onToggleRow: (id: string) => void;
+  onToggleAll: () => void;
+  allSelected: boolean;
+  someSelected: boolean;
+}
+
 export interface TableState {
   columns: ColumnDef[];
   rows: Record<string, unknown>[];

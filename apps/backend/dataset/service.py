@@ -228,6 +228,116 @@ class DatasetService:
 
         return {"deleted": True, "id": dataset_id}
 
+    def get_bulk_delete_summary(self, dataset_ids: list[str], tenant_id: str | None = None) -> list[dict]:
+        """Return per-dataset delete eligibility summaries for a batch of dataset IDs."""
+        if not dataset_ids:
+            return []
+
+        run_repo = RunRepository(self._repo._db)
+        results: list[dict] = []
+        for dataset_id in dataset_ids:
+            dataset = self._repo.get(dataset_id, tenant_id=tenant_id)
+            if dataset is None:
+                results.append(
+                    {
+                        "dataset_id": dataset_id,
+                        "version_count": 0,
+                        "active_run_count": 0,
+                        "can_delete": False,
+                        "blocking_reason": "Dataset not found",
+                        "dataset_name": None,
+                    }
+                )
+                continue
+
+            active_run_count = run_repo.count_active_by_dataset(dataset_id)
+            version_count = self._version_repo.count_by_dataset(dataset_id)
+            can_delete = active_run_count == 0 and dataset is not None
+            blocking_reason = (
+                None
+                if can_delete
+                else (f"Dataset has {active_run_count} active run(s)" if active_run_count > 0 else "Dataset not found")
+            )
+            results.append(
+                {
+                    "dataset_id": dataset_id,
+                    "version_count": version_count,
+                    "active_run_count": active_run_count,
+                    "can_delete": can_delete,
+                    "blocking_reason": blocking_reason,
+                    "dataset_name": dataset.name,
+                }
+            )
+        return results
+
+    def bulk_delete_datasets(self, dataset_ids: list[str], tenant_id: str | None = None) -> dict:
+        """Delete allowed datasets from the given list. Blocked datasets are skipped.
+
+        Returns a result summary with per-dataset outcomes.
+        """
+        if not dataset_ids:
+            return {"deleted": [], "skipped": [], "total_requested": 0}
+
+        run_repo = RunRepository(self._repo._db)
+        deleted: list[dict] = []
+        skipped: list[dict] = []
+
+        for dataset_id in dataset_ids:
+            dataset = self._repo.get(dataset_id, tenant_id=tenant_id)
+            if dataset is None:
+                skipped.append(
+                    {
+                        "dataset_id": dataset_id,
+                        "dataset_name": None,
+                        "reason": "Dataset not found",
+                    }
+                )
+                continue
+
+            active_run_count = run_repo.count_active_by_dataset(dataset_id)
+            if active_run_count > 0:
+                skipped.append(
+                    {
+                        "dataset_id": dataset_id,
+                        "dataset_name": dataset.name,
+                        "reason": f"Dataset has {active_run_count} active run(s)",
+                    }
+                )
+                continue
+
+            try:
+                self._version_repo.delete_by_dataset(dataset_id)
+                self._repo.delete(dataset_id)
+
+                dataset_storage_dir = storage_root() / dataset_id
+                if dataset_storage_dir.exists():
+                    shutil.rmtree(dataset_storage_dir)
+
+                deleted.append(
+                    {
+                        "dataset_id": dataset_id,
+                        "dataset_name": dataset.name,
+                    }
+                )
+            except Exception:
+                logger.exception(
+                    "Bulk delete failed for dataset",
+                    extra={"dataset_id": dataset_id, "tenant_id": tenant_id},
+                )
+                skipped.append(
+                    {
+                        "dataset_id": dataset_id,
+                        "dataset_name": dataset.name,
+                        "reason": "Delete failed unexpectedly",
+                    }
+                )
+
+        return {
+            "deleted": deleted,
+            "skipped": skipped,
+            "total_requested": len(dataset_ids),
+        }
+
     def get_dataset_health(self, dataset_id: str, tenant_id: str | None = None) -> dict:
         dataset = self._repo.get(dataset_id, tenant_id=tenant_id)
         if dataset is None:

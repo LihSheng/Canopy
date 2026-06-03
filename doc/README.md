@@ -12,6 +12,7 @@ Use the versioned folders for planning and design docs.
 - [Entity Computed Property Composition PRD](../doc/prd/0012-entity-computed-property-composition.md): draft PRD for multi-field, multi-source computed Entity properties in the graph designer
 - [Entity Mapping and Relationship Links PRD](../doc/prd/0009-entity-mapping-and-relationship-links.md): draft PRD for tenant-scoped entity mapping, property curation, and relationship link declarations
 - [Lineage-Aware Data Retention PRD](../doc/prd/0008-lineage-aware-data-retention.md): draft PRD for dataset lifetime policies, lineage impact preview, scheduled retention evaluation, and purge auditability
+- [Entity Manager Registry, Detail, and Editor Split PRD](../doc/prd/0015-entity-manager-registry-detail-editor-split.md): draft PRD for a central entity registry, entity detail pages, reusable dataset-scoped editor boundaries, and a later entity explorer
 - [Lineage-Aware Data Retention Issues](../doc/issues/0011-lineage-aware-data-retention-vertical-slices.md): draft vertical-slice issue breakdown for the retention PRD
 
 ## V1 Baseline

@@ -1,2 +1,2 @@
 export { CompactTable } from "./compact-table";
-export type { ColumnDef, RowIdentity, TablePage, TableState } from "./types";
+export type { ColumnDef, RowIdentity, TablePage, TableSelection, TableState } from "./types";
