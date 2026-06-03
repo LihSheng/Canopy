@@ -1,3 +1,9 @@
+import os
+import sys
+
+# Ensure backend root is on path so imports resolve
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from auth.hashing import hash_password
 from auth.repository import AuthRepository
 from common.database import init_db, session_factory
