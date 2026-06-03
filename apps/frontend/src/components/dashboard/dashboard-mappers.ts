@@ -5,6 +5,7 @@ import type {
   MonthlyTrend,
   ClaimTypeBreakdown,
   Anomaly,
+  DashboardCommandView as DashboardCommandViewResponse,
 } from "@/lib/api/types";
 
 export type MetricCard = {
@@ -57,14 +58,11 @@ export type DashboardCommandView = {
   topDepartments: DepartmentPreviewItem[];
 };
 
-export const mapCommandView = (
-  summary: DashboardSummary,
-  departments: DepartmentSummary[],
-  trends: MonthlyTrend[],
-  claimTypes: ClaimTypeBreakdown[],
-  anomalies: Anomaly[],
+export const mapDashboardCommandView = (
+  commandView: DashboardCommandViewResponse,
   timeRange: TimeRangeKey,
 ): DashboardCommandView => {
+  const { summary, departments, trends, claim_types: claimTypes, anomalies } = commandView;
   const snapshotId = summary.last_updated;
   const snapshotLabel = `${summary.period.year}-${String(summary.period.month).padStart(2, "0")}`;
 
@@ -136,4 +134,24 @@ export const mapCommandView = (
         : null,
     })),
   };
+};
+
+export const mapCommandView = (
+  summary: DashboardSummary,
+  departments: DepartmentSummary[],
+  trends: MonthlyTrend[],
+  claimTypes: ClaimTypeBreakdown[],
+  anomalies: Anomaly[],
+  timeRange: TimeRangeKey,
+): DashboardCommandView => {
+  return mapDashboardCommandView(
+    {
+      summary,
+      departments,
+      trends,
+      claim_types: claimTypes,
+      anomalies,
+    },
+    timeRange,
+  );
 }

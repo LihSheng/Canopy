@@ -6,11 +6,7 @@ vi.mock("@/hooks/use-session", () => ({
 }));
 
 vi.mock("@/lib/api/dashboard", () => ({
-  fetchSummary: vi.fn(),
-  fetchDepartments: vi.fn(),
-  fetchMonthlyTrends: vi.fn(),
-  fetchClaimTypeBreakdown: vi.fn(),
-  fetchAnomalies: vi.fn(),
+  fetchCommandView: vi.fn(),
   fetchRefreshStatus: vi.fn().mockResolvedValue({ status: "idle", last_refresh: "2024-06-01T00:00:00Z", last_attempt: null, error_message: null }),
   triggerRefresh: vi.fn(),
 }));
@@ -23,6 +19,32 @@ vi.mock("next/navigation", () => ({
 
 import { DashboardPage } from "@/components/dashboard/dashboard-page";
 import * as api from "@/lib/api/dashboard";
+
+const mockCommandView = {
+  summary: {
+    total_payroll: 1000000,
+    total_claims: 200000,
+    period: { year: 2024, month: 6 },
+    department_count: 5,
+    anomaly_count: 2,
+    last_updated: "2024-06-15T10:00:00Z",
+  },
+  departments: [
+    { id: "d1", name: "Engineering", total_spend: 500000, payroll_spend: 400000, claims_spend: 100000, change_pct: 5.0 },
+    { id: "d2", name: "Sales", total_spend: 300000, payroll_spend: 200000, claims_spend: 100000, change_pct: -2.0 },
+  ],
+  trends: [
+    { month: "2024-01", payroll: 900000, claims: 180000, total: 1080000 },
+    { month: "2024-02", payroll: 950000, claims: 190000, total: 1140000 },
+  ],
+  claim_types: [
+    { type: "Travel", amount: 100000, count: 50 },
+    { type: "Meals", amount: 50000, count: 30 },
+  ],
+  anomalies: [
+    { id: "a1", department_id: "d1", department_name: "Engineering", period: "2024-06", description: "Payroll spike", severity: "high" as const, change_pct: 15 },
+  ],
+};
 
 const mockSummary = {
   total_payroll: 1000000,
@@ -57,12 +79,8 @@ describe("Dashboard flow", () => {
     vi.clearAllMocks();
   });
 
-  it("loads and displays dashboard data", async () => {
-    vi.mocked(api.fetchSummary).mockResolvedValue(mockSummary);
-    vi.mocked(api.fetchDepartments).mockResolvedValue(mockDepartments);
-    vi.mocked(api.fetchMonthlyTrends).mockResolvedValue(mockTrends);
-    vi.mocked(api.fetchClaimTypeBreakdown).mockResolvedValue(mockClaimTypes);
-    vi.mocked(api.fetchAnomalies).mockResolvedValue(mockAnomalies);
+  it("loads and displays the dashboard command view", async () => {
+    vi.mocked(api.fetchCommandView).mockResolvedValue(mockCommandView);
 
     render(<DashboardPage />);
 
@@ -80,7 +98,7 @@ describe("Dashboard flow", () => {
   });
 
   it("shows error state when API fails", async () => {
-    vi.mocked(api.fetchSummary).mockRejectedValue(new Error("Network error"));
+    vi.mocked(api.fetchCommandView).mockRejectedValue(new Error("Network error"));
 
     render(<DashboardPage />);
 
@@ -93,11 +111,7 @@ describe("Dashboard flow", () => {
   });
 
   it("shows anomaly card with data", async () => {
-    vi.mocked(api.fetchSummary).mockResolvedValue(mockSummary);
-    vi.mocked(api.fetchDepartments).mockResolvedValue(mockDepartments);
-    vi.mocked(api.fetchMonthlyTrends).mockResolvedValue(mockTrends);
-    vi.mocked(api.fetchClaimTypeBreakdown).mockResolvedValue(mockClaimTypes);
-    vi.mocked(api.fetchAnomalies).mockResolvedValue(mockAnomalies);
+    vi.mocked(api.fetchCommandView).mockResolvedValue(mockCommandView);
 
     render(<DashboardPage />);
 

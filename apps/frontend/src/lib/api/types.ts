@@ -29,6 +29,14 @@ export interface ClaimTypeBreakdown {
   count: number;
 }
 
+export interface DashboardCommandView {
+  summary: DashboardSummary;
+  departments: DepartmentSummary[];
+  trends: MonthlyTrend[];
+  claim_types: ClaimTypeBreakdown[];
+  anomalies: Anomaly[];
+}
+
 export interface Anomaly {
   id: string;
   department_id: string;

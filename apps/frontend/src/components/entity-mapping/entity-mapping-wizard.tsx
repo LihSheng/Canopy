@@ -19,6 +19,10 @@ import type {
   SemanticMapping,
 } from "@/lib/api/types";
 import { LoadingSpinner, ErrorState, useToast } from "@/components/shared";
+import {
+  buildInitialPropertiesFromSchema,
+  buildMappingRequest,
+} from "@/components/entity-mapping/entity-mapping-core";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -119,15 +123,7 @@ export const EntityMappingWizard = ({
           }
         } else {
           // Initialize from schema: all columns included, default to schema type
-          setProperties(
-            schema.map((col) => ({
-              source_column: col.column_name,
-              property_name: col.column_name,
-              semantic_type: getDefaultSemanticType(col.primitive_type),
-              included: true,
-              is_primary_key: false,
-            }))
-          );
+          setProperties(buildInitialPropertiesFromSchema(schema, ""));
         }
       } catch (err) {
         setError(
@@ -434,18 +430,26 @@ export const EntityMappingWizard = ({
 
       // Save mapping
       if (existingMapping) {
-        await updateMapping(datasetId, datasetVersionId, {
-          object_type_id: selectedObjectTypeId,
-          properties,
-          links: links.length > 0 ? links : undefined,
-        });
+        await updateMapping(
+          datasetId,
+          datasetVersionId,
+          buildMappingRequest({
+            objectTypeId: selectedObjectTypeId,
+            properties,
+            links,
+          }),
+        );
         toast.success("Mapping updated", "Entity mapping saved.");
       } else {
-        await createMapping(datasetId, datasetVersionId, {
-          object_type_id: selectedObjectTypeId,
-          properties,
-          links: links.length > 0 ? links : undefined,
-        });
+        await createMapping(
+          datasetId,
+          datasetVersionId,
+          buildMappingRequest({
+            objectTypeId: selectedObjectTypeId,
+            properties,
+            links,
+          }),
+        );
         toast.success("Mapping created", "Entity mapping published.");
       }
       onComplete();

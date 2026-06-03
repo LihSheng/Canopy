@@ -24,6 +24,10 @@ import { LoadingSpinner, useToast } from "@/components/shared";
 import { EntityGraphCanvas } from "./entity-graph-canvas";
 import { SourceRegistrationDrawer } from "./source-registration-drawer";
 import { NodeEditDrawer, type SelectedNode } from "./node-edit-drawer";
+import {
+  buildInitialPropertiesFromSchema,
+  buildMappingRequest,
+} from "@/components/entity-mapping/entity-mapping-core";
 
 type Props = {
   dataset: Dataset;
@@ -86,20 +90,6 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
   }, [mapping, activeVersion, loadInlineData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const getDefaultSemanticType = (primitiveType?: string | null) => {
-    switch (primitiveType) {
-      case "integer":
-      case "number":
-      case "boolean":
-      case "datetime":
-      case "date":
-      case "string":
-        return primitiveType;
-      default:
-        return "string";
-    }
-  };
-
   const load = useCallback(async () => {
     if (!activeVersion) {
       setLoading(false);
@@ -156,19 +146,17 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
       const schema = schemaColumns.length > 0
         ? schemaColumns
         : await fetchDatasetVersionSchema(dataset.id, activeVersion.id);
-      const initialProperties: PropertyMapping[] = schema.map((col) => ({
-        source_column: col.column_name,
-        property_name: col.column_name,
-        semantic_type: getDefaultSemanticType(col.primitive_type),
-        included: true,
-        is_primary_key: col.column_name === primaryKeyColumn,
-      }));
-      const result = await createMapping(dataset.id, activeVersion.id, {
-        object_type_id: selectedObjectTypeId,
-        properties: initialProperties,
-        source_nodes: mapping?.source_nodes,
-        layout_state: layoutState,
-      });
+      const initialProperties = buildInitialPropertiesFromSchema(schema, primaryKeyColumn);
+      const result = await createMapping(
+        dataset.id,
+        activeVersion.id,
+        buildMappingRequest({
+          objectTypeId: selectedObjectTypeId,
+          properties: initialProperties,
+          sourceNodes: mapping?.source_nodes,
+          layoutState,
+        }),
+      );
       setMapping(result);
       toast.success("Mapping created", `Entity mapping published as v${result.version_number}.`);
     } catch (err) {
@@ -225,14 +213,18 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
     setSaving(true);
     try {
       const { updateMapping } = await import("@/lib/api/semantic");
-      const result = await updateMapping(dataset.id, activeVersion.id, {
-        object_type_id: mapping.object_type_id,
-        properties: mapping.properties,
-        links: mapping.links,
-        source_nodes: mapping.source_nodes,
-        computed_properties: mapping.computed_properties,
-        layout_state: layoutState,
-      });
+      const result = await updateMapping(
+        dataset.id,
+        activeVersion.id,
+        buildMappingRequest({
+          objectTypeId: mapping.object_type_id,
+          properties: mapping.properties,
+          links: mapping.links,
+          sourceNodes: mapping.source_nodes,
+          computedProperties: mapping.computed_properties,
+          layoutState,
+        }),
+      );
       setMapping(result);
       toast.success("Saved", `Graph saved as v${result.version_number}.`);
     } catch (err) {

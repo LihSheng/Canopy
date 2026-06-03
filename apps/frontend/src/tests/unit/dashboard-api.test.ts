@@ -7,6 +7,7 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 import {
+  fetchCommandView,
   fetchSummary,
   fetchDepartments,
   fetchMonthlyTrends,
@@ -24,6 +25,14 @@ const mockRequest = vi.mocked(request);
 describe("dashboard API", () => {
   beforeEach(() => {
     mockRequest.mockReset();
+  });
+
+  describe("fetchCommandView", () => {
+    it("calls /api/dashboard/command-view", async () => {
+      mockRequest.mockResolvedValue({ summary: {} });
+      await fetchCommandView();
+      expect(mockRequest).toHaveBeenCalledWith("/api/dashboard/command-view");
+    });
   });
 
   describe("fetchSummary", () => {

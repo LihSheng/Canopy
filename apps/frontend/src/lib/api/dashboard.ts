@@ -5,12 +5,17 @@ import type {
   MonthlyTrend,
   ClaimTypeBreakdown,
   Anomaly,
+  DashboardCommandView,
   DepartmentDetail,
   EmployeeContribution,
   ClaimDetail,
   RefreshStatus,
   MonthFilterParams,
 } from "./types";
+
+export const fetchCommandView = (): Promise<DashboardCommandView> => {
+  return request<DashboardCommandView>("/api/dashboard/command-view");
+}
 
 export const fetchSummary = (): Promise<DashboardSummary> => {
   return request<DashboardSummary>("/api/dashboard/summary");

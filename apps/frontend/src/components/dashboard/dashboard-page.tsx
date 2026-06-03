@@ -12,13 +12,9 @@ import { DashboardAiSummaryPanel, DashboardAiSummaryPanelSkeleton } from "./dash
 import { DashboardTrendPanel, DashboardTrendPanelSkeleton } from "./dashboard-trend-panel";
 import { DashboardDepartmentPreview, DashboardDepartmentPreviewSkeleton } from "./dashboard-department-preview";
 import {
-  fetchSummary,
-  fetchDepartments,
-  fetchMonthlyTrends,
-  fetchClaimTypeBreakdown,
-  fetchAnomalies,
+  fetchCommandView,
 } from "@/lib/api/dashboard";
-import { mapCommandView } from "./dashboard-mappers";
+import { mapDashboardCommandView } from "./dashboard-mappers";
 import { readDashboardState } from "@/lib/navigation/route-state";
 import { TIME_RANGE_LABELS } from "@/lib/navigation/time-range";
 import type { DashboardCommandView } from "./dashboard-mappers";
@@ -38,14 +34,8 @@ export const DashboardPage = () => {
   const load = useCallback(async () => {
     setData({ status: "loading" });
     try {
-      const [summary, departments, trends, claimTypes, anomalies] = await Promise.all([
-        fetchSummary(),
-        fetchDepartments(),
-        fetchMonthlyTrends(),
-        fetchClaimTypeBreakdown(),
-        fetchAnomalies(),
-      ]);
-      const view = mapCommandView(summary, departments, trends, claimTypes, anomalies, timeRange);
+      const commandView = await fetchCommandView();
+      const view = mapDashboardCommandView(commandView, timeRange);
       setData({ status: "success", view });
     } catch (err) {
       setData({
