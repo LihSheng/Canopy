@@ -7,6 +7,13 @@ on:
   pull_request:
     branches: [main, master]
 
+# ── Concurrency ─────────────────────────────────────────────
+# Cancel in-progress CI for the same branch/PR when a newer
+# push arrives.  Saves runner minutes and keeps results fresh.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ── Frontend ──────────────────────────────────────────────
 
