@@ -43,6 +43,7 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
   const [objectTypes, setObjectTypes] = useState<ObjectType[]>([]);
   const [schemaColumns, setSchemaColumns] = useState<SchemaColumn[]>([]);
   const [selectedObjectTypeId, setSelectedObjectTypeId] = useState<string>("");
+  const [primaryKeyColumn, setPrimaryKeyColumn] = useState<string>("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTypeKey, setNewTypeKey] = useState("");
   const [newTypeDisplayName, setNewTypeDisplayName] = useState("");
@@ -148,10 +149,10 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
   };
 
   const handleCreateMapping = async () => {
-    if (!selectedObjectTypeId || !activeVersion) return;
+    if (!selectedObjectTypeId || !primaryKeyColumn || !activeVersion) return;
     setCreatingMapping(true);
     try {
-      // Auto-initialize properties from schema columns (all included, no PK yet)
+      // Auto-initialize properties from schema columns and mark the chosen PK.
       const schema = schemaColumns.length > 0
         ? schemaColumns
         : await fetchDatasetVersionSchema(dataset.id, activeVersion.id);
@@ -160,7 +161,7 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
         property_name: col.column_name,
         semantic_type: getDefaultSemanticType(col.primitive_type),
         included: true,
-        is_primary_key: false,
+        is_primary_key: col.column_name === primaryKeyColumn,
       }));
       const result = await createMapping(dataset.id, activeVersion.id, {
         object_type_id: selectedObjectTypeId,
@@ -334,6 +335,45 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
             </div>
           )}
 
+          {schemaColumns.length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600">
+                Primary Key
+              </label>
+              <div className="grid grid-cols-1 gap-2">
+                {schemaColumns.map((col) => (
+                  <label
+                    key={col.column_name}
+                    className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-zinc-50 ${
+                      primaryKeyColumn === col.column_name
+                        ? "border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900"
+                        : "border-zinc-200"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="primary_key"
+                      checked={primaryKeyColumn === col.column_name}
+                      onChange={() => setPrimaryKeyColumn(col.column_name)}
+                      className="size-4 accent-zinc-900"
+                    />
+                    <span className="font-medium text-zinc-900">
+                      {col.column_name}
+                    </span>
+                    <span className="ml-auto rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-500">
+                      {col.primitive_type}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {primaryKeyColumn && (
+                <p className="mt-1 text-xs text-emerald-600">
+                  Primary key set to <strong>{primaryKeyColumn}</strong>
+                </p>
+              )}
+            </div>
+          )}
+
           {objectTypes.length === 0 && !showCreateForm && (
             <p className="text-xs text-zinc-400">
               No object types exist yet. Create one below.
@@ -420,14 +460,18 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
           <button
             type="button"
             onClick={handleCreateMapping}
-            disabled={!selectedObjectTypeId || creatingMapping}
+            disabled={!selectedObjectTypeId || !primaryKeyColumn || creatingMapping}
             className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {creatingMapping
               ? "Creating mapping..."
-              : selectedObjectTypeId
+              : !selectedObjectTypeId
+                ? "Select an Object Type to continue"
+                : !primaryKeyColumn
+                  ? "Select a primary key to continue"
+                  : selectedType
                 ? `Configure "${selectedType?.display_name ?? selectedObjectTypeId}" Mapping`
-                : "Select an Object Type to continue"}
+                : "Configure Mapping"}
           </button>
         </div>
       </div>

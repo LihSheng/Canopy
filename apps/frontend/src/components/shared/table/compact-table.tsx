@@ -27,7 +27,7 @@ const alignClass = (align?: "left" | "center" | "right"): string => {
   if (align === "right") return "text-right";
   if (align === "center") return "text-center";
   return "text-left";
-}
+};
 
 export const CompactTable = ({
   columns,
@@ -53,7 +53,22 @@ export const CompactTable = ({
   }
 
   if (rows.length === 0) {
-    return <EmptyState title={emptyText ?? "No data available"} />;
+    return (
+      <div>
+        {onSearchChange && searchValue !== undefined && (
+          <div className="mb-3">
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="w-full max-w-xs rounded-lg border border-zinc-200 px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        )}
+        <EmptyState title={emptyText ?? "No data available"} />
+      </div>
+    );
   }
 
   return (
@@ -70,14 +85,14 @@ export const CompactTable = ({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-zinc-200">
+      <div className="max-h-[min(32rem,calc(100dvh-22rem))] overflow-auto rounded-lg border border-zinc-200">
         <table className="min-w-full divide-y divide-zinc-200 text-sm">
           <thead>
             <tr className="bg-zinc-50">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-4 py-3 ${alignClass(col.align)} text-xs font-semibold uppercase tracking-wider text-zinc-500`}
+                  className={`whitespace-nowrap px-4 py-3 ${alignClass(col.align)} text-xs font-semibold uppercase tracking-wider text-zinc-500`}
                 >
                   {col.header}
                 </th>
@@ -90,7 +105,7 @@ export const CompactTable = ({
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className={`px-4 py-3 ${alignClass(col.align)} text-zinc-700`}
+                    className={`whitespace-nowrap px-4 py-3 ${alignClass(col.align)} text-zinc-700`}
                   >
                     {col.render
                       ? col.render(row[col.key], row, rowIndex)

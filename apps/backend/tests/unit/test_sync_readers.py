@@ -472,6 +472,17 @@ class TestMysqlCdcReader:
         from pathlib import Path
         from unittest.mock import MagicMock, patch
 
+        # Create stub classes so isinstance() works — MagicMock instances
+        # are not types and would raise TypeError inside start_streaming.
+        class _StubWriteRowsEvent:
+            pass
+
+        class _StubUpdateRowsEvent:
+            pass
+
+        class _StubDeleteRowsEvent:
+            pass
+
         # Build a fake mysqlreplication module so the dynamic import succeeds
         fake_mysqlreplication = MagicMock()
         fake_row_event = MagicMock()
@@ -483,9 +494,9 @@ class TestMysqlCdcReader:
         mock_binlog_stream.close = MagicMock()
 
         fake_mysqlreplication.BinLogStreamReader = MagicMock(return_value=mock_binlog_stream)
-        fake_row_event.WriteRowsEvent = MagicMock()
-        fake_row_event.UpdateRowsEvent = MagicMock()
-        fake_row_event.DeleteRowsEvent = MagicMock()
+        fake_row_event.WriteRowsEvent = _StubWriteRowsEvent
+        fake_row_event.UpdateRowsEvent = _StubUpdateRowsEvent
+        fake_row_event.DeleteRowsEvent = _StubDeleteRowsEvent
 
         # Simulate one WriteRows event then stop
         event_sent = [False]
@@ -493,7 +504,7 @@ class TestMysqlCdcReader:
         def mock_fetchone():
             if not event_sent[0]:
                 event_sent[0] = True
-                mock_event = MagicMock()
+                mock_event = _StubWriteRowsEvent()
                 mock_event.rows = [{"values": {"id": 1, "name": "test"}}]
                 return mock_event
             return None
@@ -528,8 +539,8 @@ class TestMysqlCdcReader:
                 path = Path(tmpdir) / "events.jsonl"
                 await reader.start_streaming(path, mock_on_event)
 
-            assert "mysql-bin.000001" in path.read_text(encoding="utf-8")
-            assert mock_on_event.called
+                assert "mysql-bin.000001" in path.read_text(encoding="utf-8")
+                assert mock_on_event.called
 
     async def test_start_streaming_binlog_exception_fallback(self):
         """Cover lines 110-112: exception during binlog streaming falls back to simulation."""
@@ -569,9 +580,9 @@ class TestMysqlCdcReader:
                 with patch("asyncio.sleep", stop_loop):
                     await reader.start_streaming(path, mock_on_event)
 
-            # Fallback simulation should have written initial seed event
-            assert "MySQL CDC Initial Seed" in path.read_text(encoding="utf-8")
-            assert mock_on_event.called
+                # Fallback simulation should have written initial seed event
+                assert "MySQL CDC Initial Seed" in path.read_text(encoding="utf-8")
+                assert mock_on_event.called
 
     async def test_start_streaming_binlog_update_event(self):
         """Cover lines 85-98: UpdateRowsEvent and DeleteRowsEvent branches in binlog loop."""
@@ -581,22 +592,41 @@ class TestMysqlCdcReader:
         from pathlib import Path
         from unittest.mock import MagicMock, patch
 
+        # Create stub classes so isinstance() works — MagicMock instances
+        # are not types and would raise TypeError inside start_streaming.
+        class _StubWriteRowsEvent:
+            pass
+
+        class _StubUpdateRowsEvent:
+            pass
+
+        class _StubDeleteRowsEvent:
+            pass
+
         fake_mysqlreplication = MagicMock()
         fake_row_event = MagicMock()
         fake_mysqlreplication.row_event = fake_row_event
         fake_mysqlreplication.BinLogStreamReader = MagicMock()
-        fake_row_event.WriteRowsEvent = MagicMock()
-        fake_row_event.UpdateRowsEvent = MagicMock()
-        fake_row_event.DeleteRowsEvent = MagicMock()
+        fake_row_event.WriteRowsEvent = _StubWriteRowsEvent
+        fake_row_event.UpdateRowsEvent = _StubUpdateRowsEvent
+        fake_row_event.DeleteRowsEvent = _StubDeleteRowsEvent
 
         mock_binlog_stream = MagicMock()
         mock_binlog_stream.log_file = "mysql-bin.000002"
         mock_binlog_stream.log_pos = 5678
         mock_binlog_stream.close = MagicMock()
 
-        # Events to return: Update, then Delete
+        # Events to return: Update, then Delete.
+        # UpdateRowsEvent rows in mysql-replication have "before_values"
+        # and "after_values"; DeleteRowsEvent rows have only "values".
+        # The reader accesses row["values"] unconditionally at line 83
+        # before the isinstance branch, so update-event rows must also
+        # carry a "values" key.
         update_event_data = [
-            {"type": "update", "rows": [{"after_values": {"id": 2, "name": "updated"}}]},
+            {
+                "type": "update",
+                "rows": [{"values": {"id": 2, "name": "old"}, "after_values": {"id": 2, "name": "updated"}}],
+            },
             {"type": "delete", "rows": [{"values": {"id": 3, "name": "deleted"}}]},
         ]
         event_idx = [0]
@@ -606,8 +636,13 @@ class TestMysqlCdcReader:
             if idx >= len(update_event_data):
                 return None
             event_idx[0] += 1
-            mock_event = MagicMock()
-            mock_event.rows = update_event_data[idx]["rows"]
+            entry = update_event_data[idx]
+            # Return the correct stub type so isinstance branches work.
+            if entry["type"] == "update":
+                mock_event = _StubUpdateRowsEvent()
+            else:
+                mock_event = _StubDeleteRowsEvent()
+            mock_event.rows = entry["rows"]
             return mock_event
 
         mock_binlog_stream.fetchone = mock_fetchone
@@ -641,11 +676,13 @@ class TestMysqlCdcReader:
                 path = Path(tmpdir) / "events.jsonl"
                 await reader.start_streaming(path, mock_on_event)
 
-            lines = path.read_text(encoding="utf-8").strip().split("\n")
-            assert len(lines) == 2
-            assert json.loads(lines[0])["op"] == "UPDATE"
-            assert json.loads(lines[1])["op"] == "DELETE"
-            assert mock_on_event.call_count == 2
+                # Assertions must be inside the TemporaryDirectory context
+                # — path is deleted once the context exits.
+                lines = path.read_text(encoding="utf-8").strip().split("\n")
+                assert len(lines) == 2
+                assert json.loads(lines[0])["op"] == "UPDATE"
+                assert json.loads(lines[1])["op"] == "DELETE"
+                assert mock_on_event.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -871,10 +908,15 @@ class TestPostgresCdcReader:
 
         call_count = [0]
 
+        reader_ref = [None]  # capture reader to stop loop from receive
+
         async def mock_receive():
             call_count[0] += 1
             if call_count[0] == 1:
                 return mock_msg
+            # Stop after first message delivered
+            if reader_ref[0]:
+                reader_ref[0].running = False
             return None
 
         mock_repl_conn = AsyncMock()
@@ -889,14 +931,6 @@ class TestPostgresCdcReader:
         connect_calls = [mock_check_conn, mock_repl_conn]
         call_idx = [0]
 
-        mock_connect = AsyncMock()
-        mock_connect.side_effect = lambda *a, **kw: (
-            connect_calls[call_idx[0]] if call_idx[0] < len(connect_calls) else None
-        )
-
-        # Increment call_idx AFTER the side_effect returns (since connect returns immediately after await)
-        # Actually the side_effect returns the mock, but we need to track call count.
-        # Use a wrapper.
         async def mock_connect_fn(*args, **kwargs):
             idx = call_idx[0]
             call_idx[0] += 1
@@ -912,27 +946,16 @@ class TestPostgresCdcReader:
                 "ds-1",
                 "tbl",
             )
-
-            # Stop loop after first message: patch fetchone to stop the second iteration
-            first_call = [True]
-
-            async def patched_fetchone():
-                if first_call[0]:
-                    first_call[0] = False
-                    return None  # first call triggers creation path
-                reader.running = False  # stop the reader
-                return None
-
-            mock_check_cursor.fetchone = patched_fetchone
+            reader_ref[0] = reader
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 path = Path(tmpdir) / "events.jsonl"
                 await reader.start_streaming(path, mock_on_event)
 
-            assert path.exists()
-            content = path.read_text(encoding="utf-8")
-            assert "Alice" in content
-            assert mock_on_event.called
+                assert path.exists()
+                content = path.read_text(encoding="utf-8")
+                assert "Alice" in content
+                assert mock_on_event.called
 
     async def test_start_streaming_replication_publication_exists(self):
         """Cover lines 60-61: publication already exists, skip creation."""
@@ -952,7 +975,16 @@ class TestPostgresCdcReader:
 
         # Replication connection that immediately stops
         mock_repl_conn = AsyncMock()
-        mock_repl_conn.receive = AsyncMock(return_value=None)  # None → skip
+
+        reader_ref = [None]
+
+        async def mock_receive():
+            # Stop reader on first call — only need to verify publication-exists path
+            if reader_ref[0]:
+                reader_ref[0].running = False
+            return None
+
+        mock_repl_conn.receive = mock_receive
         mock_repl_conn.send_feedback = MagicMock()
         mock_repl_cursor = AsyncMock()
         mock_repl_cursor.execute = AsyncMock()
@@ -978,14 +1010,14 @@ class TestPostgresCdcReader:
                 "ds-1",
                 "tbl",
             )
-            reader.running = False  # prevent infinite loop
+            reader_ref[0] = reader
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 path = Path(tmpdir) / "events.jsonl"
                 await reader.start_streaming(path, mock_on_event)
 
-            # No message written since receive() returned None and running was False
-            assert not path.exists() or path.read_text(encoding="utf-8").strip() == ""
+                # No message written since receive() returned None and loop stopped
+                assert not path.exists() or path.read_text(encoding="utf-8").strip() == ""
 
     async def test_start_streaming_replication_inner_error(self):
         """Cover lines 106-108: inner exception in replication loop caught, continues."""

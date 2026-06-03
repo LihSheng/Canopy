@@ -199,6 +199,59 @@ describe("EntityGraphTab", () => {
     expect(screen.getByText("+ Create new Object Type")).toBeInTheDocument();
   });
 
+  it("requires and submits a primary key when creating an empty-state mapping", async () => {
+    mockFetchMapping.mockResolvedValue(null);
+    mockFetchObjectTypes.mockResolvedValue([
+      {
+        id: "ot-1",
+        object_type_key: "employee",
+        display_name: "Employee",
+        tenant_id: "t1",
+        description: "",
+        created_at: "",
+        updated_at: null,
+      },
+    ]);
+    mockFetchDatasetVersionSchema.mockResolvedValue([
+      { column_name: "id", primitive_type: "integer" },
+      { column_name: "name", primitive_type: "string" },
+    ]);
+    mockCreateMapping.mockResolvedValue(baseMapping);
+
+    render(<EntityGraphTab dataset={baseDataset} versions={[baseVersion]} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("No entity mapping yet")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "ot-1" },
+    });
+    fireEvent.click(screen.getByRole("radio", { name: /id/i }));
+
+    expect(screen.getByText('Configure "Employee" Mapping')).toBeEnabled();
+
+    fireEvent.click(screen.getByText('Configure "Employee" Mapping'));
+
+    await waitFor(() => {
+      expect(mockCreateMapping).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = mockCreateMapping.mock.calls[0][2];
+    expect(payload.properties).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source_column: "id",
+          is_primary_key: true,
+        }),
+        expect.objectContaining({
+          source_column: "name",
+          is_primary_key: false,
+        }),
+      ])
+    );
+  });
+
   // ─── Graph Canvas with Entity Node ───
 
   const baseMapping = {

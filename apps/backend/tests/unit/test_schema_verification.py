@@ -55,6 +55,7 @@ EXPECTED_CONTROL_PLANE_TABLES = {
     "semantic_mappings",
     "semantic_object_types",
     "retention_policies",
+    "feature_flags",
 }
 
 

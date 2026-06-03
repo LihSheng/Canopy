@@ -12,6 +12,8 @@ from analytics.services.monthly_aggregation_service import MonthlyAggregationSer
 from auth.hashing import hash_password
 from auth.schema import UserModel
 from common.database import Base, init_db, reset_engine, set_engine
+from control_plane.schemas.memberships import TenantMembershipModel
+from control_plane.schemas.tenants import TenantModel
 from ontology.schema import (
     DepartmentModel,
     EmployeeModel,
@@ -285,7 +287,30 @@ def seed_user(db_session):
 
 
 @pytest.fixture
-def auth_headers(client, seed_user):
+def seed_tenant_and_membership(db_session, seed_user):
+    """Create a tenant and membership so auth tokens carry tenant context."""
+    tenant = TenantModel(
+        id="test-tenant-1",
+        tenant_uuid="tuuid-test-1",
+        name="Test Tenant",
+        slug="test-tenant",
+        lifecycle_state="active",
+        status="active",
+    )
+    db_session.add(tenant)
+    membership = TenantMembershipModel(
+        user_id=seed_user.id,
+        tenant_id="test-tenant-1",
+        role="admin",
+        status="active",
+    )
+    db_session.add(membership)
+    db_session.commit()
+    return tenant, membership
+
+
+@pytest.fixture
+def auth_headers(client, seed_user, seed_tenant_and_membership):
     response = client.post(
         "/api/auth/login",
         json={"email": "admin@canopy.dev", "password": "admin123"},

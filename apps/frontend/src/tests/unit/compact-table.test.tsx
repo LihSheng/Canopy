@@ -22,13 +22,14 @@ const rows = [
 
 describe("CompactTable", () => {
   it("renders headers and rows", () => {
-    render(
+    const { container } = render(
       <CompactTable
         columns={columns}
         rows={rows as unknown as Record<string, unknown>[]}
         getRowId={(r) => String(r.id)}
       />
     );
+    expect(container.querySelector(".overflow-auto")).toBeTruthy();
     expect(screen.getByText("Name")).toBeInTheDocument();
     expect(screen.getByText("Status")).toBeInTheDocument();
     expect(screen.getByText("Alice")).toBeInTheDocument();
@@ -85,6 +86,22 @@ describe("CompactTable", () => {
         emptyText="Nothing here"
       />
     );
+    expect(screen.getByText("Nothing here")).toBeInTheDocument();
+  });
+
+  it("keeps search available when there are no rows", () => {
+    const onSearch = vi.fn();
+    render(
+      <CompactTable
+        columns={columns}
+        rows={[]}
+        getRowId={(r) => String(r.id)}
+        searchValue=""
+        onSearchChange={onSearch}
+        emptyText="Nothing here"
+      />
+    );
+    expect(screen.getByPlaceholderText("Search...")).toBeInTheDocument();
     expect(screen.getByText("Nothing here")).toBeInTheDocument();
   });
 

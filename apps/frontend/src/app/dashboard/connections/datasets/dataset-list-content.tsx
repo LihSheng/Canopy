@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { fetchDatasets } from "@/lib/api/data-source";
 import type { Dataset } from "@/lib/api/types";
@@ -66,9 +66,31 @@ const DATASET_LIST_COLUMNS: ColumnDef[] = [
 
 const DatasetListContent = () => {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [searchValue, setSearchValue] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+
+  const filteredDatasets = useMemo(() => {
+    const query = searchValue.trim().toLowerCase();
+    if (!query) {
+      return datasets;
+    }
+
+    return datasets.filter((dataset) => {
+      const searchableText = [
+        dataset.id,
+        dataset.name,
+        dataset.source_object_name,
+        dataset.status,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(query);
+    });
+  }, [datasets, searchValue]);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +118,9 @@ const DatasetListContent = () => {
         columns={DATASET_LIST_COLUMNS}
         rows={[]}
         getRowId={(row) => String(row.id)}
+        searchValue={searchValue}
+        onSearchChange={setSearchValue}
+        searchPlaceholder="Search datasets..."
         emptyText="No datasets yet"
       />
     );
@@ -104,12 +129,15 @@ const DatasetListContent = () => {
   return (
     <CompactTable
       columns={DATASET_LIST_COLUMNS}
-      rows={datasets as unknown as Record<string, unknown>[]}
+      rows={filteredDatasets as unknown as Record<string, unknown>[]}
       getRowId={(row) => String(row.id)}
       loading={loading}
       error={error}
       onRetry={retry}
-      emptyText="No datasets yet"
+      searchValue={searchValue}
+      onSearchChange={setSearchValue}
+      searchPlaceholder="Search datasets..."
+      emptyText={searchValue.trim() ? "No datasets match your search" : "No datasets yet"}
     />
   );
 }

@@ -34,10 +34,11 @@ def _create_dataset(client, auth_headers):
 
 
 @pytest.fixture
-def admin_headers(client, db_session):
+def admin_headers(client, db_session, seed_tenant_and_membership):
     """Seed an admin user and return auth headers."""
     from auth.hashing import hash_password
     from auth.schema import UserModel
+    from control_plane.schemas.memberships import TenantMembershipModel
 
     user = UserModel(
         id="test-admin-1",
@@ -50,6 +51,16 @@ def admin_headers(client, db_session):
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+
+    # Create tenant membership so admin user carries tenant context.
+    membership = TenantMembershipModel(
+        user_id=user.id,
+        tenant_id="test-tenant-1",
+        role="admin",
+        status="active",
+    )
+    db_session.add(membership)
+    db_session.commit()
 
     response = client.post(
         "/api/auth/login",
