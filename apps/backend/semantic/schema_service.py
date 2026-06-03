@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from connection.database_adapter import get_adapter
 from connection.repository import ConnectionRepository
+from connection.secret_store import AesGcmSecretStore, decrypt_secret_value
 from dataset.domain import DatasetVersion
 from dataset.preview_service import read_dataset_preview
 from dataset.repository import DatasetRepository, DatasetVersionRepository
@@ -154,8 +155,16 @@ class DatasetSchemaService:
         """Introspect table schema from a DB connection adapter."""
         try:
             adapter = get_adapter(connection.source_type)
+            config = dict(connection.config_json or {})
+            password = config.get("password")
+            if password and isinstance(password, str):
+                config["password"] = decrypt_secret_value(
+                    password,
+                    AesGcmSecretStore(),
+                    allow_legacy_plaintext=True,
+                )
             # discover_tables returns metadata for all user tables
-            tables = await adapter.discover_tables(connection.config_json or {})
+            tables = await adapter.discover_tables(config)
             # Find the matching table by name
             for table in tables:
                 if table.get("table_name", "").lower() == source_object_name.lower():

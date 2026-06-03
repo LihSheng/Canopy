@@ -20,12 +20,21 @@ from semantic.repository import SemanticMappingRepository
 logger = logging.getLogger(__name__)
 
 
-def _dataset_delete_blocking_reason(active_run_count: int, entity_count: int) -> str | None:
+def _dataset_delete_blocking_reason(
+    active_run_count: int,
+    entity_count: int,
+    published_entity_count: int = 0,
+) -> str | None:
     reasons: list[str] = []
     if active_run_count > 0:
         reasons.append(f"Dataset has {active_run_count} active run(s)")
     if entity_count > 0:
         reasons.append(f"Dataset is used by {entity_count} entit{'y' if entity_count == 1 else 'ies'}")
+    if published_entity_count > 0:
+        reasons.append(
+            f"Dataset is pinned by {published_entity_count} published entity revision(s). "
+            f"Unpublish or repoint those entities before deleting."
+        )
     return "; ".join(reasons) if reasons else None
 
 
@@ -210,13 +219,18 @@ class DatasetService:
         active_run_count = run_repo.count_active_by_dataset(dataset_id)
         semantic_repo = SemanticMappingRepository(self._repo._db)
         entity_count = semantic_repo.count_distinct_object_types_by_dataset(dataset_id, tenant_id=tenant_id)
+        from entity_revision.repository import EntityRevisionRepository
+
+        revision_repo = EntityRevisionRepository(self._repo._db)
+        published_entity_count = revision_repo.count_published_entities_using_dataset(dataset_id)
         version_count = self._version_repo.count_by_dataset(dataset_id)
-        blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count)
+        blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count, published_entity_count)
         return {
             "dataset_id": dataset_id,
             "version_count": version_count,
             "active_run_count": active_run_count,
             "entity_count": entity_count,
+            "published_entity_count": published_entity_count,
             "can_delete": blocking_reason is None,
             "blocking_reason": blocking_reason,
         }
@@ -230,7 +244,11 @@ class DatasetService:
         active_run_count = run_repo.count_active_by_dataset(dataset_id)
         semantic_repo = SemanticMappingRepository(self._repo._db)
         entity_count = semantic_repo.count_distinct_object_types_by_dataset(dataset_id, tenant_id=tenant_id)
-        blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count)
+        from entity_revision.repository import EntityRevisionRepository
+
+        revision_repo = EntityRevisionRepository(self._repo._db)
+        published_entity_count = revision_repo.count_published_entities_using_dataset(dataset_id)
+        blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count, published_entity_count)
         if blocking_reason is not None:
             raise ValidationError(blocking_reason)
 
@@ -252,6 +270,9 @@ class DatasetService:
 
         run_repo = RunRepository(self._repo._db)
         semantic_repo = SemanticMappingRepository(self._repo._db)
+        from entity_revision.repository import EntityRevisionRepository
+
+        revision_repo = EntityRevisionRepository(self._repo._db)
         results: list[dict] = []
         for dataset_id in dataset_ids:
             dataset = self._repo.get(dataset_id, tenant_id=tenant_id)
@@ -262,6 +283,7 @@ class DatasetService:
                         "version_count": 0,
                         "active_run_count": 0,
                         "entity_count": 0,
+                        "published_entity_count": 0,
                         "can_delete": False,
                         "blocking_reason": "Dataset not found",
                         "dataset_name": None,
@@ -271,8 +293,9 @@ class DatasetService:
 
             active_run_count = run_repo.count_active_by_dataset(dataset_id)
             entity_count = semantic_repo.count_distinct_object_types_by_dataset(dataset_id, tenant_id=tenant_id)
+            published_entity_count = revision_repo.count_published_entities_using_dataset(dataset_id)
             version_count = self._version_repo.count_by_dataset(dataset_id)
-            blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count)
+            blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count, published_entity_count)
             can_delete = blocking_reason is None
             results.append(
                 {
@@ -280,6 +303,7 @@ class DatasetService:
                     "version_count": version_count,
                     "active_run_count": active_run_count,
                     "entity_count": entity_count,
+                    "published_entity_count": published_entity_count,
                     "can_delete": can_delete,
                     "blocking_reason": blocking_reason,
                     "dataset_name": dataset.name,
@@ -297,6 +321,9 @@ class DatasetService:
 
         run_repo = RunRepository(self._repo._db)
         semantic_repo = SemanticMappingRepository(self._repo._db)
+        from entity_revision.repository import EntityRevisionRepository
+
+        revision_repo = EntityRevisionRepository(self._repo._db)
         deleted: list[dict] = []
         skipped: list[dict] = []
 
@@ -314,7 +341,8 @@ class DatasetService:
 
             active_run_count = run_repo.count_active_by_dataset(dataset_id)
             entity_count = semantic_repo.count_distinct_object_types_by_dataset(dataset_id, tenant_id=tenant_id)
-            blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count)
+            published_entity_count = revision_repo.count_published_entities_using_dataset(dataset_id)
+            blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count, published_entity_count)
             if blocking_reason is not None:
                 skipped.append(
                     {
@@ -732,13 +760,26 @@ class DatasetVersionService:
             raise NotFoundError("Dataset version not found")
 
         is_active_version = dataset.active_version_id == version_id
+        from entity_revision.repository import EntityRevisionRepository
+
+        revision_repo = EntityRevisionRepository(self._repo._db)
+        published_depends = revision_repo.has_published_dependency_on_dataset_version(version_id)
+
+        blocking_reasons: list[str] = []
+        if is_active_version:
+            blocking_reasons.append("Version is active")
+        if published_depends:
+            blocking_reasons.append("Version is pinned by published entity revision(s)")
+        blocking_reason = "; ".join(blocking_reasons) if blocking_reasons else None
+
         return {
             "dataset_id": dataset_id,
             "version_id": version_id,
             "version_number": version.version_number,
             "is_active_version": is_active_version,
-            "can_delete": not is_active_version,
-            "blocking_reason": "Version is active" if is_active_version else None,
+            "published_entity_dependency": published_depends,
+            "can_delete": blocking_reason is None,
+            "blocking_reason": blocking_reason,
         }
 
     def delete_version(self, dataset_id: str, version_id: str) -> dict:
@@ -752,6 +793,15 @@ class DatasetVersionService:
 
         if dataset.active_version_id == version_id:
             raise ValidationError("Cannot delete active version")
+
+        from entity_revision.repository import EntityRevisionRepository
+
+        revision_repo = EntityRevisionRepository(self._repo._db)
+        if revision_repo.has_published_dependency_on_dataset_version(version_id):
+            raise ValidationError(
+                "Cannot delete dataset version: it is pinned by one or more published entity revisions. "
+                "Unpublish or repoint those entities before deleting."
+            )
 
         deleted = self._repo.delete(version_id)
         if not deleted:

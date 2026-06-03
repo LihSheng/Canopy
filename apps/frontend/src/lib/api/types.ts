@@ -469,6 +469,11 @@ export interface EntityRegistryItem {
   link_count: number;
   computed_property_count: number;
   mapping_updated_at: string | null;
+  // Revision state (entity-first model)
+  has_published_revision: boolean;
+  has_draft: boolean;
+  draft_lock_holder_id: string | null;
+  published_revision_number: number | null;
 }
 
 export interface EntityDetail {
@@ -480,6 +485,15 @@ export interface EntityDetail {
   updated_at: string | null;
   dataset_name: string | null;
   mapping: EntityMappingDetail | null;
+  // Revision state (entity-first model)
+  has_published_revision: boolean;
+  has_draft: boolean;
+  draft_lock_holder_id: string | null;
+  published_revision_number: number | null;
+  draft_revision_number: number | null;
+  // Revision content — preferred over mapping when available
+  published_revision: EntityRevisionDetail | null;
+  draft_revision: EntityRevisionDetail | null;
 }
 
 export interface EntityMappingDetail {
@@ -494,4 +508,56 @@ export interface EntityMappingDetail {
   layout_state: Record<string, unknown>;
   created_at: string;
   updated_at: string | null;
+}
+
+// ─── Entity Revision (entity-first model) ───
+
+export interface EntityRevisionProperty {
+  property_id: string;
+  property_key: string;
+  display_name: string;
+  semantic_type: string;
+  is_required: boolean;
+  is_primary_key: boolean;
+  sort_order: number;
+}
+
+export interface EntityRevision {
+  id: string;
+  entity_id: string;
+  revision_number: number;
+  status: "draft" | "published" | "archived";
+  forked_from_revision_id: string | null;
+  properties: EntityRevisionProperty[];
+  links: Record<string, unknown>[];
+  source_nodes: Record<string, unknown>[];
+  computed_properties: Record<string, unknown>[];
+  layout_state: Record<string, unknown>;
+  lock_holder_id: string | null;
+  locked_at: string | null;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+}
+
+// Entity revision detail embedded in entity detail response
+export interface EntityRevisionDetail {
+  id: string;
+  revision_number: number;
+  status: string;
+  properties: EntityRevisionProperty[];
+  source_nodes: SourceNode[];
+  links: EntityLink[];
+  computed_properties: ComputedProperty[];
+  layout_state: Record<string, unknown>;
+  published_at: string | null;
+}
+
+export interface EntityStatus {
+  has_published: boolean;
+  has_draft: boolean;
+  lock_holder_id: string | null;
+  published_revision_number: number | null;
+  draft_revision_number: number | null;
+  published_at: string | null;
 }

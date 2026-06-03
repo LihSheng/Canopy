@@ -114,7 +114,7 @@ const EntityRegistryPage = () => {
                     Properties
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Links
+                    Status
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
                     Updated
@@ -147,8 +147,23 @@ const EntityRegistryPage = () => {
                     <td className="px-4 py-3 text-center text-zinc-600">
                       {entity.property_count}
                     </td>
-                    <td className="px-4 py-3 text-center text-zinc-600">
-                      {entity.link_count}
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {entity.has_published_revision ? (
+                          <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                            Published
+                          </span>
+                        ) : (
+                          <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-400">
+                            No pub
+                          </span>
+                        )}
+                        {entity.has_draft ? (
+                          <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            Draft
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right text-xs text-zinc-500">
                       {formatDate(entity.mapping_updated_at || entity.updated_at)}
