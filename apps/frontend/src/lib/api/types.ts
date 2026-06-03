@@ -258,6 +258,7 @@ export interface DatasetDeleteSummary {
   dataset_id: string;
   version_count: number;
   active_run_count: number;
+  entity_count: number;
   can_delete: boolean;
   blocking_reason: string | null;
 }
@@ -266,6 +267,7 @@ export interface DatasetBulkDeleteSummaryItem {
   dataset_id: string;
   version_count: number;
   active_run_count: number;
+  entity_count: number;
   can_delete: boolean;
   blocking_reason: string | null;
   dataset_name: string | null;

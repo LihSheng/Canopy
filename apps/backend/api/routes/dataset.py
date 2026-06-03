@@ -72,6 +72,7 @@ class DatasetDeleteSummaryResponse(BaseModel):
     dataset_id: str
     version_count: int
     active_run_count: int
+    entity_count: int
     can_delete: bool
     blocking_reason: str | None = None
 

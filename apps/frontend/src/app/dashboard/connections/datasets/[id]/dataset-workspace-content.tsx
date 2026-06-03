@@ -547,7 +547,7 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
               tone="warning"
               className="mt-3"
               title="Dataset delete is locked."
-              description={`Remove active runs before deleting this dataset.${
+              description={`Resolve dataset dependencies before deleting this dataset.${
                 deleteSummary.blocking_reason ? ` ${deleteSummary.blocking_reason}` : ""
               }`}
             />

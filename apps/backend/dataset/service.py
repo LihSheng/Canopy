@@ -15,8 +15,18 @@ from connection.secret_store import AesGcmSecretStore, decrypt_secret_value
 from dataset.domain import Dataset, DatasetStatus, DatasetVersion, DatasetVersionStatus
 from dataset.repository import DatasetRepository, DatasetVersionRepository
 from run.repository import RunRepository
+from semantic.repository import SemanticMappingRepository
 
 logger = logging.getLogger(__name__)
+
+
+def _dataset_delete_blocking_reason(active_run_count: int, entity_count: int) -> str | None:
+    reasons: list[str] = []
+    if active_run_count > 0:
+        reasons.append(f"Dataset has {active_run_count} active run(s)")
+    if entity_count > 0:
+        reasons.append(f"Dataset is used by {entity_count} entit{'y' if entity_count == 1 else 'ies'}")
+    return "; ".join(reasons) if reasons else None
 
 
 class DatasetService:
@@ -198,13 +208,17 @@ class DatasetService:
 
         run_repo = RunRepository(self._repo._db)
         active_run_count = run_repo.count_active_by_dataset(dataset_id)
+        semantic_repo = SemanticMappingRepository(self._repo._db)
+        entity_count = semantic_repo.count_distinct_object_types_by_dataset(dataset_id, tenant_id=tenant_id)
         version_count = self._version_repo.count_by_dataset(dataset_id)
+        blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count)
         return {
             "dataset_id": dataset_id,
             "version_count": version_count,
             "active_run_count": active_run_count,
-            "can_delete": active_run_count == 0,
-            "blocking_reason": (None if active_run_count == 0 else f"Dataset has {active_run_count} active run(s)"),
+            "entity_count": entity_count,
+            "can_delete": blocking_reason is None,
+            "blocking_reason": blocking_reason,
         }
 
     def delete_dataset(self, dataset_id: str, tenant_id: str | None = None) -> dict:
@@ -214,8 +228,11 @@ class DatasetService:
 
         run_repo = RunRepository(self._repo._db)
         active_run_count = run_repo.count_active_by_dataset(dataset_id)
-        if active_run_count > 0:
-            raise ValidationError(f"Dataset has {active_run_count} active run(s)")
+        semantic_repo = SemanticMappingRepository(self._repo._db)
+        entity_count = semantic_repo.count_distinct_object_types_by_dataset(dataset_id, tenant_id=tenant_id)
+        blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count)
+        if blocking_reason is not None:
+            raise ValidationError(blocking_reason)
 
         self._version_repo.delete_by_dataset(dataset_id)
         deleted = self._repo.delete(dataset_id)
@@ -234,6 +251,7 @@ class DatasetService:
             return []
 
         run_repo = RunRepository(self._repo._db)
+        semantic_repo = SemanticMappingRepository(self._repo._db)
         results: list[dict] = []
         for dataset_id in dataset_ids:
             dataset = self._repo.get(dataset_id, tenant_id=tenant_id)
@@ -243,6 +261,7 @@ class DatasetService:
                         "dataset_id": dataset_id,
                         "version_count": 0,
                         "active_run_count": 0,
+                        "entity_count": 0,
                         "can_delete": False,
                         "blocking_reason": "Dataset not found",
                         "dataset_name": None,
@@ -251,18 +270,16 @@ class DatasetService:
                 continue
 
             active_run_count = run_repo.count_active_by_dataset(dataset_id)
+            entity_count = semantic_repo.count_distinct_object_types_by_dataset(dataset_id, tenant_id=tenant_id)
             version_count = self._version_repo.count_by_dataset(dataset_id)
-            can_delete = active_run_count == 0 and dataset is not None
-            blocking_reason = (
-                None
-                if can_delete
-                else (f"Dataset has {active_run_count} active run(s)" if active_run_count > 0 else "Dataset not found")
-            )
+            blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count)
+            can_delete = blocking_reason is None
             results.append(
                 {
                     "dataset_id": dataset_id,
                     "version_count": version_count,
                     "active_run_count": active_run_count,
+                    "entity_count": entity_count,
                     "can_delete": can_delete,
                     "blocking_reason": blocking_reason,
                     "dataset_name": dataset.name,
@@ -279,6 +296,7 @@ class DatasetService:
             return {"deleted": [], "skipped": [], "total_requested": 0}
 
         run_repo = RunRepository(self._repo._db)
+        semantic_repo = SemanticMappingRepository(self._repo._db)
         deleted: list[dict] = []
         skipped: list[dict] = []
 
@@ -295,12 +313,14 @@ class DatasetService:
                 continue
 
             active_run_count = run_repo.count_active_by_dataset(dataset_id)
-            if active_run_count > 0:
+            entity_count = semantic_repo.count_distinct_object_types_by_dataset(dataset_id, tenant_id=tenant_id)
+            blocking_reason = _dataset_delete_blocking_reason(active_run_count, entity_count)
+            if blocking_reason is not None:
                 skipped.append(
                     {
                         "dataset_id": dataset_id,
                         "dataset_name": dataset.name,
-                        "reason": f"Dataset has {active_run_count} active run(s)",
+                        "reason": blocking_reason,
                     }
                 )
                 continue

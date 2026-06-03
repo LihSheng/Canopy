@@ -1,4 +1,4 @@
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 from semantic.domain import (
@@ -149,6 +149,14 @@ class SemanticMappingRepository:
             .all()
         )
         return [self._to_domain(m) for m in models]
+
+    def count_distinct_object_types_by_dataset(self, dataset_id: str, tenant_id: str | None = None) -> int:
+        q = self._db.query(func.count(func.distinct(SemanticMappingModel.object_type_id))).filter(
+            SemanticMappingModel.dataset_id == dataset_id
+        )
+        if tenant_id is not None:
+            q = q.filter(SemanticMappingModel.tenant_id == tenant_id)
+        return int(q.scalar() or 0)
 
     def delete(self, id: str, tenant_id: str | None = None) -> bool:
         q = self._db.query(SemanticMappingModel).filter(SemanticMappingModel.id == id)

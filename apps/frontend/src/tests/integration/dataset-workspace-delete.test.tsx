@@ -71,6 +71,7 @@ describe("Dataset workspace delete actions", () => {
       dataset_id: "dataset-1",
       version_count: 2,
       active_run_count: 0,
+      entity_count: 0,
       can_delete: true,
       blocking_reason: null,
     });
@@ -191,6 +192,7 @@ describe("Dataset workspace delete actions", () => {
       dataset_id: "dataset-1",
       version_count: 2,
       active_run_count: 1,
+      entity_count: 0,
       can_delete: false,
       blocking_reason: "Dataset has 1 active run(s)",
     });
@@ -201,7 +203,7 @@ describe("Dataset workspace delete actions", () => {
       expect(screen.getByText("Dataset delete is locked.")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Remove active runs before deleting this dataset/i)).toBeInTheDocument();
+    expect(screen.getByText(/Resolve dataset dependencies before deleting this dataset/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete Dataset" })).toBeDisabled();
   });
 

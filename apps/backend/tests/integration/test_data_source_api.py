@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import uuid
+from datetime import UTC, datetime
 
 import openpyxl
 import pytest
@@ -10,6 +11,9 @@ from sqlalchemy import text
 
 from dataset.domain import Dataset
 from dataset.repository import DatasetRepository
+from semantic.domain import PropertyMapping, SemanticMapping
+from semantic.repository import ObjectTypeRepository, SemanticMappingRepository
+from semantic.service import ObjectTypeService
 
 pytestmark = pytest.mark.api_schema
 
@@ -606,6 +610,7 @@ def test_dataset_delete_allowed_when_unused(client: TestClient, auth_headers, mo
     delete_summary = delete_summary_resp.json()
     assert delete_summary["can_delete"] is True
     assert delete_summary["active_run_count"] == 0
+    assert delete_summary["entity_count"] == 0
 
     delete_resp = client.delete(f"/api/datasets/{dataset_id}", headers=auth_headers)
     assert delete_resp.status_code == 200
@@ -655,10 +660,72 @@ def test_dataset_delete_blocks_active_runs(client: TestClient, auth_headers, mon
     delete_summary = delete_summary_resp.json()
     assert delete_summary["can_delete"] is False
     assert delete_summary["active_run_count"] == 1
+    assert delete_summary["entity_count"] == 0
 
     delete_resp = client.delete(f"/api/datasets/{dataset_id}", headers=auth_headers)
     assert delete_resp.status_code == 400
     assert "active run" in delete_resp.json()["detail"].lower()
+
+
+def test_dataset_delete_blocks_entity_dependencies(client: TestClient, auth_headers, monkeypatch, tmp_path, db_session):
+    dataset_id = _create_dataset_via_api(
+        client,
+        auth_headers,
+        monkeypatch,
+        tmp_path,
+        _make_two_row_xlsx_bytes(),
+        "Entity Locked Project",
+        "Entity Locked Conn",
+        "Entity Locked Dataset",
+    )
+    active_version_id = client.get(f"/api/datasets/{dataset_id}/versions", headers=auth_headers).json()[0]["id"]
+
+    object_type = ObjectTypeService(ObjectTypeRepository(db_session)).create(
+        tenant_id="test-tenant-1",
+        object_type_key="leave_request",
+        display_name="Leave Request",
+        description="Entity using dataset",
+    )
+    SemanticMappingRepository(db_session).save(
+        SemanticMapping(
+            id=str(uuid.uuid4()),
+            tenant_id="test-tenant-1",
+            dataset_id=dataset_id,
+            dataset_version_id=active_version_id,
+            version_number=1,
+            object_type_id=object_type.id,
+            object_type_key=object_type.object_type_key,
+            properties=[
+                PropertyMapping(
+                    source_column="id",
+                    property_name="id",
+                    semantic_type="integer",
+                    included=True,
+                    is_primary_key=True,
+                )
+            ],
+            links=[],
+            computed_properties=[],
+            source_nodes=[],
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+    )
+
+    delete_summary_resp = client.get(
+        f"/api/datasets/{dataset_id}/dependencies",
+        headers=auth_headers,
+    )
+    assert delete_summary_resp.status_code == 200
+    delete_summary = delete_summary_resp.json()
+    assert delete_summary["can_delete"] is False
+    assert delete_summary["active_run_count"] == 0
+    assert delete_summary["entity_count"] == 1
+    assert "used by 1 entity" in delete_summary["blocking_reason"].lower()
+
+    delete_resp = client.delete(f"/api/datasets/{dataset_id}", headers=auth_headers)
+    assert delete_resp.status_code == 400
+    assert "used by 1 entity" in delete_resp.json()["detail"].lower()
 
 
 def test_dataset_version_delete_allowed_for_non_active_version(
