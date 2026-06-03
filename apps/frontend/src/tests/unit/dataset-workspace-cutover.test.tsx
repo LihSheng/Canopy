@@ -5,7 +5,7 @@ import type { Dataset, DatasetVersion } from "@/lib/api/types";
 
 // ─── Mocks ───
 
-const mockFlags = vi.fn<[], Record<string, boolean>>();
+const mockFlags = vi.fn<() => Record<string, boolean>>();
 vi.mock("@/lib/feature-flags-context", () => ({
   useFeatureFlags: () => ({
     flags: mockFlags(),

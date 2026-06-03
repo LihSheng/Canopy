@@ -202,10 +202,6 @@ async def preview_table(
     return await service.preview_table(id, table, tenant_id=ctx.tenant_id)
 
 
-def _lifecycle_service(db: Session) -> ConnectionService:
-    return _build_service(db, with_audit=True)
-
-
 @router.get("/{id}/dependencies")
 def get_connection_dependencies(
     id: str,
