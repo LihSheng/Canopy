@@ -7,6 +7,7 @@ from entity_revision.domain import (
     EntityProperty,
     EntityRevision,
     EntityRevisionDependency,
+    SourceBinding,
 )
 from entity_revision.schema import EntityRevisionDependencyModel, EntityRevisionModel
 
@@ -206,6 +207,14 @@ class EntityRevisionRepository:
                 }
                 for p in d.properties
             ],
+            source_bindings=[
+                {
+                    "property_key": b.property_key,
+                    "source_node_id": b.source_node_id,
+                    "source_field_name": b.source_field_name,
+                }
+                for b in d.source_bindings
+            ],
             links=d.links or [],
             source_nodes=d.source_nodes or [],
             computed_properties=d.computed_properties or [],
@@ -235,6 +244,14 @@ class EntityRevisionRepository:
                     sort_order=p.get("sort_order", 0),
                 )
                 for p in (m.properties or [])
+            ],
+            source_bindings=[
+                SourceBinding(
+                    property_key=b.get("property_key", ""),
+                    source_node_id=b.get("source_node_id", ""),
+                    source_field_name=b.get("source_field_name", ""),
+                )
+                for b in (m.source_bindings or [])
             ],
             links=m.links or [],
             source_nodes=m.source_nodes or [],

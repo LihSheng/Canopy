@@ -63,6 +63,7 @@ class EntityRevision:
     status: str  # RevisionStatus value
     forked_from_revision_id: str | None = None
     properties: list[EntityProperty] = field(default_factory=list)
+    source_bindings: list[SourceBinding] = field(default_factory=list)
     links: list[dict] = field(default_factory=list)
     source_nodes: list[dict] = field(default_factory=list)
     computed_properties: list[dict] = field(default_factory=list)

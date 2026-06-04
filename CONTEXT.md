@@ -77,6 +77,10 @@ The source table column (auto-detected from schema, user-overridable) used by in
 
 The configuration section in the analytics shell sidebar where users manage Connections and Datasets. Separate from the consumption-oriented Dashboard, Departments, Anomalies, and Reports sections.
 
+### Entity Manager
+
+The canonical Entity authoring surface where users edit Entity properties and source bindings. Entity Manager owns semantic modeling; Data Studio only prepares and exposes source data.
+
 ### Feature Flag
 A server-backed rollout control that can change product behavior for all users in a given environment. Feature flags are managed from an Admin surface and are intended for operational release control, not end-user configuration.
 For now, feature flags are administered by a single internal admin role; tighter production gating can be added later.
@@ -86,24 +90,24 @@ The first Admin page version is a simple list of global on/off toggles with desc
 The internal management surface and role used to configure operational settings such as global feature flags.
 
 ### Entity
-The business-object configuration a user defines for a dataset version inside the graph-based Data Studio workspace. Entity is the user-facing term for the semantic configuration model, and the canvas is the primary authoring surface.
+The business-object configuration a user defines in Entity Manager. Entity is the user-facing term for the semantic configuration model, and the canvas is the primary authoring surface for properties and source bindings.
 
 ### Object Type
 The tenant-scoped reusable business-object definition that an Entity mapping can select or create. Object Types are shared across dataset versions within the tenant.
 
-### Relationship Link
-An optional metadata declaration inside an Entity mapping that connects the current Entity to another tenant Object Type using a source property and the target Object Type's primary key.
-Phase 1 uses a visual, canvas-based editor for link layout and interaction, while the stored link remains metadata in the Semantic Mapping.
+### Source Binding
+An optional metadata declaration inside an Entity mapping that connects cleaned source data from Data Studio to one Entity property.
+Phase 1 uses a visual, canvas-based editor for binding layout and interaction, while the stored binding remains metadata in the Semantic Mapping.
 Phase 1 graph scope shows source, dataset version, and Entity nodes only; clean/group/process nodes are deferred.
 Phase 1 graph edits are authoritative for the mapping config, so saved graph changes must update the Semantic Mapping record.
 Phase 1 graph changes are committed through an explicit Save/Publish action and produce a new versioned mapping record.
 Phase 1 graph version snapshots include both semantic config and canvas layout state so the graph can reopen in the same arrangement.
-Phase 1 canvas scope shows the current dataset graph plus target references only; it does not become a tenant-wide graph.
-Phase 1 canvas uses separate node types for raw source object, dataset version, Entity/Object Type, and target references.
+Phase 1 canvas scope shows the current dataset graph plus binding references only; it does not become a tenant-wide graph.
+Phase 1 canvas uses separate node types for raw source object, dataset version, Entity/Object Type, and binding references.
 Phase 1 node inspector edits the Entity/Object Type mapping; source and dataset version nodes stay read-only.
 Phase 1 uses the graph as the primary workspace and reuses wizard logic in a graph-side inspector instead of keeping two separate editors.
 Phase 1 uses a right-side drawer for node and edge inspection/editing.
-Phase 1 graph load shows the current dataset lineage path, the current Entity, and existing links/references.
+Phase 1 graph load shows the current dataset lineage path, the current Entity, and existing bindings/references.
 Phase 1 graph supports designing an Entity from the canvas by adding one or more raw data source nodes and linking their fields into the Entity.
 Phase 1 edges connect source fields to Entity properties, not just source nodes to Entity nodes.
 Phase 1 source fields are collapsed inside the source node by default and expanded in the drawer when the source is selected.
@@ -117,7 +121,7 @@ Phase 1 source nodes are an unordered set in the Entity config.
 Phase 1 canvas source creation only registers already known table/file sources; it does not start a full new connector import flow.
 
 ### Semantic Mapping
-The versioned configuration record that stores one Entity's Object Type selection, primary key, property mappings, and relationship links for a specific dataset version.
+The versioned configuration record that stores one Entity's Object Type selection, primary key, property mappings, source bindings, and canvas layout state for a specific dataset version.
 _Avoid_: Admin panel, settings page
 
 ### Connection Wizard
@@ -184,9 +188,9 @@ _Avoid_: general analytics dashboard, tenant-facing reporting page
 - A **Dataset** can carry an **Entity** mapping for one dataset version.
 - An **Entity** selects or creates one **Object Type**.
 - A **Semantic Mapping** stores the versioned configuration for an **Entity**.
-- A **Relationship Link** connects one **Entity** to another tenant **Object Type**.
-- The **Entity Designer Graph Canvas** is the primary config surface; separate Entity and Graph tabs are not the target end state.
-- The legacy `Entity` tab is a route alias that opens the graph surface during the transition period, not a separate editor path.
+- A **Source Binding** connects cleaned source data from Data Studio to one **Entity** property.
+- The **Entity Manager** is the primary semantic authoring surface; separate Entity and Graph tabs are not the target end state.
+- The legacy `Entity` tab is a route alias that opens the Entity Manager graph surface during the transition period, not a separate editor path.
 - **Live Explorer** will host **direct_query** datasets in a separate module outside the snapshot pipeline.
 - The **SecretStore** encrypts third-party credentials stored in the **data connector** config.
 - A **Schema signature** is stored per **Source object** and compared during discovery and sync runs.

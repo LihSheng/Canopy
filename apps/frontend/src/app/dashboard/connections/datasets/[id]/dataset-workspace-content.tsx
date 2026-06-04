@@ -51,6 +51,7 @@ import {
 import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
 import { EntityTab } from "@/components/entity-mapping/entity-tab";
 import { EntityGraphTab } from "@/components/entity-graph/entity-graph-tab";
+import { EntityAssociationSummary } from "@/components/entity-graph/entity-association-summary";
 import { useFeatureFlags } from "@/lib/feature-flags-context";
 import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, DATASET_STATUS_COLORS, errorMessageFailedToLoad, RETENTION_PRESETS, RETENTION_MODE_LABELS } from "@/lib/constants";
 
@@ -592,6 +593,7 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
       <div>
         {activeTab === "Overview" && (
           <div className="space-y-6">
+            <EntityAssociationSummary datasetId={datasetId} />
             <DatasetSummaryCards
               health={health}
               versionCount={versions.length}

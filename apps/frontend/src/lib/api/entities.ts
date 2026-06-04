@@ -5,6 +5,7 @@ import type {
   EntityRevision,
   EntityStatus,
   EntityRevisionProperty,
+  SourceBinding,
 } from "./types";
 
 export const fetchEntities = (search?: string): Promise<EntityRegistryItem[]> => {
@@ -90,4 +91,103 @@ export const createInitialRevision = (
     method: "POST",
     body: JSON.stringify(body),
   });
+};
+
+// ─── Property CRUD (within draft) ───
+
+export const addProperty = (
+  entityId: string,
+  body: {
+    property_key: string;
+    display_name: string;
+    semantic_type?: string;
+    is_required?: boolean;
+    is_primary_key?: boolean;
+    sort_order?: number;
+  }
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(`/api/entities/${entityId}/draft/properties`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+};
+
+export const updateProperty = (
+  entityId: string,
+  propertyId: string,
+  body: {
+    property_key?: string;
+    display_name?: string;
+    semantic_type?: string;
+    is_required?: boolean;
+    is_primary_key?: boolean;
+    sort_order?: number;
+  }
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/draft/properties/${propertyId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }
+  );
+};
+
+export const removeProperty = (
+  entityId: string,
+  propertyId: string
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/draft/properties/${propertyId}`,
+    { method: "DELETE" }
+  );
+};
+
+export const reorderProperties = (
+  entityId: string,
+  propertyIds: string[]
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/draft/properties/reorder`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ property_ids: propertyIds }),
+    }
+  );
+};
+
+// ─── Source Bindings ───
+
+export const setSourceBindings = (
+  entityId: string,
+  bindings: SourceBinding[]
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(`/api/entities/${entityId}/draft/bindings`, {
+    method: "PUT",
+    body: JSON.stringify({ bindings }),
+  });
+};
+
+export const fetchSourceBindings = (
+  entityId: string
+): Promise<SourceBinding[]> => {
+  return request<SourceBinding[]>(`/api/entities/${entityId}/draft/bindings`);
+};
+
+export const fetchBrokenBindings = (
+  entityId: string
+): Promise<SourceBinding[]> => {
+  return request<SourceBinding[]>(
+    `/api/entities/${entityId}/draft/bindings/broken`
+  );
+};
+
+// ─── Dataset-Entity Association ───
+
+export const fetchEntityByDataset = (
+  datasetId: string
+): Promise<EntityDetail | null> => {
+  return request<EntityDetail | null>(
+    `/api/entities/by-dataset/${datasetId}`
+  );
 };

@@ -11,6 +11,12 @@ import {
   createInitialRevision,
   publishDraft,
   discardDraft,
+  addProperty,
+  updateProperty,
+  removeProperty,
+  reorderProperties,
+  fetchSourceBindings,
+  setSourceBindings,
 } from "@/lib/api/entities";
 import { ROUTES } from "@/lib/constants";
 import type {
@@ -21,7 +27,9 @@ import type {
   ComputedProperty,
   EntityLink,
   EntityRevisionProperty,
+  SourceBinding,
 } from "@/lib/api/types";
+import { PropertyEditor, type PropertySavePayload } from "@/components/entity-graph/property-editor";
 
 const EntityDetailPage = () => {
   const params = useParams();
@@ -33,6 +41,7 @@ const EntityDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [tableRefreshing, setTableRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,6 +57,20 @@ const EntityDetailPage = () => {
       setError(err instanceof Error ? err.message : "Failed to load entity");
     } finally {
       setLoading(false);
+    }
+  }, [id]);
+
+  // Silent refresh: updates entity without flipping page-level loading
+  const refreshSilently = useCallback(async () => {
+    try {
+      const [data, st] = await Promise.all([
+        fetchEntity(id),
+        fetchEntityStatus(id),
+      ]);
+      setEntity(data);
+      setStatus(st);
+    } catch {
+      // error stays; table-level error state handles it
     }
   }, [id]);
 
@@ -100,6 +123,95 @@ const EntityDetailPage = () => {
       setError(err instanceof Error ? err.message : "Failed to discard draft");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // ─── Property editing handlers (within draft) ───
+
+  const [draftBindings, setDraftBindings] = useState<SourceBinding[]>([]);
+  const [bindingsLoaded, setBindingsLoaded] = useState(false);
+
+  // Load bindings when draft is available
+  useEffect(() => {
+    if (status?.has_draft && !bindingsLoaded) {
+      fetchSourceBindings(id)
+        .then(setDraftBindings)
+        .catch(() => setDraftBindings([]))
+        .finally(() => setBindingsLoaded(true));
+    }
+    if (!status?.has_draft) {
+      setBindingsLoaded(false);
+      setDraftBindings([]);
+    }
+  }, [id, status?.has_draft, bindingsLoaded]);
+
+  const handleSaveProperty = async (data: PropertySavePayload) => {
+    setTableRefreshing(true);
+    setError(null);
+    try {
+      // 1. Create or update property
+      if (data.propertyId) {
+        await updateProperty(id, data.propertyId, data.propertyFields);
+      } else {
+        await addProperty(id, data.propertyFields);
+      }
+
+      // 2. Merge binding and save
+      const propKey = data.propertyFields.property_key;
+      const merged = draftBindings.filter((b) => b.property_key !== propKey);
+      if (data.binding) {
+        merged.push({
+          property_key: propKey,
+          source_node_id: data.binding.source_node_id,
+          source_field_name: data.binding.source_field_name,
+        });
+      }
+      await setSourceBindings(id, merged);
+
+      // 3. Refresh
+      setBindingsLoaded(false);
+      const [bindings] = await Promise.all([
+        fetchSourceBindings(id),
+        refreshSilently(),
+      ]);
+      setDraftBindings(bindings);
+      setBindingsLoaded(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save property");
+      throw err;
+    } finally {
+      setTableRefreshing(false);
+    }
+  };
+
+  const handleRemoveProperty = async (propertyId: string) => {
+    setTableRefreshing(true);
+    try {
+      await removeProperty(id, propertyId);
+      setBindingsLoaded(false);
+      const [bindings] = await Promise.all([
+        fetchSourceBindings(id),
+        refreshSilently(),
+      ]);
+      setDraftBindings(bindings);
+      setBindingsLoaded(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove property");
+      throw err;
+    } finally {
+      setTableRefreshing(false);
+    }
+  };
+
+  const handleReorderProperties = async (propertyIds: string[]) => {
+    setTableRefreshing(true);
+    try {
+      await reorderProperties(id, propertyIds);
+      await refreshSilently();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reorder properties");
+    } finally {
+      setTableRefreshing(false);
     }
   };
 
@@ -300,120 +412,142 @@ const EntityDetailPage = () => {
           {/* Entity detail sections — prefers revision over legacy mapping */}
           {hasContent ? (
             <>
-              {/* Properties */}
-              <section className="rounded-lg border border-zinc-200 bg-white">
-                <div className="border-b border-zinc-100 px-4 py-3">
-                  <h3 className="text-sm font-semibold text-zinc-900">
-                    Properties
-                    <span className="ml-1.5 text-xs font-normal text-zinc-400">
-                      ({effectiveProperties.length})
-                    </span>
-                  </h3>
-                </div>
-                {effectiveProperties.length === 0 ? (
-                  <p className="px-4 py-6 text-sm text-zinc-400">
-                    No properties mapped.
-                  </p>
-                ) : (
-                  <table className="min-w-full divide-y divide-zinc-100 text-sm">
-                    <thead>
-                      <tr className="bg-zinc-50">
-                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                          Property
-                        </th>
-                        {isRevisionProperty(effectiveProperties[0]) ? (
-                          <>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                              Key
-                            </th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                              Type
-                            </th>
-                            <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                              Req
-                            </th>
-                            <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                              PK
-                            </th>
-                          </>
-                        ) : (
-                          <>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                              Source Column
-                            </th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                              Type
-                            </th>
-                            <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                              PK
-                            </th>
-                          </>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-100">
-                      {isRevisionProperty(effectiveProperties[0])
-                        ? (effectiveProperties as EntityRevisionProperty[]).map((p) => (
-                            <tr key={p.property_id} className="hover:bg-zinc-50">
-                              <td className="px-4 py-2 font-medium text-zinc-900">
-                                {p.display_name}
-                              </td>
-                              <td className="px-4 py-2 font-mono text-xs text-zinc-500">
-                                {p.property_key}
-                              </td>
-                              <td className="px-4 py-2 text-zinc-500">
-                                <span className="inline-block rounded-full border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
-                                  {semanticTypeLabel(p.semantic_type)}
-                                </span>
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                {p.is_required ? (
-                                  <span className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-                                    Req
+              {/* Properties — editable when draft exists */}
+              {status?.has_draft && effectiveRevision ? (
+                <PropertyEditor
+                  properties={
+                    effectiveRevision.properties ||
+                    []
+                  }
+                  sourceBindings={draftBindings}
+                  sourceNodes={
+                    (effectiveRevision.source_nodes || []).map((sn) => ({
+                      source_id: sn.source_id,
+                      name: sn.name,
+                      source_type: sn.source_type,
+                      fields: sn.fields || [],
+                    }))
+                  }
+                  onSaveProperty={handleSaveProperty}
+                  onRemove={handleRemoveProperty}
+                  onReorder={handleReorderProperties}
+                  loading={tableRefreshing}
+                />
+              ) : (
+                <section className="rounded-lg border border-zinc-200 bg-white">
+                  <div className="border-b border-zinc-100 px-4 py-3">
+                    <h3 className="text-sm font-semibold text-zinc-900">
+                      Properties
+                      <span className="ml-1.5 text-xs font-normal text-zinc-400">
+                        ({effectiveProperties.length})
+                      </span>
+                    </h3>
+                  </div>
+                  {effectiveProperties.length === 0 ? (
+                    <p className="px-4 py-6 text-sm text-zinc-400">
+                      No properties mapped.
+                    </p>
+                  ) : (
+                    <table className="min-w-full divide-y divide-zinc-100 text-sm">
+                      <thead>
+                        <tr className="bg-zinc-50">
+                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                            Property
+                          </th>
+                          {isRevisionProperty(effectiveProperties[0]) ? (
+                            <>
+                              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                Key
+                              </th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                Type
+                              </th>
+                              <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                Req
+                              </th>
+                              <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                PK
+                              </th>
+                            </>
+                          ) : (
+                            <>
+                              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                Source Column
+                              </th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                Type
+                              </th>
+                              <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                PK
+                              </th>
+                            </>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {isRevisionProperty(effectiveProperties[0])
+                          ? (effectiveProperties as EntityRevisionProperty[]).map((p) => (
+                              <tr key={p.property_id} className="hover:bg-zinc-50">
+                                <td className="px-4 py-2 font-medium text-zinc-900">
+                                  {p.display_name}
+                                </td>
+                                <td className="px-4 py-2 font-mono text-xs text-zinc-500">
+                                  {p.property_key}
+                                </td>
+                                <td className="px-4 py-2 text-zinc-500">
+                                  <span className="inline-block rounded-full border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                                    {semanticTypeLabel(p.semantic_type)}
                                   </span>
-                                ) : (
-                                  <span className="text-zinc-300">\u2014</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                {p.is_primary_key ? (
-                                  <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                                    PK
+                                </td>
+                                <td className="px-4 py-2 text-center">
+                                  {p.is_required ? (
+                                    <span className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                                      Req
+                                    </span>
+                                  ) : (
+                                    <span className="text-zinc-300">{'\u2014'}</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-center">
+                                  {p.is_primary_key ? (
+                                    <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                      PK
+                                    </span>
+                                  ) : (
+                                    <span className="text-zinc-300">{'\u2014'}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          : (effectiveProperties as PropertyMapping[]).map((p, i) => (
+                              <tr key={i} className="hover:bg-zinc-50">
+                                <td className="px-4 py-2 font-medium text-zinc-900">
+                                  {p.property_name}
+                                </td>
+                                <td className="px-4 py-2 font-mono text-xs text-zinc-500">
+                                  {p.source_column}
+                                </td>
+                                <td className="px-4 py-2 text-zinc-500">
+                                  <span className="inline-block rounded-full border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                                    {semanticTypeLabel(p.semantic_type)}
                                   </span>
-                                ) : (
-                                  <span className="text-zinc-300">\u2014</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))
-                        : (effectiveProperties as PropertyMapping[]).map((p, i) => (
-                            <tr key={i} className="hover:bg-zinc-50">
-                              <td className="px-4 py-2 font-medium text-zinc-900">
-                                {p.property_name}
-                              </td>
-                              <td className="px-4 py-2 font-mono text-xs text-zinc-500">
-                                {p.source_column}
-                              </td>
-                              <td className="px-4 py-2 text-zinc-500">
-                                <span className="inline-block rounded-full border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
-                                  {semanticTypeLabel(p.semantic_type)}
-                                </span>
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                {p.is_primary_key ? (
-                                  <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                                    PK
-                                  </span>
-                                ) : (
-                                  <span className="text-zinc-300">\u2014</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                    </tbody>
-                  </table>
-                )}
-              </section>
+                                </td>
+                                <td className="px-4 py-2 text-center">
+                                  {p.is_primary_key ? (
+                                    <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                      PK
+                                    </span>
+                                  ) : (
+                                    <span className="text-zinc-300">{'\u2014'}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                      </tbody>
+                    </table>
+                  )}
+                </section>
+              )}
 
               {/* Computed Properties */}
               {effectiveComputed.length > 0 && (

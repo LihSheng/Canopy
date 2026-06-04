@@ -530,6 +530,12 @@ export interface EntityRevisionProperty {
   sort_order: number;
 }
 
+export interface SourceBinding {
+  property_key: string;
+  source_node_id: string;
+  source_field_name: string;
+}
+
 export interface EntityRevision {
   id: string;
   entity_id: string;
@@ -537,6 +543,7 @@ export interface EntityRevision {
   status: "draft" | "published" | "archived";
   forked_from_revision_id: string | null;
   properties: EntityRevisionProperty[];
+  source_bindings: SourceBinding[];
   links: Record<string, unknown>[];
   source_nodes: Record<string, unknown>[];
   computed_properties: Record<string, unknown>[];

@@ -9,6 +9,7 @@ from entity_revision.domain import (
     EntityRevision,
     EntityRevisionDependency,
     RevisionStatus,
+    SourceBinding,
 )
 from entity_revision.repository import EntityRevisionRepository
 from semantic.repository import ObjectTypeRepository
@@ -91,6 +92,14 @@ class EntityRevisionService:
                 )
                 for p in published.properties
             ],
+            source_bindings=[
+                SourceBinding(
+                    property_key=b.property_key,
+                    source_node_id=b.source_node_id,
+                    source_field_name=b.source_field_name,
+                )
+                for b in published.source_bindings
+            ],
             links=published.links,
             source_nodes=published.source_nodes,
             computed_properties=published.computed_properties,
@@ -117,6 +126,7 @@ class EntityRevisionService:
         entity_id: str,
         tenant_id: str,
         properties: list[EntityProperty] | None = None,
+        source_bindings: list[SourceBinding] | None = None,
         links: list[dict] | None = None,
         source_nodes: list[dict] | None = None,
         computed_properties: list[dict] | None = None,
@@ -147,6 +157,8 @@ class EntityRevisionService:
 
         if properties is not None:
             draft.properties = properties
+        if source_bindings is not None:
+            draft.source_bindings = source_bindings
         if links is not None:
             draft.links = links
         if source_nodes is not None:
@@ -184,6 +196,133 @@ class EntityRevisionService:
 
         self._revision_repo.delete(draft.id)
         return {"discarded": True, "entity_id": entity_id, "draft_id": draft.id}
+
+    # ── Property CRUD (within draft) ──────────────────────────────────────
+
+    def add_property(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        prop: EntityProperty,
+        lock_holder_id: str | None = None,
+    ) -> EntityRevision:
+        """Add a new property to the active draft."""
+        draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
+        # Ensure property_id is set
+        if not prop.property_id:
+            prop.property_id = str(uuid.uuid4())
+        # Check for duplicate property_key
+        if any(p.property_key == prop.property_key for p in draft.properties):
+            raise ValidationError(f"Property with key '{prop.property_key}' already exists.")
+        # Assign sort_order if not specified
+        if prop.sort_order == 0:
+            max_order = max((p.sort_order for p in draft.properties), default=0)
+            prop.sort_order = max_order + 1
+        draft.properties.append(prop)
+        draft.updated_at = datetime.now(UTC)
+        return self._revision_repo.save(draft)
+
+    def update_property(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        property_id: str,
+        updates: dict,
+        lock_holder_id: str | None = None,
+    ) -> EntityRevision:
+        """Update a single property in the active draft."""
+        draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
+        for i, p in enumerate(draft.properties):
+            if p.property_id == property_id:
+                updated = EntityProperty(
+                    property_id=p.property_id,
+                    property_key=updates.get("property_key", p.property_key),
+                    display_name=updates.get("display_name", p.display_name),
+                    semantic_type=updates.get("semantic_type", p.semantic_type),
+                    is_required=updates.get("is_required", p.is_required),
+                    is_primary_key=updates.get("is_primary_key", p.is_primary_key),
+                    sort_order=updates.get("sort_order", p.sort_order),
+                )
+                draft.properties[i] = updated
+                draft.updated_at = datetime.now(UTC)
+                return self._revision_repo.save(draft)
+        raise NotFoundError(f"Property '{property_id}' not found in draft properties")
+
+    def remove_property(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        property_id: str,
+        lock_holder_id: str | None = None,
+    ) -> EntityRevision:
+        """Remove a property from the active draft. Also removes any bindings for it."""
+        draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
+        # Find and remove the property
+        found = False
+        removed_key = ""
+        for i, p in enumerate(draft.properties):
+            if p.property_id == property_id:
+                removed_key = p.property_key
+                draft.properties.pop(i)
+                found = True
+                break
+        if not found:
+            raise NotFoundError(f"Property '{property_id}' not found in draft properties")
+        # Remove any source bindings that reference this property_key
+        if removed_key:
+            draft.source_bindings = [b for b in draft.source_bindings if b.property_key != removed_key]
+        draft.updated_at = datetime.now(UTC)
+        return self._revision_repo.save(draft)
+
+    def reorder_properties(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        property_ids: list[str],
+        lock_holder_id: str | None = None,
+    ) -> EntityRevision:
+        """Reorder properties in the draft to match the given property_id list order."""
+        draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
+        id_to_prop = {p.property_id: p for p in draft.properties}
+        reordered: list[EntityProperty] = []
+        seen = set()
+        for pid in property_ids:
+            if pid in seen:
+                raise ValidationError(f"Duplicate property_id '{pid}' in reorder list")
+            seen.add(pid)
+            if pid not in id_to_prop:
+                raise NotFoundError(f"Property '{pid}' not found in draft properties")
+            reordered.append(id_to_prop[pid])
+        # Any properties not in the reorder list keep their relative order at end
+        for p in draft.properties:
+            if p.property_id not in seen:
+                reordered.append(p)
+        for i, p in enumerate(reordered):
+            p.sort_order = i + 1
+        draft.properties = reordered
+        draft.updated_at = datetime.now(UTC)
+        return self._revision_repo.save(draft)
+
+    def _get_editable_draft(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        lock_holder_id: str | None,
+    ) -> EntityRevision:
+        """Get the draft and validate it's editable by the lock holder."""
+        obj = self._object_type_repo.get(entity_id, tenant_id=tenant_id)
+        if obj is None:
+            raise NotFoundError("Entity not found")
+        draft = self._revision_repo.get_draft(entity_id)
+        if draft is None:
+            raise NotFoundError("No active draft found for this entity")
+        if draft.lock_holder_id and lock_holder_id:
+            if draft.lock_holder_id != lock_holder_id:
+                raise ValidationError(
+                    f"Draft is locked by another user. "
+                    f"Only the lock holder ({draft.lock_holder_id}) can edit this draft."
+                )
+        return draft
 
     # ── Publish draft ────────────────────────────────────────────────────
 
@@ -228,13 +367,17 @@ class EntityRevisionService:
             if not rp.property_key or not rp.property_key.strip():
                 errors.append(f"Required property (id={rp.property_id}) has an empty property_key.")
 
-            # Check that the required property has at least one source binding
-            bound = any(rp.property_key in (sn.get("fields") or []) for sn in source_nodes)
+            # Check that the required property has at least one source binding (prefer explicit bindings)
+            if draft.source_bindings:
+                bound = any(b.property_key == rp.property_key for b in draft.source_bindings)
+            else:
+                # Fallback to source_nodes.fields for backward compat
+                bound = any(rp.property_key in (sn.get("fields") or []) for sn in source_nodes)
             if not bound:
                 errors.append(
                     f"Required property '{rp.property_key}' ({rp.display_name}) "
-                    f"has no source column binding in the draft's source nodes. "
-                    f"Bind it to a source column before publishing."
+                    f"has no source binding. "
+                    f"Bind it to a source field before publishing."
                 )
 
         # Rule 3: Source dependencies are always required for publish.
@@ -306,6 +449,7 @@ class EntityRevisionService:
         entity_id: str,
         tenant_id: str,
         properties: list[EntityProperty] | None = None,
+        source_bindings: list[SourceBinding] | None = None,
         links: list[dict] | None = None,
         source_nodes: list[dict] | None = None,
         computed_properties: list[dict] | None = None,
@@ -335,6 +479,7 @@ class EntityRevisionService:
             revision_number=1,
             status=RevisionStatus.PUBLISHED.value if publish else RevisionStatus.DRAFT.value,
             properties=properties or [],
+            source_bindings=source_bindings or [],
             links=links or [],
             source_nodes=source_nodes or [],
             computed_properties=computed_properties or [],

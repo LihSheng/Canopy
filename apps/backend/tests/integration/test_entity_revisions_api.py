@@ -596,3 +596,292 @@ class TestEntityRegistryWithRevisions:
         assert data["published_revision_number"] == 1
         assert data["draft_lock_holder_id"] is None
         assert data["draft_revision_number"] is None
+
+
+# ─── Property CRUD Tests ──────────────────────────────────────────────────────
+
+
+class TestPropertyCRUD:
+    """Test individual property CRUD within a draft."""
+
+    @pytest.fixture
+    def seed_draft(self, db_session, seed_published_revision, seed_entity):
+        """Create an active draft for property CRUD tests."""
+        from datetime import UTC, datetime
+
+        now = datetime.now(UTC)
+        repo = EntityRevisionRepository(db_session)
+        draft = EntityRevision(
+            id=str(uuid.uuid4()),
+            entity_id=seed_entity.id,
+            revision_number=2,
+            status=RevisionStatus.DRAFT.value,
+            forked_from_revision_id=seed_published_revision.id,
+            properties=seed_published_revision.properties,
+            source_bindings=[],
+            links=[],
+            source_nodes=seed_published_revision.source_nodes,
+            computed_properties=[],
+            layout_state={},
+            lock_holder_id="test-user-1",
+            locked_at=now,
+            created_at=now,
+            updated_at=now,
+        )
+        return repo.save(draft)
+
+    def test_add_property(self, client, auth_headers, seed_entity, seed_draft):
+        """POST /entities/{id}/draft/properties adds a property to draft."""
+        response = client.post(
+            f"/api/entities/{seed_entity.id}/draft/properties",
+            json={
+                "property_key": "salary",
+                "display_name": "Salary",
+                "semantic_type": "number",
+                "is_required": False,
+                "is_primary_key": False,
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 201, response.text
+        data = response.json()
+        assert data["status"] == "draft"
+        prop_keys = [p["property_key"] for p in data["properties"]]
+        assert "salary" in prop_keys
+        assert "employee_id" in prop_keys  # original prop preserved
+        assert "employee_name" in prop_keys
+        assert "department" in prop_keys
+
+    def test_add_duplicate_property_key_fails(self, client, auth_headers, seed_entity, seed_draft):
+        """Adding a property with existing key returns 400."""
+        response = client.post(
+            f"/api/entities/{seed_entity.id}/draft/properties",
+            json={
+                "property_key": "employee_id",
+                "display_name": "Duplicate ID",
+                "semantic_type": "string",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 400, response.text
+        assert "already exists" in response.json()["detail"].lower()
+
+    def test_update_property(self, client, auth_headers, seed_entity, seed_draft):
+        """PUT /entities/{id}/draft/properties/{prop_id} updates a property."""
+        response = client.put(
+            f"/api/entities/{seed_entity.id}/draft/properties/prop-001",
+            json={
+                "display_name": "Staff Identifier",
+                "is_required": False,
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        updated = next(p for p in data["properties"] if p["property_id"] == "prop-001")
+        assert updated["display_name"] == "Staff Identifier"
+        assert updated["is_required"] is False
+
+    def test_update_nonexistent_property_fails(self, client, auth_headers, seed_entity, seed_draft):
+        """Updating nonexistent property returns 404."""
+        response = client.put(
+            f"/api/entities/{seed_entity.id}/draft/properties/nonexistent",
+            json={"display_name": "Nope"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 404
+
+    def test_remove_property(self, client, auth_headers, seed_entity, seed_draft):
+        """DELETE /entities/{id}/draft/properties/{prop_id} removes a property."""
+        response = client.delete(
+            f"/api/entities/{seed_entity.id}/draft/properties/prop-003",
+            headers=auth_headers,
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        prop_keys = [p["property_key"] for p in data["properties"]]
+        assert "department" not in prop_keys
+        assert len(data["properties"]) == 2
+
+    def test_reorder_properties(self, client, auth_headers, seed_entity, seed_draft):
+        """PUT /entities/{id}/draft/properties/reorder reorders properties."""
+        response = client.put(
+            f"/api/entities/{seed_entity.id}/draft/properties/reorder",
+            json={"property_ids": ["prop-003", "prop-001", "prop-002"]},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["properties"][0]["property_id"] == "prop-003"
+        assert data["properties"][0]["sort_order"] == 1
+        assert data["properties"][1]["property_id"] == "prop-001"
+        assert data["properties"][1]["sort_order"] == 2
+        assert data["properties"][2]["property_id"] == "prop-002"
+        assert data["properties"][2]["sort_order"] == 3
+
+
+# ─── Source Binding Tests ─────────────────────────────────────────────────────
+
+
+class TestSourceBindings:
+    """Test source binding CRUD and broken binding detection."""
+
+    @pytest.fixture
+    def seed_draft(self, db_session, seed_published_revision, seed_entity):
+        """Create a draft with properties and source_nodes for binding tests."""
+        from datetime import UTC, datetime
+
+        now = datetime.now(UTC)
+        repo = EntityRevisionRepository(db_session)
+        draft = EntityRevision(
+            id=str(uuid.uuid4()),
+            entity_id=seed_entity.id,
+            revision_number=2,
+            status=RevisionStatus.DRAFT.value,
+            forked_from_revision_id=seed_published_revision.id,
+            properties=seed_published_revision.properties,
+            source_bindings=[],
+            links=[],
+            source_nodes=[
+                {
+                    "source_id": "src-1",
+                    "source_type": "dataset_table",
+                    "name": "employees_csv",
+                    "reference_id": "ds-ref-1",
+                    "fields": ["id", "name", "dept"],
+                }
+            ],
+            computed_properties=[],
+            layout_state={},
+            lock_holder_id="test-user-1",
+            locked_at=now,
+            created_at=now,
+            updated_at=now,
+        )
+        return repo.save(draft)
+
+    def test_set_bindings(self, client, auth_headers, seed_entity, seed_draft):
+        """PUT /entities/{id}/draft/bindings sets source bindings."""
+        response = client.put(
+            f"/api/entities/{seed_entity.id}/draft/bindings",
+            json={
+                "bindings": [
+                    {
+                        "property_key": "employee_id",
+                        "source_node_id": "src-1",
+                        "source_field_name": "id",
+                    },
+                    {
+                        "property_key": "employee_name",
+                        "source_node_id": "src-1",
+                        "source_field_name": "name",
+                    },
+                ]
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert len(data["source_bindings"]) == 2
+        assert data["source_bindings"][0]["property_key"] == "employee_id"
+        assert data["source_bindings"][0]["source_node_id"] == "src-1"
+        assert data["source_bindings"][0]["source_field_name"] == "id"
+
+    def test_get_bindings(self, client, auth_headers, seed_entity, seed_draft):
+        """GET /entities/{id}/draft/bindings returns bindings."""
+        # Set bindings first
+        client.put(
+            f"/api/entities/{seed_entity.id}/draft/bindings",
+            json={
+                "bindings": [
+                    {
+                        "property_key": "employee_id",
+                        "source_node_id": "src-1",
+                        "source_field_name": "id",
+                    }
+                ]
+            },
+            headers=auth_headers,
+        )
+        response = client.get(
+            f"/api/entities/{seed_entity.id}/draft/bindings",
+            headers=auth_headers,
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["property_key"] == "employee_id"
+
+    def test_get_broken_bindings(self, client, auth_headers, seed_entity, seed_draft):
+        """GET /entities/{id}/draft/bindings/broken detects broken bindings."""
+        # Set up: one valid binding + one broken (wrong property_key + wrong source_node)
+        client.put(
+            f"/api/entities/{seed_entity.id}/draft/bindings",
+            json={
+                "bindings": [
+                    {
+                        "property_key": "employee_id",
+                        "source_node_id": "src-1",
+                        "source_field_name": "id",
+                    },
+                    {
+                        "property_key": "missing_prop",
+                        "source_node_id": "src-1",
+                        "source_field_name": "x",
+                    },
+                    {
+                        "property_key": "employee_name",
+                        "source_node_id": "missing_src",
+                        "source_field_name": "name",
+                    },
+                ]
+            },
+            headers=auth_headers,
+        )
+        response = client.get(
+            f"/api/entities/{seed_entity.id}/draft/bindings/broken",
+            headers=auth_headers,
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        # Two broken: missing_prop (wrong property_key) + employee_name->missing_src (wrong source_node_id)
+        assert len(data) == 2
+        broken_keys = {b["property_key"] for b in data}
+        assert "missing_prop" in broken_keys
+        assert "employee_name" in broken_keys
+
+    def test_property_removal_cleans_bindings(self, client, auth_headers, seed_entity, seed_draft):
+        """Removing a property also removes its bindings."""
+        # Set bindings
+        client.put(
+            f"/api/entities/{seed_entity.id}/draft/bindings",
+            json={
+                "bindings": [
+                    {
+                        "property_key": "employee_id",
+                        "source_node_id": "src-1",
+                        "source_field_name": "id",
+                    },
+                    {
+                        "property_key": "department",
+                        "source_node_id": "src-1",
+                        "source_field_name": "dept",
+                    },
+                ]
+            },
+            headers=auth_headers,
+        )
+        # Remove department property
+        client.delete(
+            f"/api/entities/{seed_entity.id}/draft/properties/prop-003",
+            headers=auth_headers,
+        )
+        # Get bindings - should only have employee_id left
+        response = client.get(
+            f"/api/entities/{seed_entity.id}/draft/bindings",
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["property_key"] == "employee_id"

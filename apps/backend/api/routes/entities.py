@@ -264,6 +264,123 @@ def list_entities(
     return result
 
 
+@router.get("/by-dataset/{dataset_id}", response_model=EntityDetailResponse | None)
+def get_entity_by_dataset(
+    dataset_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Return the entity associated with a dataset, if any.
+
+    Data Studio uses this to surface entity association context.
+    """
+    from semantic.schema import SemanticMappingModel
+
+    # Find the latest mapping for this dataset within the tenant
+    mapping = (
+        db.query(SemanticMappingModel)
+        .filter(
+            SemanticMappingModel.dataset_id == dataset_id,
+            SemanticMappingModel.tenant_id == ctx.tenant_id,
+        )
+        .order_by(SemanticMappingModel.version_number.desc())
+        .first()
+    )
+    if mapping is None:
+        return None
+
+    detail = get_entity_detail_read_model(db, ctx.tenant_id, mapping.object_type_id)
+    if detail is None:
+        return None
+
+    object_type_id = detail["id"]
+    revision_repo = EntityRevisionRepository(db)
+    published = revision_repo.get_published(object_type_id)
+    draft = revision_repo.get_draft(object_type_id)
+
+    mapping_detail = None
+    if detail.get("mapping"):
+        m = detail["mapping"]
+        mapping_detail = EntityMappingDetail(
+            id=m.id,
+            dataset_id=m.dataset_id,
+            dataset_version_id=m.dataset_version_id,
+            version_number=m.version_number,
+            properties=[
+                PropertyMappingResponse(
+                    source_column=p.source_column,
+                    property_name=p.property_name,
+                    semantic_type=p.semantic_type,
+                    included=p.included,
+                    is_primary_key=p.is_primary_key,
+                )
+                for p in m.properties
+            ],
+            links=[
+                EntityLinkResponse(
+                    link_id=ln.link_id,
+                    display_name=ln.display_name,
+                    source_property_key=ln.source_property_key,
+                    target_object_type_id=ln.target_object_type_id,
+                    target_property_key=ln.target_property_key,
+                    cardinality=ln.cardinality,
+                )
+                for ln in (m.links or [])
+            ],
+            source_nodes=[
+                SourceNodeResponse(
+                    source_id=sn.source_id,
+                    source_type=sn.source_type,
+                    name=sn.name,
+                    reference_id=sn.reference_id,
+                    fields=sn.fields,
+                )
+                for sn in (m.source_nodes or [])
+            ],
+            computed_properties=[
+                ComputedPropertyResponse(
+                    id=cp.id,
+                    property_name=cp.property_name,
+                    semantic_type=cp.semantic_type,
+                    composition_kind=cp.composition_kind,
+                    expression=cp.expression,
+                    included=cp.included,
+                    inputs=[
+                        FieldRefResponse(
+                            source_id=inp.source_id,
+                            source_name=inp.source_name,
+                            field_name=inp.field_name,
+                        )
+                        for inp in (cp.inputs or [])
+                    ],
+                )
+                for cp in (m.computed_properties or [])
+            ],
+            layout_state=m.layout_state or {},
+            created_at=m.created_at.isoformat() if m.created_at else "",
+            updated_at=m.updated_at.isoformat() if m.updated_at else None,
+        )
+
+    return EntityDetailResponse(
+        id=detail["id"],
+        object_type_key=detail["object_type_key"],
+        display_name=detail["display_name"],
+        description=detail["description"],
+        created_at=detail["created_at"].isoformat() if detail.get("created_at") else "",
+        updated_at=detail["updated_at"].isoformat() if detail.get("updated_at") else None,
+        dataset_name=detail.get("dataset_name"),
+        mapping=mapping_detail,
+        has_published_revision=published is not None,
+        has_draft=draft is not None,
+        draft_lock_holder_id=draft.lock_holder_id if draft else None,
+        published_revision_number=published.revision_number if published else None,
+        draft_revision_number=draft.revision_number if draft else None,
+        published_revision=_build_revision_detail(published) if published else None,
+        draft_revision=_build_revision_detail(draft) if draft else None,
+    )
+
+
 @router.get("/{object_type_id}", response_model=EntityDetailResponse)
 def get_entity(
     object_type_id: str,

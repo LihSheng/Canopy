@@ -14,6 +14,8 @@ Use the versioned folders for planning and design docs.
 - [Lineage-Aware Data Retention PRD](../doc/prd/0008-lineage-aware-data-retention.md): draft PRD for dataset lifetime policies, lineage impact preview, scheduled retention evaluation, and purge auditability
 - [Entity Manager Registry, Detail, and Editor Split PRD](../doc/prd/0015-entity-manager-registry-detail-editor-split.md): draft PRD for a central entity registry, entity detail pages, reusable dataset-scoped editor boundaries, and a later entity explorer
 - [Entity-First Digital Twin Manager PRD](../doc/prd/0017-entity-first-digital-twin-manager.md): draft PRD for moving Canopy from dataset-scoped Entity editing to an Entity-first digital twin manager with draft/publish governance, multi-source bindings, and hard dependency protection
+- [Entity Manager Property Editing and Data Studio Association PRD](../doc/prd/0018-entity-manager-property-editing-and-data-studio-association.md): draft PRD for making Entity Manager the canonical property/binding editor while Data Studio remains source prep and association context
+- [Entity Manager Property Editing and Data Studio Association Issues](../doc/issues/0012-entity-manager-property-editing-and-data-studio-association-vertical-slices.md): draft tracer-bullet issue breakdown for the 0018 boundary refinement
 - [Lineage-Aware Data Retention Issues](../doc/issues/0011-lineage-aware-data-retention-vertical-slices.md): draft vertical-slice issue breakdown for the retention PRD
 
 ## V1 Baseline

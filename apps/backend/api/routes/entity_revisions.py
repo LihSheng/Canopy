@@ -1,5 +1,7 @@
 """API routes for entity revision lifecycle: draft, publish, list revisions."""
 
+import uuid
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -9,7 +11,7 @@ from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError, ValidationError
 from context.tenant_context import TenantContext
-from entity_revision.domain import EntityProperty
+from entity_revision.domain import EntityProperty, SourceBinding
 from entity_revision.repository import EntityRevisionRepository
 from entity_revision.service import EntityRevisionService
 from semantic.repository import ObjectTypeRepository
@@ -44,6 +46,22 @@ class EntityPropertyResponse(BaseModel):
     sort_order: int
 
 
+class SourceBindingRequest(BaseModel):
+    """Request shape for a source-to-property binding."""
+
+    property_key: str = Field(..., min_length=1, description="Entity property key")
+    source_node_id: str = Field(..., min_length=1, description="Source node ID")
+    source_field_name: str = Field(..., min_length=1, description="Source field name")
+
+
+class SourceBindingResponse(BaseModel):
+    """Response shape for a source-to-property binding."""
+
+    property_key: str
+    source_node_id: str
+    source_field_name: str
+
+
 class SourceDependencyRequest(BaseModel):
     """Pinned source dependency for publish."""
 
@@ -60,6 +78,7 @@ class EntityRevisionResponse(BaseModel):
     status: str
     forked_from_revision_id: str | None = None
     properties: list[EntityPropertyResponse] = []
+    source_bindings: list[SourceBindingResponse] = []
     links: list[dict] = []
     source_nodes: list[dict] = []
     computed_properties: list[dict] = []
@@ -92,6 +111,7 @@ class UpdateDraftRequest(BaseModel):
     """Request to update draft content."""
 
     properties: list[EntityPropertyRequest] | None = None
+    source_bindings: list[SourceBindingRequest] | None = None
     links: list[dict] | None = None
     source_nodes: list[dict] | None = None
     computed_properties: list[dict] | None = None
@@ -108,12 +128,47 @@ class CreateInitialRevisionRequest(BaseModel):
     """Request to create the initial revision for a new entity."""
 
     properties: list[EntityPropertyRequest] | None = None
+    source_bindings: list[SourceBindingRequest] | None = None
     links: list[dict] | None = None
     source_nodes: list[dict] | None = None
     computed_properties: list[dict] | None = None
     layout_state: dict | None = None
     publish: bool = False
     source_dependencies: list[SourceDependencyRequest] | None = None
+
+
+class AddPropertyRequest(BaseModel):
+    """Request to add a single property to a draft."""
+
+    property_key: str = Field(..., min_length=1, max_length=255, pattern=r"^[a-z][a-z0-9_]*$")
+    display_name: str = Field(..., min_length=1, max_length=255)
+    semantic_type: str = "string"
+    is_required: bool = False
+    is_primary_key: bool = False
+    sort_order: int = 0
+
+
+class UpdatePropertyRequest(BaseModel):
+    """Request to update a single property in a draft."""
+
+    property_key: str | None = None
+    display_name: str | None = None
+    semantic_type: str | None = None
+    is_required: bool | None = None
+    is_primary_key: bool | None = None
+    sort_order: int | None = None
+
+
+class ReorderPropertiesRequest(BaseModel):
+    """Request to reorder properties in a draft."""
+
+    property_ids: list[str] = Field(..., min_length=1)
+
+
+class SetBindingsRequest(BaseModel):
+    """Request to set all source bindings for a draft."""
+
+    bindings: list[SourceBindingRequest] = []
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────
@@ -137,6 +192,14 @@ def _revision_to_response(rev) -> EntityRevisionResponse:
                 sort_order=p.sort_order,
             )
             for p in (rev.properties or [])
+        ],
+        source_bindings=[
+            SourceBindingResponse(
+                property_key=b.property_key,
+                source_node_id=b.source_node_id,
+                source_field_name=b.source_field_name,
+            )
+            for b in (rev.source_bindings or [])
         ],
         links=rev.links or [],
         source_nodes=rev.source_nodes or [],
@@ -247,11 +310,23 @@ def update_draft(
             for p in body.properties
         ]
 
+    bindings_domain = None
+    if body.source_bindings is not None:
+        bindings_domain = [
+            SourceBinding(
+                property_key=b.property_key,
+                source_node_id=b.source_node_id,
+                source_field_name=b.source_field_name,
+            )
+            for b in body.source_bindings
+        ]
+
     try:
         draft = service.update_draft(
             entity_id=entity_id,
             tenant_id=ctx.tenant_id,
             properties=properties_domain,
+            source_bindings=bindings_domain,
             links=body.links,
             source_nodes=body.source_nodes,
             computed_properties=body.computed_properties,
@@ -263,6 +338,213 @@ def update_draft(
     except NotFoundError:
         raise
     return _revision_to_response(draft)
+
+
+# ─── Property CRUD Routes (within draft) ──────────────────────────────────
+
+
+@router.post("/{entity_id}/draft/properties", status_code=201, response_model=EntityRevisionResponse)
+def add_property(
+    entity_id: str,
+    body: AddPropertyRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Add a new property to the active draft."""
+    service = _build_service(db)
+    prop = EntityProperty(
+        property_id=str(uuid.uuid4()),
+        property_key=body.property_key,
+        display_name=body.display_name,
+        semantic_type=body.semantic_type,
+        is_required=body.is_required,
+        is_primary_key=body.is_primary_key,
+        sort_order=body.sort_order,
+    )
+    try:
+        draft = service.add_property(
+            entity_id=entity_id,
+            tenant_id=ctx.tenant_id,
+            prop=prop,
+            lock_holder_id=user.id,
+        )
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+@router.put("/{entity_id}/draft/properties/reorder", response_model=EntityRevisionResponse)
+def reorder_properties(
+    entity_id: str,
+    body: ReorderPropertiesRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Reorder properties in the active draft."""
+    service = _build_service(db)
+    try:
+        draft = service.reorder_properties(
+            entity_id=entity_id,
+            tenant_id=ctx.tenant_id,
+            property_ids=body.property_ids,
+            lock_holder_id=user.id,
+        )
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+@router.put("/{entity_id}/draft/properties/{property_id}", response_model=EntityRevisionResponse)
+def update_property(
+    entity_id: str,
+    property_id: str,
+    body: UpdatePropertyRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Update a single property in the active draft."""
+    service = _build_service(db)
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not updates:
+        raise ValidationError("No update fields provided")
+    try:
+        draft = service.update_property(
+            entity_id=entity_id,
+            tenant_id=ctx.tenant_id,
+            property_id=property_id,
+            updates=updates,
+            lock_holder_id=user.id,
+        )
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+@router.delete("/{entity_id}/draft/properties/{property_id}", response_model=EntityRevisionResponse)
+def remove_property(
+    entity_id: str,
+    property_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Remove a property from the active draft."""
+    service = _build_service(db)
+    try:
+        draft = service.remove_property(
+            entity_id=entity_id,
+            tenant_id=ctx.tenant_id,
+            property_id=property_id,
+            lock_holder_id=user.id,
+        )
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+# ─── Source Binding Routes ───────────────────────────────────────────────
+
+
+@router.put("/{entity_id}/draft/bindings", response_model=EntityRevisionResponse)
+def set_source_bindings(
+    entity_id: str,
+    body: SetBindingsRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Set (replace) all source bindings for the active draft."""
+    service = _build_service(db)
+    bindings_domain = [
+        SourceBinding(
+            property_key=b.property_key,
+            source_node_id=b.source_node_id,
+            source_field_name=b.source_field_name,
+        )
+        for b in body.bindings
+    ]
+    try:
+        draft = service.update_draft(
+            entity_id=entity_id,
+            tenant_id=ctx.tenant_id,
+            source_bindings=bindings_domain,
+            lock_holder_id=user.id,
+        )
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+@router.get("/{entity_id}/draft/bindings", response_model=list[SourceBindingResponse])
+def get_source_bindings(
+    entity_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Get all source bindings for the active draft."""
+    service = _build_service(db)
+    draft = service.get_draft(entity_id, ctx.tenant_id)
+    if draft is None:
+        raise NotFoundError("No active draft found")
+    return [
+        SourceBindingResponse(
+            property_key=b.property_key,
+            source_node_id=b.source_node_id,
+            source_field_name=b.source_field_name,
+        )
+        for b in (draft.source_bindings or [])
+    ]
+
+
+@router.get("/{entity_id}/draft/bindings/broken", response_model=list[SourceBindingResponse])
+def get_broken_bindings(
+    entity_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Get bindings that reference missing properties or source nodes."""
+    service = _build_service(db)
+    draft = service.get_draft(entity_id, ctx.tenant_id)
+    if draft is None:
+        raise NotFoundError("No active draft found")
+
+    property_keys = {p.property_key for p in draft.properties}
+    source_node_ids = {sn.get("source_id", "") for sn in draft.source_nodes}
+
+    broken: list[SourceBindingResponse] = []
+    for b in draft.source_bindings or []:
+        is_broken = False
+        if b.property_key not in property_keys:
+            is_broken = True
+        if b.source_node_id not in source_node_ids:
+            is_broken = True
+        if is_broken:
+            broken.append(
+                SourceBindingResponse(
+                    property_key=b.property_key,
+                    source_node_id=b.source_node_id,
+                    source_field_name=b.source_field_name,
+                )
+            )
+    return broken
+
+
+# ─── Draft lifecycle routes ──────────────────────────────────────────────
 
 
 @router.delete("/{entity_id}/draft")
@@ -337,6 +619,17 @@ def create_initial_revision(
             for p in body.properties
         ]
 
+    bindings_domain = None
+    if body.source_bindings is not None:
+        bindings_domain = [
+            SourceBinding(
+                property_key=b.property_key,
+                source_node_id=b.source_node_id,
+                source_field_name=b.source_field_name,
+            )
+            for b in body.source_bindings
+        ]
+
     source_deps = None
     if body.source_dependencies:
         source_deps = [d.model_dump() for d in body.source_dependencies]
@@ -346,6 +639,7 @@ def create_initial_revision(
             entity_id=entity_id,
             tenant_id=ctx.tenant_id,
             properties=properties_domain,
+            source_bindings=bindings_domain,
             links=body.links,
             source_nodes=body.source_nodes,
             computed_properties=body.computed_properties,
