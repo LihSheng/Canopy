@@ -492,6 +492,8 @@ export interface EntityDetail {
   created_at: string;
   updated_at: string | null;
   dataset_name: string | null;
+  dataset_id: string | null;
+  project_id: string | null;
   mapping: EntityMappingDetail | null;
   // Revision state (entity-first model)
   has_published_revision: boolean;

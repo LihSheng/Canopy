@@ -8,6 +8,7 @@ import pytest
 from context.tenant_context import TenantContext, set_current_tenant_context
 from control_plane.schemas.memberships import TenantMembershipModel
 from control_plane.schemas.tenants import TenantModel
+from dataset.schema import DatasetModel, DatasetVersionModel
 from semantic.domain import PropertyMapping, SemanticMapping
 from semantic.repository import ObjectTypeRepository, SemanticMappingRepository
 from semantic.service import ObjectTypeService
@@ -124,6 +125,109 @@ def seed_entity_with_mapping(db_session, tenant_context, seed_entity):
     return seed_entity, saved
 
 
+@pytest.fixture
+def seed_entity_with_legacy_and_tenant_mappings(db_session, tenant_context, seed_entity):
+    """Create legacy and tenant-owned mappings for the same entity."""
+    legacy_dataset = DatasetModel(
+        id="legacy-leave-dataset",
+        tenant_id=None,
+        project_id="default",
+        connection_id="legacy-connection",
+        name="org_leave_group",
+        source_object_name="leave",
+        status="active",
+    )
+    tenant_dataset = DatasetModel(
+        id="tenant-leave-dataset",
+        tenant_id=tenant_context.tenant_id,
+        project_id="default",
+        connection_id="tenant-connection",
+        name="lv_emp_leave_request_file",
+        source_object_name="leave",
+        status="active",
+    )
+    db_session.add_all([legacy_dataset, tenant_dataset])
+
+    db_session.add_all(
+        [
+            DatasetVersionModel(
+                id="legacy-leave-version",
+                dataset_id=legacy_dataset.id,
+                run_id=None,
+                version_number=1,
+                status="ready",
+                row_count=0,
+                column_count=0,
+                storage_path="legacy-path",
+                raw_storage_path="legacy-raw-path",
+            ),
+            DatasetVersionModel(
+                id="tenant-leave-version",
+                dataset_id=tenant_dataset.id,
+                run_id=None,
+                version_number=1,
+                status="ready",
+                row_count=0,
+                column_count=0,
+                storage_path="tenant-path",
+                raw_storage_path="tenant-raw-path",
+            ),
+        ]
+    )
+    db_session.commit()
+
+    legacy_mapping = SemanticMapping(
+        id=str(uuid.uuid4()),
+        tenant_id=tenant_context.tenant_id,
+        dataset_id=legacy_dataset.id,
+        dataset_version_id="legacy-leave-version",
+        version_number=3,
+        object_type_id=seed_entity.id,
+        object_type_key=seed_entity.object_type_key,
+        properties=[
+            PropertyMapping(
+                source_column="id",
+                property_name="id",
+                semantic_type="integer",
+                included=True,
+                is_primary_key=True,
+            ),
+        ],
+        links=[],
+        computed_properties=[],
+        source_nodes=[],
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    tenant_mapping = SemanticMapping(
+        id=str(uuid.uuid4()),
+        tenant_id=tenant_context.tenant_id,
+        dataset_id=tenant_dataset.id,
+        dataset_version_id="tenant-leave-version",
+        version_number=1,
+        object_type_id=seed_entity.id,
+        object_type_key=seed_entity.object_type_key,
+        properties=[
+            PropertyMapping(
+                source_column="id",
+                property_name="id",
+                semantic_type="integer",
+                included=True,
+                is_primary_key=True,
+            ),
+        ],
+        links=[],
+        computed_properties=[],
+        source_nodes=[],
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    repo = SemanticMappingRepository(db_session)
+    repo.save(legacy_mapping)
+    repo.save(tenant_mapping)
+    return seed_entity, legacy_dataset, tenant_dataset, legacy_mapping, tenant_mapping
+
+
 # ─── Tests ────────────────────────────────────────────────────────────────────
 
 
@@ -210,6 +314,51 @@ class TestGetEntity:
         assert props["id"]["is_primary_key"] is True
         assert props["id"]["included"] is True
         assert props["deleted_at"]["included"] is False
+
+    def test_get_entity_prefers_tenant_owned_dataset_over_legacy(
+        self, client, auth_headers, seed_entity_with_legacy_and_tenant_mappings
+    ):
+        """Detail should resolve the tenant-owned backing dataset when both exist."""
+        (
+            entity,
+            legacy_dataset,
+            tenant_dataset,
+            legacy_mapping,
+            tenant_mapping,
+        ) = seed_entity_with_legacy_and_tenant_mappings
+
+        response = client.get(f"/api/entities/{entity.id}", headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["dataset_id"] == tenant_dataset.id
+        assert data["dataset_name"] == tenant_dataset.name
+        assert data["mapping"]["dataset_id"] == tenant_dataset.id
+        assert data["mapping"]["version_number"] == tenant_mapping.version_number
+        assert data["mapping"]["version_number"] != legacy_mapping.version_number
+
+    def test_list_entities_prefers_tenant_owned_dataset_over_legacy(
+        self, client, auth_headers, seed_entity_with_legacy_and_tenant_mappings
+    ):
+        """Registry list should show the tenant-owned dataset when both exist."""
+        (
+            entity,
+            legacy_dataset,
+            tenant_dataset,
+            legacy_mapping,
+            tenant_mapping,
+        ) = seed_entity_with_legacy_and_tenant_mappings
+
+        response = client.get("/api/entities", headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+
+        item = next((r for r in data if r["id"] == entity.id), None)
+        assert item is not None
+        assert item["dataset_id"] == tenant_dataset.id
+        assert item["dataset_name"] == tenant_dataset.name
+        assert item["mapping_version"] == tenant_mapping.version_number
+        assert item["mapping_version"] != legacy_mapping.version_number
 
     def test_get_entity_not_found(self, client, auth_headers):
         """Non-existent entity returns 404."""

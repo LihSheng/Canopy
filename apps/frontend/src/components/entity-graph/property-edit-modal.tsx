@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type MouseEvent, useEffect, useId } from "react";
-import type { EntityRevisionProperty, SourceBinding } from "@/lib/api/types";
+import type { EntityRevisionProperty, SourceBinding, SourceNode } from "@/lib/api/types";
+import { SourceRegistrationDrawer } from "./source-registration-drawer";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,10 @@ type Props = {
   /** Called on remove (edit mode only) */
   onRemove?: () => Promise<void>;
   onClose: () => void;
+  /** Called when a new source is registered via the inline drawer */
+  onAddSource: (nodes: SourceNode[]) => Promise<void>;
+  projectId: string;
+  datasetId: string;
   loading?: boolean;
 };
 
@@ -73,6 +78,9 @@ export const PropertyEditModal = ({
   onSave,
   onRemove,
   onClose,
+  onAddSource,
+  projectId,
+  datasetId,
   loading = false,
 }: Props) => {
   const isCreate = !property;
@@ -90,6 +98,7 @@ export const PropertyEditModal = ({
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sourceDrawerOpen, setSourceDrawerOpen] = useState(false);
 
   // ── Init / reset when modal opens ──────────────────────────────────────
 
@@ -345,50 +354,123 @@ export const PropertyEditModal = ({
               Source Binding
             </label>
             {sourceNodes.length === 0 ? (
-              <p className="text-xs italic text-zinc-400">
-                No source nodes available. Add source nodes to bind fields.
-              </p>
-            ) : binding ? (
-              /* Bound state */
-              <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
-                <span className="flex-1 font-mono text-xs text-emerald-800">
-                  {(sourceNodes.find((sn) => sn.source_id === binding.source_node_id)
-                    ?.name || binding.source_node_id)}
-                  .{binding.source_field_name}
-                </span>
+              <div className="space-y-2">
+                <p className="text-xs italic text-zinc-400">
+                  No source nodes available. Add a source to bind fields.
+                </p>
                 <button
                   type="button"
-                  onClick={handleUnbind}
+                  onClick={() => setSourceDrawerOpen(true)}
                   disabled={busy}
-                  className="rounded px-1.5 py-0.5 text-xs text-rose-500 hover:bg-rose-100 disabled:opacity-50"
+                  className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
                 >
-                  Unbind
+                  + Add Source
                 </button>
               </div>
             ) : (
-              /* Unbound state — show one dropdown per source node */
               <div className="space-y-2">
-                {sourceNodes.map((sn) => (
-                  <select
-                    key={sn.source_id}
-                    value=""
-                    disabled={busy}
-                    onChange={(e) => {
-                      if (e.target.value) handleBind(sn.source_id, e.target.value);
-                    }}
-                    className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-                  >
-                    <option value="">{sn.name} — select field</option>
-                    {sn.fields.map((field) => (
-                      <option key={field} value={field}>
-                        {field}
-                      </option>
+                {binding && (
+                  /* Currently bound — show as a note above the table */
+                  <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
+                    <span className="flex-1 text-xs text-emerald-800">
+                      Currently bound to{" "}
+                      <span className="font-mono">
+                        {(sourceNodes.find((sn) => sn.source_id === binding.source_node_id)
+                          ?.name || binding.source_node_id)}
+                        .{binding.source_field_name}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleUnbind}
+                      disabled={busy}
+                      className="rounded px-1.5 py-0.5 text-xs text-rose-500 hover:bg-rose-100 disabled:opacity-50"
+                    >
+                      Unbind
+                    </button>
+                  </div>
+                )}
+                <table className="min-w-full divide-y divide-zinc-100 text-sm">
+                  <thead>
+                    <tr className="bg-zinc-50">
+                      <th className="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Source
+                      </th>
+                      <th className="px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Field
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
+                    {sourceNodes.map((sn) => (
+                      <tr key={sn.source_id} className="hover:bg-zinc-50">
+                        <td className="px-3 py-2">
+                          <span className="text-xs font-medium text-zinc-900">{sn.name}</span>
+                          <span className="ml-1.5 text-xs text-zinc-400">
+                            {sn.fields.length} field{sn.fields.length !== 1 ? "s" : ""}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <select
+                            value={
+                              binding && binding.source_node_id === sn.source_id
+                                ? binding.source_field_name
+                                : ""
+                            }
+                            disabled={busy}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                handleBind(sn.source_id, e.target.value);
+                              }
+                            }}
+                            className="w-full rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                          >
+                            <option value="">-- select field --</option>
+                            {sn.fields.map((field) => (
+                              <option key={field} value={field}>
+                                {field}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
                     ))}
-                  </select>
-                ))}
+                  </tbody>
+                </table>
+                <button
+                  type="button"
+                  onClick={() => setSourceDrawerOpen(true)}
+                  disabled={busy}
+                  className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  + Add Source
+                </button>
               </div>
             )}
           </div>
+
+          {/* Source registration drawer (inside modal) */}
+          {sourceDrawerOpen && (
+            <SourceRegistrationDrawer
+              projectId={projectId}
+              datasetId={datasetId}
+              sourceNodes={
+                sourceNodes.map((sn) => ({
+                  source_id: sn.source_id,
+                  source_type: sn.source_type,
+                  name: sn.name,
+                  reference_id: sn.source_id,
+                  fields: sn.fields || [],
+                }))
+              }
+              onAdd={async (nodes) => {
+                await onAddSource(nodes);
+                setSourceDrawerOpen(false);
+              }}
+              onRemove={() => {}}
+              onClose={() => setSourceDrawerOpen(false)}
+            />
+          )}
         </div>
 
         {/* Footer */}

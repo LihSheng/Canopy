@@ -91,6 +91,8 @@ class EntityDetailResponse(BaseModel):
     created_at: str
     updated_at: str | None
     dataset_name: str | None
+    dataset_id: str | None = None
+    project_id: str | None = None
     mapping: "EntityMappingDetail | None"
     # Revision state fields (entity-first model)
     has_published_revision: bool = False
@@ -370,6 +372,8 @@ def get_entity_by_dataset(
         created_at=detail["created_at"].isoformat() if detail.get("created_at") else "",
         updated_at=detail["updated_at"].isoformat() if detail.get("updated_at") else None,
         dataset_name=detail.get("dataset_name"),
+        dataset_id=detail.get("dataset_id"),
+        project_id=detail.get("project_id"),
         mapping=mapping_detail,
         has_published_revision=published is not None,
         has_draft=draft is not None,
@@ -467,6 +471,8 @@ def get_entity(
         created_at=detail["created_at"].isoformat() if detail.get("created_at") else "",
         updated_at=detail["updated_at"].isoformat() if detail.get("updated_at") else None,
         dataset_name=detail.get("dataset_name"),
+        dataset_id=detail.get("dataset_id"),
+        project_id=detail.get("project_id"),
         mapping=mapping_detail,
         has_published_revision=published is not None,
         has_draft=draft is not None,

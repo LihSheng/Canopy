@@ -75,7 +75,7 @@ vi.mock("@/components/entity-graph/source-registration-drawer", () => ({
     onClose,
   }: {
     sourceNodes: Array<{ source_id: string; name: string; source_type: string }>;
-    onAdd: (node: { source_id: string; name: string; source_type: string; reference_id: string; fields: string[] }) => void;
+    onAdd: (nodes: Array<{ source_id: string; name: string; source_type: string; reference_id: string; fields: string[] }>) => void;
     onRemove: (sourceId: string) => void;
     onClose: () => void;
   }) => (
@@ -85,13 +85,13 @@ vi.mock("@/components/entity-graph/source-registration-drawer", () => ({
       <button
         data-testid="drawer-add-mock"
         onClick={() =>
-          onAdd({
+          onAdd([{
             source_id: "new-src-1",
             source_type: "dataset_table",
             name: "Test Source",
             reference_id: "00000000-0000-0000-0000-000000000001",
             fields: [],
-          })
+          }])
         }
       >
         Add Mock Source

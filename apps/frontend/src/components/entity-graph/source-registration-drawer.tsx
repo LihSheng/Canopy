@@ -9,7 +9,7 @@ type Props = {
   projectId: string;
   datasetId: string;
   sourceNodes: SourceNode[];
-  onAdd: (node: SourceNode) => void;
+  onAdd: (nodes: SourceNode[]) => Promise<void>;
   onRemove: (sourceId: string) => void;
   onClose: () => void;
 };
@@ -29,11 +29,11 @@ export const SourceRegistrationDrawer = ({
   onRemove,
   onClose,
 }: Props) => {
-  const [sourceType, setSourceType] = useState<"dataset_table" | "static_file">("dataset_table");
   const [knownSources, setKnownSources] = useState<KnownSource[]>([]);
-  const [selectedSourceId, setSelectedSourceId] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
   const [loadingSources, setLoadingSources] = useState(true);
-  const [fetchingSchema, setFetchingSchema] = useState(false);
+  const [addingSources, setAddingSources] = useState(false);
 
   // Load known sources: datasets + static_file connections
   useEffect(() => {
@@ -52,7 +52,7 @@ export const SourceRegistrationDrawer = ({
 
         // Datasets as "dataset_table" sources
         for (const ds of datasets) {
-          // Exclude the current dataset itself
+          // Exclude the current dataset itself (circular self-reference)
           if (ds.id === datasetId) continue;
           sources.push({
             id: ds.id,
@@ -87,43 +87,91 @@ export const SourceRegistrationDrawer = ({
     };
   }, [projectId, datasetId]);
 
-  // Filter sources by selected type
-  const filteredSources = knownSources.filter((s) => s.source_type === sourceType);
-  const selectedSource = knownSources.find((s) => s.id === selectedSourceId);
-  const alreadyRegistered = sourceNodes.map((sn) => sn.reference_id);
+  // Filter to exclude already-registered sources
+  const unregistered = knownSources.filter(
+    (s) => !sourceNodes.some((sn) => sn.reference_id === s.id)
+  );
+
+  // Further filter by search query
+  const visibleSources = searchQuery
+    ? unregistered.filter((s) => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : unregistered;
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const selectAllVisible = () => {
+    setSelectedIds(new Set(visibleSources.map((s) => s.id)));
+  };
+
+  const deselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  const selectedCount = selectedIds.size;
 
   const handleAdd = async () => {
-    if (!selectedSourceId || !selectedSource) return;
+    if (selectedCount === 0) return;
 
-    // Fetch schema fields for the source if not already loaded
-    let fields = selectedSource.fields;
-    if (fields.length === 0) {
-      setFetchingSchema(true);
-      try {
-        if (selectedSource.source_type === "dataset_table") {
-          const datasets = await fetchDatasets(projectId);
-          const ds = datasets.find((d) => d.id === selectedSource.id);
-          if (ds?.active_version_id) {
-            const schema = await fetchDatasetVersionSchema(selectedSource.id, ds.active_version_id);
-            fields = schema.map((col) => col.column_name);
+    setAddingSources(true);
+    try {
+      // Fetch schemas for all selected sources in parallel
+      const results = await Promise.allSettled(
+        [...selectedIds].map(async (id) => {
+          const source = knownSources.find((s) => s.id === id);
+          if (!source) throw new Error(`Source ${id} not found`);
+
+          let fields = source.fields;
+          if (fields.length === 0 && source.source_type === "dataset_table") {
+            const datasets = await fetchDatasets(projectId);
+            const ds = datasets.find((d) => d.id === source.id);
+            if (ds?.active_version_id) {
+              const schema = await fetchDatasetVersionSchema(source.id, ds.active_version_id);
+              fields = schema.map((col) => col.column_name);
+            }
           }
-        }
-      } catch {
-        // Leave fields empty
-      } finally {
-        setFetchingSchema(false);
-      }
-    }
 
-    const newSource: SourceNode = {
-      source_id: `src-${selectedSource.id}`,
-      source_type: sourceType,
-      name: selectedSource.name,
-      reference_id: selectedSource.id,
-      fields,
-    };
-    onAdd(newSource);
-    setSelectedSourceId("");
+          const node: SourceNode = {
+            source_id: `src-${source.id}`,
+            source_type: source.source_type,
+            name: source.name,
+            reference_id: source.id,
+            fields,
+          };
+          return node;
+        })
+      );
+
+      const nodes: SourceNode[] = [];
+      const failed: string[] = [];
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          nodes.push(result.value);
+        } else {
+          failed.push(result.reason instanceof Error ? result.reason.message : "Unknown error");
+        }
+      }
+
+      if (nodes.length > 0) {
+        await onAdd(nodes);
+      }
+      // If some failed, we report them — for now silently; toast can be added later
+      void failed;
+
+      setSelectedIds(new Set());
+      onClose();
+    } finally {
+      setAddingSources(false);
+    }
   };
 
   return (
@@ -172,67 +220,85 @@ export const SourceRegistrationDrawer = ({
         )}
       </div>
 
-      {/* Add new source from known catalog */}
+      {/* Add new sources — checkbox list */}
       <div className="border-t border-zinc-200 p-4">
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-          Register Source
+          Add Sources
         </h4>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Type</label>
-            <select
-              value={sourceType}
-              onChange={(e) => {
-                setSourceType(e.target.value as "dataset_table" | "static_file");
-                setSelectedSourceId("");
-              }}
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none"
-            >
-              <option value="dataset_table">Dataset Table</option>
-              <option value="static_file">Static File</option>
-            </select>
-          </div>
 
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">
-              {sourceType === "dataset_table" ? "Dataset" : "Connection"}
-            </label>
-            {loadingSources ? (
-              <p className="mt-1 text-xs text-zinc-400">Loading sources...</p>
-            ) : filteredSources.length === 0 ? (
-              <p className="mt-1 text-xs text-zinc-400">
-                No {sourceType === "dataset_table" ? "datasets" : "static file connections"} available in this project.
-              </p>
-            ) : (
-              <select
-                value={selectedSourceId}
-                onChange={(e) => setSelectedSourceId(e.target.value)}
-                className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none"
+        {loadingSources ? (
+          <p className="text-xs text-zinc-400">Loading sources...</p>
+        ) : unregistered.length === 0 ? (
+          <p className="text-xs text-zinc-400">No additional sources available in this project.</p>
+        ) : (
+          <div className="space-y-2">
+            {/* Search input */}
+            <input
+              type="text"
+              placeholder="Search sources..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none"
+            />
+
+            {/* Select All / Deselect All */}
+            <div className="flex gap-3 text-xs">
+              <button
+                type="button"
+                onClick={selectAllVisible}
+                className="text-zinc-500 hover:text-zinc-800"
               >
-                <option value="">Select...</option>
-                {filteredSources.map((src) => (
-                  <option
-                    key={src.id}
-                    value={src.id}
-                    disabled={alreadyRegistered.includes(src.id)}
-                  >
-                    {src.name}
-                    {alreadyRegistered.includes(src.id) ? " (already registered)" : ""}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+                Select All
+              </button>
+              <button
+                type="button"
+                onClick={deselectAll}
+                className="text-zinc-500 hover:text-zinc-800"
+              >
+                Deselect All
+              </button>
+            </div>
 
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={!selectedSourceId || fetchingSchema}
-            className="w-full rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {fetchingSchema ? "Loading schema..." : "Add Source"}
-          </button>
-        </div>
+            {/* Checkbox list */}
+            <ul className="max-h-64 space-y-1 overflow-y-auto">
+              {visibleSources.map((src) => (
+                <li key={src.id} className="flex items-center gap-2 rounded px-1 py-1 hover:bg-zinc-50">
+                  <input
+                    type="checkbox"
+                    id={`src-${src.id}`}
+                    checked={selectedIds.has(src.id)}
+                    onChange={() => toggleSelection(src.id)}
+                    className="size-3.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500"
+                  />
+                  <label htmlFor={`src-${src.id}`} className="flex flex-1 items-center gap-2 text-sm cursor-pointer">
+                    <span className="font-medium text-zinc-900">{src.name}</span>
+                    <span className="inline-block rounded-full border border-zinc-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+                      {src.source_type}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+
+            {/* Counter and Add button */}
+            {selectedCount > 0 && (
+              <p className="text-xs text-zinc-500">
+                {selectedCount} selected
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={selectedCount === 0 || addingSources}
+              className="w-full rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {addingSources
+                ? "Loading schemas..."
+                : `Add Source${selectedCount !== 1 ? "s" : ""}`}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

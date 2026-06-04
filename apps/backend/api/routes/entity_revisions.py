@@ -222,6 +222,23 @@ def _build_service(db: Session) -> EntityRevisionService:
 # ─── Routes ───────────────────────────────────────────────────────────────
 
 
+@router.get("/{entity_id}/revisions/{revision_id}", response_model=EntityRevisionResponse)
+def get_revision(
+    entity_id: str,
+    revision_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Get a single revision by ID, verifying it belongs to the entity."""
+    service = _build_service(db)
+    try:
+        revision = service.get_revision(entity_id, revision_id, ctx.tenant_id)
+    except NotFoundError:
+        raise
+    return _revision_to_response(revision)
+
+
 @router.get("/{entity_id}/revisions", response_model=list[EntityRevisionResponse])
 def list_revisions(
     entity_id: str,
@@ -591,6 +608,35 @@ def publish_draft(
     except NotFoundError:
         raise
     return _revision_to_response(published)
+
+
+@router.post("/{entity_id}/revert/{revision_id}", status_code=201, response_model=EntityRevisionResponse)
+def revert_to_revision(
+    entity_id: str,
+    revision_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Revert to a prior revision by creating a new draft based on it.
+
+    Creates a new draft with the content of the specified historical revision.
+    The original revision is never mutated. The user can review and publish
+    the reverted state as a new version.
+    """
+    service = _build_service(db)
+    try:
+        draft = service.revert_to_revision(
+            entity_id=entity_id,
+            revision_id=revision_id,
+            tenant_id=ctx.tenant_id,
+            lock_holder_id=user.id,
+        )
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
 
 
 @router.post("/{entity_id}/revisions", status_code=201, response_model=EntityRevisionResponse)

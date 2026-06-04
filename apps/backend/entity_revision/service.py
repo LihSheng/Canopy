@@ -434,6 +434,108 @@ class EntityRevisionService:
 
         return published
 
+    # ── Revert to a prior revision ───────────────────────────────────────
+
+    def revert_to_revision(
+        self,
+        entity_id: str,
+        revision_id: str,
+        tenant_id: str,
+        lock_holder_id: str,
+    ) -> EntityRevision:
+        """Revert to a prior revision by creating a new draft based on it.
+
+        Rules:
+        - Entity must exist.
+        - Target revision must exist and belong to the entity.
+        - Target revision must not be a draft (cannot revert to a draft).
+        - An active draft must not already exist (single active draft rule).
+        - Creates a new draft with the target revision's full content.
+        - Preserves history: original revision remains unchanged.
+        - The new draft is locked to the requesting user for editing.
+        """
+        obj = self._object_type_repo.get(entity_id, tenant_id=tenant_id)
+        if obj is None:
+            raise NotFoundError("Entity not found")
+
+        # Fetch the target historical revision
+        target = self._revision_repo.get(revision_id)
+        if target is None:
+            raise NotFoundError("Revision not found")
+        if target.entity_id != entity_id:
+            raise NotFoundError("Revision does not belong to this entity")
+        if target.status == RevisionStatus.DRAFT.value:
+            raise ValidationError("Cannot revert to a draft revision. Select a published or archived revision.")
+
+        # Check for existing active draft
+        existing_draft = self._revision_repo.get_draft(entity_id)
+        if existing_draft is not None:
+            raise ValidationError(
+                f"An active draft already exists for this entity "
+                f"(draft revision {existing_draft.revision_number}). "
+                f"Discard it before reverting to a prior version."
+            )
+
+        # Create a new draft based on the target revision content
+        max_rev = self._revision_repo.get_max_revision_number(entity_id)
+        now = datetime.now(UTC)
+
+        draft = EntityRevision(
+            id=str(uuid.uuid4()),
+            entity_id=entity_id,
+            revision_number=max_rev + 1,
+            status=RevisionStatus.DRAFT.value,
+            forked_from_revision_id=target.id,
+            properties=[
+                EntityProperty(
+                    property_id=p.property_id,
+                    property_key=p.property_key,
+                    display_name=p.display_name,
+                    semantic_type=p.semantic_type,
+                    is_required=p.is_required,
+                    is_primary_key=p.is_primary_key,
+                    sort_order=p.sort_order,
+                )
+                for p in target.properties
+            ],
+            source_bindings=[
+                SourceBinding(
+                    property_key=b.property_key,
+                    source_node_id=b.source_node_id,
+                    source_field_name=b.source_field_name,
+                )
+                for b in target.source_bindings
+            ],
+            links=target.links,
+            source_nodes=target.source_nodes,
+            computed_properties=target.computed_properties,
+            layout_state=target.layout_state,
+            lock_holder_id=lock_holder_id,
+            locked_at=now,
+            created_at=now,
+            updated_at=now,
+        )
+        return self._revision_repo.save(draft)
+
+    # ── Get single revision ──────────────────────────────────────────────
+
+    def get_revision(
+        self,
+        entity_id: str,
+        revision_id: str,
+        tenant_id: str,
+    ) -> EntityRevision:
+        """Get a specific revision by ID, verifying it belongs to the entity."""
+        obj = self._object_type_repo.get(entity_id, tenant_id=tenant_id)
+        if obj is None:
+            raise NotFoundError("Entity not found")
+        revision = self._revision_repo.get(revision_id)
+        if revision is None:
+            raise NotFoundError("Revision not found")
+        if revision.entity_id != entity_id:
+            raise NotFoundError("Revision does not belong to this entity")
+        return revision
+
     # ── List revisions ───────────────────────────────────────────────────
 
     def list_revisions(self, entity_id: str, tenant_id: str) -> list[EntityRevision]:

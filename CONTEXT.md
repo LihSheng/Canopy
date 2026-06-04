@@ -79,7 +79,7 @@ The configuration section in the analytics shell sidebar where users manage Conn
 
 ### Entity Manager
 
-The canonical Entity authoring surface where users edit Entity properties and source bindings. Entity Manager owns semantic modeling; Data Studio only prepares and exposes source data.
+The canonical Entity authoring surface where users edit Entity properties, source bindings, and the editable canvas. Entity Manager owns semantic modeling; Data Studio only prepares and exposes source data.
 
 ### Feature Flag
 A server-backed rollout control that can change product behavior for all users in a given environment. Feature flags are managed from an Admin surface and are intended for operational release control, not end-user configuration.
@@ -189,8 +189,8 @@ _Avoid_: general analytics dashboard, tenant-facing reporting page
 - An **Entity** selects or creates one **Object Type**.
 - A **Semantic Mapping** stores the versioned configuration for an **Entity**.
 - A **Source Binding** connects cleaned source data from Data Studio to one **Entity** property.
-- The **Entity Manager** is the primary semantic authoring surface; separate Entity and Graph tabs are not the target end state.
-- The legacy `Entity` tab is a route alias that opens the Entity Manager graph surface during the transition period, not a separate editor path.
+- The **Entity Manager** is the primary semantic authoring surface and hosts the editable canvas; dataset detail no longer hosts the canvas.
+- The legacy `Entity` tab is a route alias that opens the Entity Manager surface during the transition period, not a separate editor path.
 - **Live Explorer** will host **direct_query** datasets in a separate module outside the snapshot pipeline.
 - The **SecretStore** encrypts third-party credentials stored in the **data connector** config.
 - A **Schema signature** is stored per **Source object** and compared during discovery and sync runs.

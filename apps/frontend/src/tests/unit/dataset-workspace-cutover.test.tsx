@@ -5,16 +5,6 @@ import type { Dataset, DatasetVersion } from "@/lib/api/types";
 
 // ─── Mocks ───
 
-const mockFlags = vi.fn<() => Record<string, boolean>>();
-vi.mock("@/lib/feature-flags-context", () => ({
-  useFeatureFlags: () => ({
-    flags: mockFlags(),
-    loading: false,
-    error: null,
-    refresh: vi.fn(),
-  }),
-}));
-
 // Use a mutable search params that the test controls
 let _searchParams = new URLSearchParams("");
 const mockRouterReplace = vi.fn();
@@ -72,11 +62,6 @@ vi.mock("@/components/entity-mapping/entity-tab", () => ({
   EntityTab: () => <div data-testid="entity-tab-wizard">EntityTab Wizard</div>,
 }));
 
-// Mock EntityGraphTab (canvas)
-vi.mock("@/components/entity-graph/entity-graph-tab", () => ({
-  EntityGraphTab: () => <div data-testid="entity-graph-tab">EntityGraphTab Canvas</div>,
-}));
-
 // Mock useToast by wrapping in ToastProvider
 const MockToastProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;
 vi.mock("@/components/shared", async () => {
@@ -131,118 +116,30 @@ describe("DatasetWorkspaceContent — Canvas Cutover", () => {
     _searchParams = new URLSearchParams("");
   });
 
-  describe("when entity_canvas_enabled flag is ON", () => {
-    beforeEach(() => {
-      mockFlags.mockReturnValue({ entity_canvas_enabled: true });
+  it("shows the Entity tab and no Graph tab", async () => {
+    const { fetchDataset } = await import("@/lib/api/data-source");
+    vi.mocked(fetchDataset).mockResolvedValue(baseDataset);
+
+    render(<DatasetWorkspaceContent datasetId="ds-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Entity")).toBeInTheDocument();
     });
 
-    it("does not show a separate 'Graph' tab", async () => {
-      const { fetchDataset } = await import("@/lib/api/data-source");
-      vi.mocked(fetchDataset).mockResolvedValue(baseDataset);
-
-      render(<DatasetWorkspaceContent datasetId="ds-1" />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Entity")).toBeInTheDocument();
-      });
-
-      // Graph tab should not be visible when canvas is primary
-      expect(screen.queryByText("Graph")).not.toBeInTheDocument();
-    });
-
-    it("renders EntityGraphTab (canvas) when Entity tab is active", async () => {
-      _searchParams = new URLSearchParams("tab=Entity");
-      const { fetchDataset } = await import("@/lib/api/data-source");
-      vi.mocked(fetchDataset).mockResolvedValue(baseDataset);
-
-      render(<DatasetWorkspaceContent datasetId="ds-1" />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("entity-graph-tab")).toBeInTheDocument();
-      });
-
-      expect(screen.queryByTestId("entity-tab-wizard")).not.toBeInTheDocument();
-    });
-
-    it("shows base tabs plus Entity (no Graph)", async () => {
-      const { fetchDataset } = await import("@/lib/api/data-source");
-      vi.mocked(fetchDataset).mockResolvedValue(baseDataset);
-
-      render(<DatasetWorkspaceContent datasetId="ds-1" />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Overview")).toBeInTheDocument();
-        expect(screen.getByText("Preview")).toBeInTheDocument();
-        expect(screen.getByText("Schema")).toBeInTheDocument();
-        expect(screen.getByText("Transform")).toBeInTheDocument();
-        expect(screen.getByText("Lineage")).toBeInTheDocument();
-        expect(screen.getByText("Runs")).toBeInTheDocument();
-        expect(screen.getByText("Versions")).toBeInTheDocument();
-        expect(screen.getByText("Details")).toBeInTheDocument();
-        expect(screen.getByText("Entity")).toBeInTheDocument();
-      });
-
-      expect(screen.queryByText("Graph")).not.toBeInTheDocument();
-    });
-
-    it("redirects Graph tab URL to Entity when canvas is primary", async () => {
-      _searchParams = new URLSearchParams("tab=Graph");
-      const { fetchDataset } = await import("@/lib/api/data-source");
-      vi.mocked(fetchDataset).mockResolvedValue(baseDataset);
-
-      render(<DatasetWorkspaceContent datasetId="ds-1" />);
-
-      // The redirect useEffect should fire and replace URL
-      await waitFor(() => {
-        expect(mockRouterReplace).toHaveBeenCalled();
-      });
-
-      // It should redirect to Entity tab
-      const lastCall = mockRouterReplace.mock.calls.at(-1)?.[0] as string;
-      expect(lastCall).toContain("tab=Entity");
-    });
+    expect(screen.queryByText("Graph")).not.toBeInTheDocument();
   });
 
-  describe("when entity_canvas_enabled flag is OFF (fallback)", () => {
-    beforeEach(() => {
-      mockFlags.mockReturnValue({ entity_canvas_enabled: false });
+  it("renders EntityTab (wizard) when Entity tab is active", async () => {
+    _searchParams = new URLSearchParams("tab=Entity");
+    const { fetchDataset } = await import("@/lib/api/data-source");
+    vi.mocked(fetchDataset).mockResolvedValue(baseDataset);
+
+    render(<DatasetWorkspaceContent datasetId="ds-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("entity-tab-wizard")).toBeInTheDocument();
     });
 
-    it("shows both 'Entity' and 'Graph' tabs", async () => {
-      const { fetchDataset } = await import("@/lib/api/data-source");
-      vi.mocked(fetchDataset).mockResolvedValue(baseDataset);
-
-      render(<DatasetWorkspaceContent datasetId="ds-1" />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Entity")).toBeInTheDocument();
-        expect(screen.getByText("Graph")).toBeInTheDocument();
-      });
-    });
-
-    it("renders EntityTab (wizard) when Entity tab is active", async () => {
-      _searchParams = new URLSearchParams("tab=Entity");
-      const { fetchDataset } = await import("@/lib/api/data-source");
-      vi.mocked(fetchDataset).mockResolvedValue(baseDataset);
-
-      render(<DatasetWorkspaceContent datasetId="ds-1" />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("entity-tab-wizard")).toBeInTheDocument();
-        expect(screen.queryByTestId("entity-graph-tab")).not.toBeInTheDocument();
-      });
-    });
-
-    it("renders EntityGraphTab (canvas) when Graph tab is active", async () => {
-      _searchParams = new URLSearchParams("tab=Graph");
-      const { fetchDataset } = await import("@/lib/api/data-source");
-      vi.mocked(fetchDataset).mockResolvedValue(baseDataset);
-
-      render(<DatasetWorkspaceContent datasetId="ds-1" />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("entity-graph-tab")).toBeInTheDocument();
-      });
-    });
+    expect(screen.queryByTestId("entity-graph-tab")).not.toBeInTheDocument();
   });
 });

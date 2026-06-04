@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { AnalyticsPageShell } from "@/components/analytics-shell/analytics-page-shell";
 import { LoadingSpinner, ErrorState } from "@/components/shared";
 import { fetchEntity } from "@/lib/api/entities";
+import { fetchDataset, fetchDatasetVersions } from "@/lib/api/data-source";
 import {
   fetchEntityStatus,
   forkDraft,
@@ -17,6 +18,8 @@ import {
   reorderProperties,
   fetchSourceBindings,
   setSourceBindings,
+  updateDraft,
+  revertToRevision,
 } from "@/lib/api/entities";
 import { ROUTES } from "@/lib/constants";
 import type {
@@ -28,10 +31,15 @@ import type {
   EntityLink,
   EntityRevisionProperty,
   SourceBinding,
+  SourceNode,
+  Dataset,
+  DatasetVersion,
 } from "@/lib/api/types";
 import { PropertyEditor, type PropertySavePayload } from "@/components/entity-graph/property-editor";
+import { EntityGraphTab } from "@/components/entity-graph/entity-graph-tab";
+import { EntityVersionHistory } from "@/components/entity-graph/entity-version-history";
 
-const EntityDetailPage = () => {
+export const EntityDetailPage = () => {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -42,10 +50,17 @@ const EntityDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [tableRefreshing, setTableRefreshing] = useState(false);
+  const [linkedDataset, setLinkedDataset] = useState<Dataset | null>(null);
+  const [linkedVersions, setLinkedVersions] = useState<DatasetVersion[]>([]);
+  const [canvasError, setCanvasError] = useState<string | null>(null);
+  const [canvasMissing, setCanvasMissing] = useState(false);
+  const entityDatasetDependencyId = entity?.dataset_id || entity?.mapping?.dataset_id || "";
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setCanvasError(null);
+    setCanvasMissing(false);
     try {
       const [data, st] = await Promise.all([
         fetchEntity(id),
@@ -53,6 +68,29 @@ const EntityDetailPage = () => {
       ]);
       setEntity(data);
       setStatus(st);
+      const datasetId = data.dataset_id || data.mapping?.dataset_id;
+      if (datasetId) {
+        try {
+          const [dataset, versions] = await Promise.all([
+            fetchDataset(datasetId),
+            fetchDatasetVersions(datasetId),
+          ]);
+          setLinkedDataset(dataset);
+          setLinkedVersions(versions);
+        } catch (canvasErr) {
+          setLinkedDataset(null);
+          setLinkedVersions([]);
+          const message = canvasErr instanceof Error ? canvasErr.message : "Failed to load entity canvas";
+          if (message === "Dataset not found") {
+            setCanvasMissing(true);
+          } else {
+            setCanvasError(message);
+          }
+        }
+      } else {
+        setLinkedDataset(null);
+        setLinkedVersions([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load entity");
     } finally {
@@ -69,6 +107,19 @@ const EntityDetailPage = () => {
       ]);
       setEntity(data);
       setStatus(st);
+      const datasetId = data.dataset_id || data.mapping?.dataset_id;
+      if (datasetId) {
+        try {
+          const [dataset, versions] = await Promise.all([
+            fetchDataset(datasetId),
+            fetchDatasetVersions(datasetId),
+          ]);
+          setLinkedDataset(dataset);
+          setLinkedVersions(versions);
+        } catch {
+          // keep previous canvas error state
+        }
+      }
     } catch {
       // error stays; table-level error state handles it
     }
@@ -105,7 +156,16 @@ const EntityDetailPage = () => {
   const handlePublish = async () => {
     setActionLoading("publish");
     try {
-      await publishDraft(id);
+      if (!entityDatasetDependencyId) {
+        throw new Error("This entity is not linked to a dataset, so it cannot be published.");
+      }
+
+      await publishDraft(id, [
+        {
+          dependency_type: "dataset",
+          dependency_id: entityDatasetDependencyId,
+        },
+      ]);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to publish draft");
@@ -121,6 +181,23 @@ const EntityDetailPage = () => {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to discard draft");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRevert = async (revision: { id: string; revision_number: number }) => {
+    if (!window.confirm(
+      `Revert to v${revision.revision_number}? This will create a new draft based on that version. The current published version will not be modified.`
+    )) {
+      return;
+    }
+    setActionLoading("revert");
+    try {
+      await revertToRevision(id, revision.id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to revert to revision");
     } finally {
       setActionLoading(null);
     }
@@ -215,6 +292,43 @@ const EntityDetailPage = () => {
     }
   };
 
+  // ── Source node handlers ──
+
+  const handleAddSource = async (nodes: SourceNode[]) => {
+    setTableRefreshing(true);
+    try {
+      const currentSources = effectiveRevision?.source_nodes ?? effectiveMapping?.source_nodes ?? [];
+      // Merge multiple nodes at once, deduplicating by source_id
+      const existingIds = new Set(currentSources.map((sn) => sn.source_id));
+      const added = nodes.filter((n) => !existingIds.has(n.source_id));
+      const updated = [...currentSources, ...added];
+      if (updated.length !== currentSources.length) {
+        await updateDraft(id, { source_nodes: updated as Record<string, unknown>[] });
+      }
+      await refreshSilently();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add source");
+      throw err;
+    } finally {
+      setTableRefreshing(false);
+    }
+  };
+
+  const handleRemoveSource = async (sourceId: string) => {
+    setTableRefreshing(true);
+    try {
+      const currentSources = effectiveRevision?.source_nodes ?? effectiveMapping?.source_nodes ?? [];
+      const updated = currentSources.filter((sn) => sn.source_id !== sourceId);
+      await updateDraft(id, { source_nodes: updated as unknown as Record<string, unknown>[] });
+      await refreshSilently();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove source");
+      throw err;
+    } finally {
+      setTableRefreshing(false);
+    }
+  };
+
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return "\u2014";
     try {
@@ -255,6 +369,10 @@ const EntityDetailPage = () => {
   const effectiveLinks = effectiveRevision?.links ?? effectiveMapping?.links ?? [];
 
   const hasContent = effectiveRevision || effectiveMapping;
+
+  // Dataset/project context for source registration
+  const entityDatasetId = entity?.dataset_id || entity?.mapping?.dataset_id || "";
+  const entityProjectId = entity?.project_id || "";
 
   const isRevisionProperty = (
     prop: EntityRevisionProperty | PropertyMapping
@@ -376,7 +494,7 @@ const EntityDetailPage = () => {
                 <dd className="font-medium text-zinc-900">
                   {entity.dataset_name ? (
                     <a
-                      href={ROUTES.connections.datasetDetail(entity.mapping?.dataset_id || "")}
+                      href={ROUTES.connections.datasetDetail(entity.dataset_id || entity.mapping?.dataset_id || "")}
                       className="text-zinc-900 underline hover:text-zinc-600"
                     >
                       {entity.dataset_name}
@@ -409,6 +527,24 @@ const EntityDetailPage = () => {
             </dl>
           </div>
 
+          {linkedDataset && linkedVersions.length > 0 ? (
+            <section className="rounded-lg border border-zinc-200 bg-white p-4">
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold text-zinc-900">Entity Canvas</h3>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Editable graph for properties, sources, links, and layout.
+                </p>
+              </div>
+              <EntityGraphTab dataset={linkedDataset} versions={linkedVersions} />
+            </section>
+          ) : canvasError || canvasMissing ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {canvasMissing
+                ? "Canvas unavailable. The entity mapping is loaded, but the backing dataset record cannot be found."
+                : `Canvas unavailable: ${canvasError}`}
+            </div>
+          ) : null}
+
           {/* Entity detail sections — prefers revision over legacy mapping */}
           {hasContent ? (
             <>
@@ -431,6 +567,10 @@ const EntityDetailPage = () => {
                   onSaveProperty={handleSaveProperty}
                   onRemove={handleRemoveProperty}
                   onReorder={handleReorderProperties}
+                  onAddSource={handleAddSource}
+                  onRemoveSource={handleRemoveSource}
+                  projectId={entityProjectId}
+                  datasetId={entityDatasetId}
                   loading={tableRefreshing}
                 />
               ) : (
@@ -691,6 +831,25 @@ const EntityDetailPage = () => {
                       ))}
                     </tbody>
                   </table>
+                </section>
+              )}
+
+              {/* Version history section */}
+              {entity && status?.has_published && (
+                <section className="rounded-lg border border-zinc-200 bg-white p-4">
+                  <div className="mb-3">
+                    <h3 className="text-sm font-semibold text-zinc-900">
+                      Version History
+                    </h3>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Browse prior published versions and inspect their configuration.
+                    </p>
+                  </div>
+                  <EntityVersionHistory
+                    entityId={id}
+                    publishedRevisionId={entity.published_revision?.id || null}
+                    onRevert={handleRevert}
+                  />
                 </section>
               )}
             </>

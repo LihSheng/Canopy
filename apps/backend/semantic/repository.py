@@ -1,6 +1,7 @@
-from sqlalchemy import desc, func
+from sqlalchemy import case, desc, func
 from sqlalchemy.orm import Session
 
+from dataset.schema import DatasetModel
 from semantic.domain import (
     ComputedProperty,
     EntityLink,
@@ -129,14 +130,25 @@ class SemanticMappingRepository:
         return result[0] if result else 0
 
     def get_latest_by_object_type_id(self, tenant_id: str, object_type_id: str) -> SemanticMapping | None:
-        """Get the latest mapping (highest version) for a given object_type_id within a tenant."""
+        """Get the best mapping for a given object_type_id within a tenant.
+
+        Prefer mappings whose backing dataset is tenant-owned. Fall back to
+        legacy shared datasets only when no tenant-owned mapping exists.
+        """
         model = (
             self._db.query(SemanticMappingModel)
+            .outerjoin(DatasetModel, SemanticMappingModel.dataset_id == DatasetModel.id)
             .filter(
                 SemanticMappingModel.tenant_id == tenant_id,
                 SemanticMappingModel.object_type_id == object_type_id,
             )
-            .order_by(desc(SemanticMappingModel.version_number))
+            .order_by(
+                case((DatasetModel.tenant_id == tenant_id, 1), else_=0).desc(),
+                desc(SemanticMappingModel.version_number),
+                desc(SemanticMappingModel.updated_at),
+                desc(SemanticMappingModel.created_at),
+                desc(SemanticMappingModel.id),
+            )
             .first()
         )
         return self._to_domain(model) if model else None

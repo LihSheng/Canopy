@@ -200,11 +200,15 @@ Main routes:
 - `/dashboard`
 - `/dashboard/anomalies`
 - `/dashboard/departments/[id]`
+- `/dashboard/entities`
+- `/dashboard/entities/[id]`
 
 First places to inspect:
 
 - [`apps/frontend/src/app/login/page.tsx`](../apps/frontend/src/app/login/page.tsx)
 - [`apps/frontend/src/app/dashboard/page.tsx`](../apps/frontend/src/app/dashboard/page.tsx)
+- [`apps/frontend/src/app/dashboard/entities/page.tsx`](../apps/frontend/src/app/dashboard/entities/page.tsx)
+- [`apps/frontend/src/app/dashboard/entities/[id]/page.tsx`](../apps/frontend/src/app/dashboard/entities/[id]/page.tsx)
 - [`apps/frontend/src/components/dashboard/dashboard-shell.tsx`](../apps/frontend/src/components/dashboard/dashboard-shell.tsx)
 - [`apps/frontend/src/components/dashboard/anomalies-shell.tsx`](../apps/frontend/src/components/dashboard/anomalies-shell.tsx)
 - [`apps/frontend/src/components/dashboard/department-detail-shell.tsx`](../apps/frontend/src/components/dashboard/department-detail-shell.tsx)
@@ -213,6 +217,7 @@ Supporting areas:
 
 - [`apps/frontend/src/components/auth`](../apps/frontend/src/components/auth)
 - [`apps/frontend/src/components/shared`](../apps/frontend/src/components/shared)
+- [`apps/frontend/src/components/entity-graph`](../apps/frontend/src/components/entity-graph)
 - [`apps/frontend/src/lib/api`](../apps/frontend/src/lib/api)
 - [`apps/frontend/src/lib/mappers.ts`](../apps/frontend/src/lib/mappers.ts)
 - [`apps/frontend/src/lib/formatters.ts`](../apps/frontend/src/lib/formatters.ts)

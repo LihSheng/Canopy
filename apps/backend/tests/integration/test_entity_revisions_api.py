@@ -885,3 +885,197 @@ class TestSourceBindings:
         data = response.json()
         assert len(data) == 1
         assert data[0]["property_key"] == "employee_id"
+
+
+class TestGetSingleRevision:
+    """Test fetching a single revision by ID."""
+
+    def test_get_revision(self, client, auth_headers, seed_published_revision, seed_entity):
+        """GET /api/entities/{id}/revisions/{rev_id} returns the revision."""
+        response = client.get(
+            f"/api/entities/{seed_entity.id}/revisions/{seed_published_revision.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["id"] == seed_published_revision.id
+        assert data["status"] == "published"
+        assert data["revision_number"] == 1
+        assert len(data["properties"]) == 3
+
+    def test_get_revision_not_found(self, client, auth_headers, seed_entity):
+        """GET with nonexistent revision ID returns 404."""
+        response = client.get(
+            f"/api/entities/{seed_entity.id}/revisions/nonexistent-id",
+            headers=auth_headers,
+        )
+        assert response.status_code == 404
+
+    def test_get_revision_wrong_entity(self, client, auth_headers, seed_published_revision):
+        """GET with revision belonging to a different entity returns 404."""
+        response = client.get(
+            f"/api/entities/wrong-entity-id/revisions/{seed_published_revision.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 404
+
+
+class TestRevertToRevision:
+    """Test reverting to a prior revision."""
+
+    @pytest.fixture
+    def seed_archived_revision(self, db_session, tenant_context, seed_entity):
+        """Create an archived (previously published) revision for revert tests.
+
+        Uses revision_number=10 to avoid conflict with seed_published_revision (rev=1).
+        """
+        from datetime import UTC, datetime
+
+        now = datetime.now(UTC)
+        repo = EntityRevisionRepository(db_session)
+        revision = EntityRevision(
+            id=str(uuid.uuid4()),
+            entity_id=seed_entity.id,
+            revision_number=10,
+            status=RevisionStatus.ARCHIVED.value,
+            properties=[
+                EntityProperty(
+                    property_id="prop-arc-001",
+                    property_key="legacy_id",
+                    display_name="Legacy ID",
+                    semantic_type="string",
+                    is_required=True,
+                    is_primary_key=True,
+                    sort_order=1,
+                ),
+            ],
+            links=[],
+            source_nodes=[
+                {
+                    "source_id": "src-archive",
+                    "source_type": "dataset_table",
+                    "name": "legacy_source",
+                    "reference_id": "ds-ref-archive",
+                    "fields": ["legacy_id", "name"],
+                }
+            ],
+            computed_properties=[],
+            layout_state={},
+            created_at=now,
+            updated_at=now,
+            published_at=now,
+        )
+        return repo.save(revision)
+
+    def test_revert_to_archived_revision(
+        self,
+        client,
+        auth_headers,
+        seed_entity,
+        seed_archived_revision,
+        seed_published_revision,
+    ):
+        """POST /api/entities/{id}/revert/{rev_id} creates draft based on archived revision."""
+        response = client.post(
+            f"/api/entities/{seed_entity.id}/revert/{seed_archived_revision.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 201, response.text
+        data = response.json()
+        assert data["status"] == "draft"
+        assert data["forked_from_revision_id"] == seed_archived_revision.id
+
+        # Verify content matches the archived revision, not the published one
+        prop_keys = {p["property_key"] for p in data["properties"]}
+        assert "legacy_id" in prop_keys  # From archived revision
+        assert "employee_id" not in prop_keys  # From published revision only
+
+    def test_revert_to_published_revision(self, client, auth_headers, seed_entity, seed_published_revision):
+        """Reverting to currently published revision works."""
+        response = client.post(
+            f"/api/entities/{seed_entity.id}/revert/{seed_published_revision.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 201, response.text
+        data = response.json()
+        assert data["status"] == "draft"
+        assert data["forked_from_revision_id"] == seed_published_revision.id
+
+    def test_revert_to_draft_fails(self, client, auth_headers, seed_entity, seed_published_revision):
+        """Cannot revert to a draft revision."""
+        # Create a draft
+        fork_resp = client.post(
+            f"/api/entities/{seed_entity.id}/draft",
+            headers=auth_headers,
+        )
+        assert fork_resp.status_code == 201
+        draft_id = fork_resp.json()["id"]
+
+        # Try to revert to it
+        response = client.post(
+            f"/api/entities/{seed_entity.id}/revert/{draft_id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 400
+        assert "draft" in response.json()["detail"].lower()
+
+    def test_revert_when_draft_exists_fails(
+        self,
+        client,
+        auth_headers,
+        seed_entity,
+        seed_published_revision,
+        seed_archived_revision,
+    ):
+        """Cannot revert when an active draft already exists."""
+        # Create a draft
+        fork_resp = client.post(
+            f"/api/entities/{seed_entity.id}/draft",
+            headers=auth_headers,
+        )
+        assert fork_resp.status_code == 201
+
+        # Try to revert
+        response = client.post(
+            f"/api/entities/{seed_entity.id}/revert/{seed_archived_revision.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 400
+        assert "active draft" in response.json()["detail"].lower()
+
+    def test_revert_nonexistent_revision(self, client, auth_headers, seed_entity):
+        """Reverting to nonexistent revision returns 404."""
+        response = client.post(
+            f"/api/entities/{seed_entity.id}/revert/nonexistent",
+            headers=auth_headers,
+        )
+        assert response.status_code == 404
+
+    def test_revert_preserves_original_revision(self, client, auth_headers, seed_entity, seed_archived_revision):
+        """Original revision is not modified after revert."""
+        # Get original state
+        original = client.get(
+            f"/api/entities/{seed_entity.id}/revisions/{seed_archived_revision.id}",
+            headers=auth_headers,
+        )
+        assert original.status_code == 200
+        orig_data = original.json()
+        assert orig_data["revision_number"] == 10  # matches fixture
+
+        # Revert
+        response = client.post(
+            f"/api/entities/{seed_entity.id}/revert/{seed_archived_revision.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+
+        # Verify original unchanged
+        check = client.get(
+            f"/api/entities/{seed_entity.id}/revisions/{seed_archived_revision.id}",
+            headers=auth_headers,
+        )
+        assert check.status_code == 200
+        check_data = check.json()
+        assert check_data["status"] == orig_data["status"]
+        assert check_data["revision_number"] == orig_data["revision_number"]
+        assert len(check_data["properties"]) == len(orig_data["properties"])

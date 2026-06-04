@@ -50,9 +50,7 @@ import {
 } from "@/components/shared";
 import { SyncPolicyEditor, type SyncPolicy } from "@/components/data-studio/sync-policy-editor";
 import { EntityTab } from "@/components/entity-mapping/entity-tab";
-import { EntityGraphTab } from "@/components/entity-graph/entity-graph-tab";
 import { EntityAssociationSummary } from "@/components/entity-graph/entity-association-summary";
-import { useFeatureFlags } from "@/lib/feature-flags-context";
 import { ROUTES, ERROR_MESSAGES, UI_LABELS, FILE_ACCEPT, DATASET_STATUS_COLORS, errorMessageFailedToLoad, RETENTION_PRESETS, RETENTION_MODE_LABELS } from "@/lib/constants";
 
 const BASE_TABS = [
@@ -67,9 +65,7 @@ const BASE_TABS = [
   "Entity",
 ] as const;
 
-const GRAPH_TAB = "Graph" as const;
-
-type Tab = (typeof BASE_TABS)[number] | typeof GRAPH_TAB;
+type Tab = (typeof BASE_TABS)[number];
 
 type Props = {
   datasetId: string;
@@ -78,14 +74,7 @@ type Props = {
 const DatasetWorkspaceContent = ({ datasetId }: Props) => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { flags } = useFeatureFlags();
-  const entityCanvasEnabled = flags["entity_canvas_enabled"] ?? false;
-
-  // When the entity canvas flag is ON, the Entity tab routes into the canvas.
-  // No separate Graph tab is shown. The old wizard remains a fallback.
-  const VISIBLE_TABS: readonly Tab[] = entityCanvasEnabled
-    ? BASE_TABS
-    : [...BASE_TABS, GRAPH_TAB];
+  const VISIBLE_TABS: readonly Tab[] = BASE_TABS;
 
   const activeTab = (searchParams.get("tab") as Tab) || "Overview";
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -409,15 +398,6 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
   }, [activeTab, loadSchema]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // When canvas is the primary editor, redirect "Graph" tab to "Entity"
-  useEffect(() => {
-    if (entityCanvasEnabled && activeTab === "Graph") {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", "Entity");
-      router.replace(`?${params.toString()}`, { scroll: false });
-    }
-  }, [entityCanvasEnabled, activeTab, searchParams, router]);
-
   const setTab = (tab: Tab) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
@@ -690,15 +670,7 @@ const DatasetWorkspaceContent = ({ datasetId }: Props) => {
         )}
 
         {activeTab === "Entity" && (
-          entityCanvasEnabled ? (
-            <EntityGraphTab dataset={dataset} versions={versions} />
-          ) : (
-            <EntityTab dataset={dataset} versions={versions} />
-          )
-        )}
-
-        {activeTab === "Graph" && (
-          <EntityGraphTab dataset={dataset} versions={versions} />
+          <EntityTab dataset={dataset} versions={versions} />
         )}
 
         {activeTab === "Details" && (

@@ -175,10 +175,17 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
     );
   };
 
-  const handleAddSource = (node: SourceNode) => {
-    const updated = [...(mapping?.source_nodes || []), node];
+  const handleAddSource = (nodes: SourceNode[]) => {
+    const current = mapping?.source_nodes || [];
+    const existingIds = new Set(current.map((sn) => sn.source_id));
+    const added = nodes.filter((n) => !existingIds.has(n.source_id));
+    const updated = [...current, ...added];
     updateMappingSources(updated);
-    toast.success("Source added", `"${node.name}" registered as a source node.`);
+    if (added.length === 1) {
+      toast.success("Source added", `"${added[0].name}" registered as a source node.`);
+    } else if (added.length > 1) {
+      toast.success(`${added.length} sources added`, `${added.length} source nodes registered.`);
+    }
   };
 
   const handleRemoveSource = (sourceId: string) => {

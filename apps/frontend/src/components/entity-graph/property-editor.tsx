@@ -5,12 +5,13 @@ import {
   SortableTable,
   type SortableColumnDef,
 } from "@/components/shared/table";
-import type { EntityRevisionProperty, SourceBinding } from "@/lib/api/types";
+import type { EntityRevisionProperty, SourceBinding, SourceNode } from "@/lib/api/types";
 import {
   PropertyEditModal,
   type SourceNodeInfo,
   type PropertyFieldValues,
 } from "./property-edit-modal";
+import { SourceRegistrationDrawer } from "./source-registration-drawer";
 
 // ─── Grip icon (for DragOverlay) ────────────────────────────────────────
 
@@ -95,6 +96,10 @@ type Props = {
   onSaveProperty: (data: PropertySavePayload) => Promise<void>;
   onRemove: (propertyId: string) => Promise<void>;
   onReorder: (propertyIds: string[]) => Promise<void>;
+  onAddSource: (nodes: SourceNode[]) => Promise<void>;
+  onRemoveSource: (sourceId: string) => Promise<void>;
+  projectId: string;
+  datasetId: string;
   disabled?: boolean;
   loading?: boolean;
 };
@@ -108,12 +113,19 @@ export const PropertyEditor = ({
   onSaveProperty,
   onRemove,
   onReorder,
+  onAddSource,
+  onRemoveSource,
+  projectId,
+  datasetId,
   disabled,
   loading = false,
 }: Props) => {
   // ── Modal state ─────────────────────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false);
   const [modalProperty, setModalProperty] = useState<EntityRevisionProperty | null>(null);
+
+  // ── Source drawer state ─────────────────────────────────────────────
+  const [sourceDrawerOpen, setSourceDrawerOpen] = useState(false);
 
   // ── Binding lookup ──────────────────────────────────────────────────
   const bindingMap = new Map<string, SourceBinding>();
@@ -155,6 +167,11 @@ export const PropertyEditor = ({
     if (loading) return;
     setModalOpen(false);
     setModalProperty(null);
+  };
+
+  const handleAddSourceWrapper = async (nodes: SourceNode[]) => {
+    await onAddSource(nodes);
+    setSourceDrawerOpen(false);
   };
 
   const handleModalSave = async (data: {
@@ -320,6 +337,84 @@ export const PropertyEditor = ({
         />
       </div>
 
+      {/* Sources table */}
+      <div className="rounded-lg border border-zinc-200 bg-white">
+        <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
+          <h3 className="text-sm font-semibold text-zinc-900">
+            Sources
+            <span className="ml-1.5 text-xs font-normal text-zinc-400">
+              ({sourceNodes.length})
+            </span>
+          </h3>
+          {!disabled && (
+            <button
+              type="button"
+              onClick={() => setSourceDrawerOpen(true)}
+              className="text-xs font-medium text-zinc-600 hover:text-zinc-900"
+            >
+              + Add Source
+            </button>
+          )}
+        </div>
+
+        {sourceNodes.length === 0 ? (
+          <div className="px-4 py-6 text-center text-sm text-zinc-400">
+            No sources registered. Click &quot;+ Add Source&quot; to register a data source.
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-zinc-100 text-sm">
+            <thead>
+              <tr className="bg-zinc-50">
+                <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Source Name
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Type
+                </th>
+                <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Fields
+                </th>
+                {!disabled && (
+                  <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Action
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {sourceNodes.map((sn) => (
+                <tr key={sn.source_id} className="hover:bg-zinc-50">
+                  <td className="px-4 py-2 font-medium text-zinc-900">
+                    {sn.name}
+                  </td>
+                  <td className="px-4 py-2 text-zinc-500">
+                    <span className="inline-block rounded-full border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                      {sn.source_type}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono text-xs text-zinc-500">
+                    {sn.fields.length}
+                  </td>
+                  {!disabled && (
+                    <td className="px-4 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => onRemoveSource(sn.source_id)}
+                        disabled={loading}
+                        className="rounded px-2 py-0.5 text-xs text-rose-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                        title={`Remove ${sn.name}`}
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
       {/* Property edit modal */}
       <PropertyEditModal
         open={modalOpen}
@@ -333,8 +428,38 @@ export const PropertyEditor = ({
         onSave={handleModalSave}
         onRemove={modalProperty ? handleModalRemove : undefined}
         onClose={closeModal}
+        onAddSource={onAddSource}
+        projectId={projectId}
+        datasetId={datasetId}
         loading={loading}
       />
+
+      {/* Source registration drawer */}
+      {sourceDrawerOpen && (
+        <SourceRegistrationDrawer
+          projectId={projectId}
+          datasetId={datasetId}
+          sourceNodes={
+            sourceNodes.map((sn) => ({
+              source_id: sn.source_id,
+              source_type: sn.source_type,
+              name: sn.name,
+              reference_id: sn.source_id, // fallback
+              fields: sn.fields || [],
+            }))
+          }
+          onAdd={handleAddSourceWrapper}
+          onRemove={onRemoveSource}
+          onClose={() => setSourceDrawerOpen(false)}
+        />
+      )}
+
+      {sourceDrawerOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/20"
+          onClick={() => setSourceDrawerOpen(false)}
+        />
+      )}
     </>
   );
 };

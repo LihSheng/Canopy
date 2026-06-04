@@ -75,6 +75,15 @@ export const fetchRevisions = (entityId: string): Promise<EntityRevision[]> => {
   return request<EntityRevision[]>(`/api/entities/${entityId}/revisions`);
 };
 
+export const fetchRevision = (
+  entityId: string,
+  revisionId: string
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/revisions/${revisionId}`
+  );
+};
+
 export const createInitialRevision = (
   entityId: string,
   body: {
@@ -189,5 +198,17 @@ export const fetchEntityByDataset = (
 ): Promise<EntityDetail | null> => {
   return request<EntityDetail | null>(
     `/api/entities/by-dataset/${datasetId}`
+  );
+};
+
+// ─── Revert ───
+
+export const revertToRevision = (
+  entityId: string,
+  revisionId: string
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/revert/${revisionId}`,
+    { method: "POST" }
   );
 };

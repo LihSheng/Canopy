@@ -8,7 +8,7 @@ entity service that knows everything."
 These functions take a plain db session; they are not bound to a repository.
 """
 
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from dataset.schema import DatasetModel
@@ -24,26 +24,35 @@ def list_entity_registry_items(db: Session, tenant_id: str, search: str | None =
     serialisation to an API response.
     """
 
-    # Subquery: latest mapping version per object_type_id within the tenant
-    latest_sub = (
+    # Subquery: best mapping per object_type_id within the tenant.
+    # Prefer tenant-owned datasets over legacy shared datasets.
+    mapping_rank = (
         db.query(
-            SemanticMappingModel.object_type_id,
-            func.max(SemanticMappingModel.version_number).label("max_version"),
+            SemanticMappingModel.object_type_id.label("object_type_id"),
+            SemanticMappingModel.id.label("mapping_id"),
+            func.row_number()
+            .over(
+                partition_by=SemanticMappingModel.object_type_id,
+                order_by=[
+                    case((DatasetModel.tenant_id == tenant_id, 1), else_=0).desc(),
+                    SemanticMappingModel.version_number.desc(),
+                    SemanticMappingModel.updated_at.desc(),
+                    SemanticMappingModel.created_at.desc(),
+                    SemanticMappingModel.id.desc(),
+                ],
+            )
+            .label("row_num"),
         )
+        .outerjoin(DatasetModel, SemanticMappingModel.dataset_id == DatasetModel.id)
         .filter(SemanticMappingModel.tenant_id == tenant_id)
-        .group_by(SemanticMappingModel.object_type_id)
         .subquery()
     )
 
-    # Full latest mapping row per object type
-    latest_mappings = (
+    # Full best mapping row per object type
+    best_mappings = (
         db.query(SemanticMappingModel)
-        .join(
-            latest_sub,
-            (SemanticMappingModel.object_type_id == latest_sub.c.object_type_id)
-            & (SemanticMappingModel.version_number == latest_sub.c.max_version),
-        )
-        .filter(SemanticMappingModel.tenant_id == tenant_id)
+        .join(mapping_rank, SemanticMappingModel.id == mapping_rank.c.mapping_id)
+        .filter(mapping_rank.c.row_num == 1)
         .subquery()
     )
 
@@ -55,24 +64,24 @@ def list_entity_registry_items(db: Session, tenant_id: str, search: str | None =
             ObjectTypeModel.description,
             ObjectTypeModel.created_at,
             ObjectTypeModel.updated_at,
-            latest_mappings.c.id.label("mapping_id"),
-            latest_mappings.c.dataset_id,
-            latest_mappings.c.dataset_version_id,
-            latest_mappings.c.version_number.label("mapping_version_number"),
-            latest_mappings.c.properties,
-            latest_mappings.c.links,
-            latest_mappings.c.computed_properties,
-            latest_mappings.c.updated_at.label("mapping_updated_at"),
+            best_mappings.c.id.label("mapping_id"),
+            best_mappings.c.dataset_id,
+            best_mappings.c.dataset_version_id,
+            best_mappings.c.version_number.label("mapping_version_number"),
+            best_mappings.c.properties,
+            best_mappings.c.links,
+            best_mappings.c.computed_properties,
+            best_mappings.c.updated_at.label("mapping_updated_at"),
             DatasetModel.name.label("dataset_name"),
         )
         .join(
-            latest_mappings,
-            ObjectTypeModel.id == latest_mappings.c.object_type_id,
+            best_mappings,
+            ObjectTypeModel.id == best_mappings.c.object_type_id,
             isouter=True,
         )
         .join(
             DatasetModel,
-            latest_mappings.c.dataset_id == DatasetModel.id,
+            best_mappings.c.dataset_id == DatasetModel.id,
             isouter=True,
         )
         .filter(ObjectTypeModel.tenant_id == tenant_id)
@@ -113,9 +122,14 @@ def get_entity_detail_read_model(db: Session, tenant_id: str, object_type_id: st
     latest = mapping_repo.get_latest_by_object_type_id(tenant_id, object_type_id)
 
     dataset_name = None
+    dataset_id = None
+    project_id = None
     if latest:
         ds = db.query(DatasetModel).filter(DatasetModel.id == latest.dataset_id).first()
-        dataset_name = ds.name if ds else None
+        if ds:
+            dataset_name = ds.name
+            dataset_id = ds.id
+            project_id = ds.project_id
 
     return {
         "id": obj.id,
@@ -127,4 +141,6 @@ def get_entity_detail_read_model(db: Session, tenant_id: str, object_type_id: st
         "updated_at": obj.updated_at,
         "mapping": latest if latest else None,
         "dataset_name": dataset_name,
+        "dataset_id": dataset_id,
+        "project_id": project_id,
     }
