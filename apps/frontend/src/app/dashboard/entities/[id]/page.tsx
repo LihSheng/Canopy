@@ -37,7 +37,9 @@ import type {
 } from "@/lib/api/types";
 import { PropertyEditor, type PropertySavePayload } from "@/components/entity-graph/property-editor";
 import { EntityGraphTab } from "@/components/entity-graph/entity-graph-tab";
+import { EntityLineageCanvas } from "@/components/entity-graph/entity-lineage-canvas";
 import { EntityVersionHistory } from "@/components/entity-graph/entity-version-history";
+import type { EntityLineageGraph } from "@/lib/api/types";
 
 export const EntityDetailPage = () => {
   const params = useParams();
@@ -54,7 +56,6 @@ export const EntityDetailPage = () => {
   const [linkedVersions, setLinkedVersions] = useState<DatasetVersion[]>([]);
   const [canvasError, setCanvasError] = useState<string | null>(null);
   const [canvasMissing, setCanvasMissing] = useState(false);
-  const entityDatasetDependencyId = entity?.dataset_id || entity?.mapping?.dataset_id || "";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -156,16 +157,7 @@ export const EntityDetailPage = () => {
   const handlePublish = async () => {
     setActionLoading("publish");
     try {
-      if (!entityDatasetDependencyId) {
-        throw new Error("This entity is not linked to a dataset, so it cannot be published.");
-      }
-
-      await publishDraft(id, [
-        {
-          dependency_type: "dataset",
-          dependency_id: entityDatasetDependencyId,
-        },
-      ]);
+      await publishDraft(id);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to publish draft");
@@ -399,14 +391,52 @@ export const EntityDetailPage = () => {
           <div className="rounded-lg border border-zinc-200 bg-white p-4">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-zinc-900">
-                  {entity.display_name}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-zinc-900">
+                    {entity.display_name}
+                  </h2>
+                  {/* Status badge */}
+                  {status && (
+                    <span
+                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        status.has_published
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {status.has_published ? "Published" : "In Progress"}
+                    </span>
+                  )}
+                </div>
                 <p className="mt-1 text-sm text-zinc-500">
                   <span className="font-mono text-xs">{entity.object_type_key}</span>
+                  {entity.plural_name && (
+                    <span className="ml-2 text-xs text-zinc-400">
+                      Plural: {entity.plural_name}
+                    </span>
+                  )}
                 </p>
                 {entity.description && (
                   <p className="mt-2 text-sm text-zinc-600">{entity.description}</p>
+                )}
+                {/* Groups */}
+                {entity.groups && entity.groups.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {entity.groups.map((g: string) => (
+                      <span
+                        key={g}
+                        className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600"
+                      >
+                        {g}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Icon indicator */}
+                {entity.icon && (
+                  <div className="mt-1.5 text-xs text-zinc-400">
+                    Icon: {entity.icon}
+                  </div>
                 )}
               </div>
 
@@ -527,7 +557,30 @@ export const EntityDetailPage = () => {
             </dl>
           </div>
 
-          {linkedDataset && linkedVersions.length > 0 ? (
+          {/* Entity-centered lineage canvas (PRD 0021) */}
+          {entity.lineage ? (
+            <section className="rounded-lg border border-zinc-200 bg-white p-4">
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold text-zinc-900">Entity Canvas</h3>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Lineage graph for {entity.display_name} — sources, dataset, properties, and links.
+                </p>
+              </div>
+              <EntityLineageCanvas
+                lineage={entity.lineage}
+                onLayoutChange={async (layout) => {
+                  if (status?.has_draft) {
+                    try {
+                      await updateDraft(id, { layout_state: layout });
+                    } catch {
+                      // layout save is best-effort
+                    }
+                  }
+                }}
+              />
+            </section>
+          ) : linkedDataset && linkedVersions.length > 0 ? (
+            /* Legacy canvas fallback — when lineage data is absent but dataset mapping exists */
             <section className="rounded-lg border border-zinc-200 bg-white p-4">
               <div className="mb-3">
                 <h3 className="text-sm font-semibold text-zinc-900">Entity Canvas</h3>

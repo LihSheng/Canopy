@@ -338,7 +338,7 @@ class EntityRevisionService:
         1. A draft must exist.
         2. At least one valid source binding must exist (source_nodes with source_node entries).
         3. All required properties must be present and not empty.
-        4. All active bindings must pin to stable datasets/versions (if deps provided).
+        4. Optional source dependency pinning is accepted when provided.
         5. Optional properties may remain unbound.
         """
         obj = self._object_type_repo.get(entity_id, tenant_id=tenant_id)
@@ -380,22 +380,6 @@ class EntityRevisionService:
                     f"Bind it to a source field before publishing."
                 )
 
-        # Rule 3: Source dependencies are always required for publish.
-        # At least one dataset-level dependency must be pinned.
-        if not source_dependencies:
-            errors.append(
-                "Publish requires at least one source dependency to be pinned. "
-                "Provide a dataset-level dependency (dependency_type=dataset) so "
-                "the published revision has a stable dependency contract."
-            )
-        else:
-            has_dataset_level = any(d.get("dependency_type") == "dataset" for d in source_dependencies)
-            if not has_dataset_level:
-                errors.append(
-                    "Publish requires at least one dataset-level dependency to be pinned. "
-                    "Found dependencies but none with dependency_type=dataset."
-                )
-
         if errors:
             raise ValidationError(f"Publish validation failed: {'; '.join(errors)}")
 
@@ -419,7 +403,14 @@ class EntityRevisionService:
 
         published = self._revision_repo.save(draft)
 
-        # Pin source dependencies
+        # Transition entity status to "published" on first publish
+        obj = self._object_type_repo.get(entity_id, tenant_id=None)
+        if obj is not None and obj.status != "published":
+            obj.status = "published"
+            obj.updated_at = now
+            self._object_type_repo.save(obj)
+
+        # Pin source dependencies when the caller provides them.
         if source_dependencies:
             deps = [
                 EntityRevisionDependency(
@@ -595,7 +586,14 @@ class EntityRevisionService:
 
         saved = self._revision_repo.save(revision)
 
-        # Pin dependencies on initial publish
+        # Transition entity status to "published" on initial publish
+        if publish:
+            if obj.status != "published":
+                obj.status = "published"
+                obj.updated_at = now
+                self._object_type_repo.save(obj)
+
+        # Pin dependencies on initial publish when provided.
         if publish and source_dependencies:
             deps = [
                 EntityRevisionDependency(

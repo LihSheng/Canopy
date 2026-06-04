@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnalyticsPageShell } from "@/components/analytics-shell/analytics-page-shell";
 import { LoadingSpinner, ErrorState, EmptyState } from "@/components/shared";
+import { EntityAddFlow } from "@/components/entity-helper";
 import { fetchEntities } from "@/lib/api/entities";
 import { ROUTES } from "@/lib/constants";
 import type { EntityRegistryItem } from "@/lib/api/types";
@@ -56,7 +57,7 @@ const EntityRegistryPage = () => {
   return (
     <AnalyticsPageShell title="Entities" contextText="Entity registry">
       <div className="space-y-4">
-        {/* Search bar */}
+        {/* Search bar and Add button */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1 max-w-sm">
             <svg
@@ -78,6 +79,7 @@ const EntityRegistryPage = () => {
               className="w-full rounded-md border border-zinc-300 bg-white pl-10 pr-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
             />
           </div>
+          <EntityAddFlow />
         </div>
 
         {loading && <LoadingSpinner text="Loading entities..." />}
@@ -153,12 +155,16 @@ const EntityRegistryPage = () => {
                           <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
                             Published
                           </span>
+                        ) : entity.status === "in_progress" || entity.has_draft ? (
+                          <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            In Progress
+                          </span>
                         ) : (
                           <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-400">
                             No pub
                           </span>
                         )}
-                        {entity.has_draft ? (
+                        {entity.has_draft && entity.has_published_revision ? (
                           <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                             Draft
                           </span>

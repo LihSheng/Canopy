@@ -16,6 +16,8 @@ Use the versioned folders for planning and design docs.
 - [Entity-First Digital Twin Manager PRD](../doc/prd/0017-entity-first-digital-twin-manager.md): draft PRD for moving Canopy from dataset-scoped Entity editing to an Entity-first digital twin manager with draft/publish governance, multi-source bindings, and hard dependency protection
 - [Entity Manager Property Editing and Data Studio Association PRD](../doc/prd/0018-entity-manager-property-editing-and-data-studio-association.md): draft PRD for making Entity Manager the canonical property/binding editor while Data Studio remains source prep and association context
 - [Entity Add Flow With Palantir-Style Helper PRD](../doc/prd/0020-entity-add-flow-palantir-style-helper.md): draft PRD for a single Entity create helper that supports create-new and attach-existing flows
+- [Entity-Centered Lineage Canvas PRD](../doc/prd/0021-entity-centered-lineage-canvas.md): draft PRD for an Entity-centered lineage graph with dataset/version context, derived chains, and future-proof graph storage
+- [Entity-Centered Lineage Canvas Issues](../doc/issues/0014-entity-centered-lineage-canvas-vertical-slices.md): draft tracer-bullet issue breakdown for the Entity-centered lineage canvas PRD
 - [Entity Manager Property Editing and Data Studio Association Issues](../doc/issues/0012-entity-manager-property-editing-and-data-studio-association-vertical-slices.md): draft tracer-bullet issue breakdown for the 0018 boundary refinement
 - [Lineage-Aware Data Retention Issues](../doc/issues/0011-lineage-aware-data-retention-vertical-slices.md): draft vertical-slice issue breakdown for the retention PRD
 

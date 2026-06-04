@@ -479,11 +479,7 @@ class TestPublishDraft:
         """POST /api/entities/{id}/draft/publish publishes the draft."""
         response = client.post(
             f"/api/entities/{seed_entity.id}/draft/publish",
-            json={
-                "source_dependencies": [
-                    {"dependency_type": "dataset", "dependency_id": "ds-001"},
-                ]
-            },
+            json={},
             headers=auth_headers,
         )
         assert response.status_code == 200, response.text
@@ -501,6 +497,17 @@ class TestPublishDraft:
         status = status_resp.json()
         assert status["has_published"] is True
         assert status["published_revision_number"] == 2  # New published
+
+    def test_publish_draft_without_dataset_dependency(self, client, auth_headers, seed_entity, seed_draft_with_binding):
+        """Publishing does not require a dataset dependency anymore."""
+        response = client.post(
+            f"/api/entities/{seed_entity.id}/draft/publish",
+            headers=auth_headers,
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["status"] == "published"
+        assert data["published_at"] is not None
 
     @pytest.fixture
     def seed_draft(self, db_session, seed_published_revision, seed_entity):

@@ -70,6 +70,10 @@ class ObjectTypeRepository:
             object_type_key=d.object_type_key,
             display_name=d.display_name,
             description=d.description,
+            plural_name=d.plural_name,
+            icon=d.icon,
+            groups=d.groups,
+            status=d.status,
             created_at=d.created_at,
             updated_at=d.updated_at,
         )
@@ -81,6 +85,10 @@ class ObjectTypeRepository:
             object_type_key=m.object_type_key,
             display_name=m.display_name,
             description=m.description,
+            plural_name=m.plural_name or "",
+            icon=m.icon or "",
+            groups=m.groups or [],
+            status=m.status or "in_progress",
             created_at=m.created_at,
             updated_at=m.updated_at,
         )

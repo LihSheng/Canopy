@@ -184,7 +184,7 @@ describe("EntityGraphTab", () => {
   it("shows object type selector when types are available", async () => {
     mockFetchMapping.mockResolvedValue(null);
     mockFetchObjectTypes.mockResolvedValue([
-      { id: "ot-1", object_type_key: "employee", display_name: "Employee", tenant_id: "t1", description: "", created_at: "", updated_at: null },
+      { id: "ot-1", object_type_key: "employee", display_name: "Employee", tenant_id: "t1", description: "", plural_name: "", icon: "", groups: [], status: "in_progress", created_at: "", updated_at: null },
     ]);
     mockFetchDatasetVersionSchema.mockResolvedValue([{ column_name: "id", primitive_type: "integer" }]);
     render(<EntityGraphTab dataset={baseDataset} versions={[baseVersion]} />);

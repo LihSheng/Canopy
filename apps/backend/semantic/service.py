@@ -1,3 +1,4 @@
+import re
 import uuid
 from datetime import UTC, datetime
 
@@ -57,12 +58,40 @@ def _check_type_compatibility(source_type: str, target_type: str) -> bool:
     return target_type in compatible
 
 
+def _generate_object_type_key(display_name: str, repo: ObjectTypeRepository, tenant_id: str) -> str:
+    """Generate a stable, unique object_type_key from a display name.
+
+    Rules:
+    - Lowercase, replace non-alphanumeric with underscores
+    - Collapse multiple underscores
+    - Strip leading/trailing underscores
+    - Prepend 'entity_' if the result starts with a digit
+    - Ensure uniqueness by appending a suffix if needed
+    """
+    key = display_name.lower().strip()
+    key = re.sub(r"[^a-z0-9]+", "_", key)
+    key = re.sub(r"_+", "_", key)
+    key = key.strip("_")
+    if not key:
+        key = "entity"
+    if key[0].isdigit():
+        key = "entity_" + key
+
+    # Ensure uniqueness within tenant
+    base_key = key
+    suffix = 1
+    while repo.get_by_key(tenant_id, key) is not None:
+        key = f"{base_key}_{suffix}"
+        suffix += 1
+    return key
+
+
 class ObjectTypeService:
     def __init__(self, repo: ObjectTypeRepository):
         self._repo = repo
 
     def create(self, tenant_id: str, object_type_key: str, display_name: str, description: str = "") -> ObjectType:
-        # Pre-check for duplicate key (avoids IntegrityError → proper 409)
+        # Pre-check for duplicate key (avoids IntegrityError -> proper 409)
         existing = self._repo.get_by_key(tenant_id, object_type_key)
         if existing is not None:
             raise ValueError(f"Object type key '{object_type_key}' already exists for this tenant")
@@ -77,6 +106,36 @@ class ObjectTypeService:
         )
         return self._repo.save(obj_type)
 
+    def create_entity(
+        self,
+        tenant_id: str,
+        display_name: str,
+        description: str = "",
+        plural_name: str = "",
+        icon: str = "",
+        groups: list[str] | None = None,
+    ) -> ObjectType:
+        """Create an entity shell with server-generated object_type_key.
+
+        Follows the Palantir-style helper flow: key is generated from display_name
+        once and stays fixed afterward.
+        """
+        key = _generate_object_type_key(display_name, self._repo, tenant_id)
+        now = datetime.now(UTC)
+        obj_type = ObjectType(
+            id=str(uuid.uuid4()),
+            tenant_id=tenant_id,
+            object_type_key=key,
+            display_name=display_name,
+            description=description,
+            plural_name=plural_name,
+            icon=icon,
+            groups=groups or [],
+            status="in_progress",
+            created_at=now,
+        )
+        return self._repo.save(obj_type)
+
     def get(self, id: str, tenant_id: str) -> ObjectType | None:
         return self._repo.get(id, tenant_id=tenant_id)
 
@@ -84,7 +143,14 @@ class ObjectTypeService:
         return self._repo.list_by_tenant(tenant_id)
 
     def update(
-        self, id: str, tenant_id: str, display_name: str | None = None, description: str | None = None
+        self,
+        id: str,
+        tenant_id: str,
+        display_name: str | None = None,
+        description: str | None = None,
+        plural_name: str | None = None,
+        icon: str | None = None,
+        groups: list[str] | None = None,
     ) -> ObjectType:
         obj = self._repo.get(id, tenant_id=tenant_id)
         if obj is None:
@@ -93,6 +159,12 @@ class ObjectTypeService:
             obj.display_name = display_name
         if description is not None:
             obj.description = description
+        if plural_name is not None:
+            obj.plural_name = plural_name
+        if icon is not None:
+            obj.icon = icon
+        if groups is not None:
+            obj.groups = groups
         obj.updated_at = datetime.now(UTC)
         return self._repo.save(obj)
 

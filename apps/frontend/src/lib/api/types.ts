@@ -384,6 +384,10 @@ export interface ObjectType {
   object_type_key: string;
   display_name: string;
   description: string;
+  plural_name: string;
+  icon: string;
+  groups: string[];
+  status: string;
   created_at: string;
   updated_at: string | null;
 }
@@ -468,6 +472,10 @@ export interface EntityRegistryItem {
   object_type_key: string;
   display_name: string;
   description: string;
+  plural_name: string;
+  icon: string;
+  groups: string[];
+  status: string;
   created_at: string;
   updated_at: string | null;
   dataset_name: string | null;
@@ -484,11 +492,46 @@ export interface EntityRegistryItem {
   published_revision_number: number | null;
 }
 
+/** Node in the entity-centered lineage graph (PRD 0021). */
+export interface LineageNode {
+  id: string;
+  kind: "dataset" | "source" | "derived" | "entity";
+  label: string;
+  properties: string[];
+  collapsed: boolean;
+  collapsed_count: number;
+  subtype: string;
+}
+
+/** Edge in the entity-centered lineage graph (PRD 0021). */
+export interface LineageEdge {
+  id: string;
+  kind: "lineage" | "binding" | "link";
+  source_id: string;
+  target_id: string;
+  label: string;
+  source_handle: string;
+  target_handle: string;
+}
+
+/** Complete entity-centered lineage graph read model (PRD 0021). */
+export interface EntityLineageGraph {
+  entity_id: string;
+  entity_label: string;
+  nodes: LineageNode[];
+  edges: LineageEdge[];
+  layout_state: Record<string, { x: number; y: number }>;
+}
+
 export interface EntityDetail {
   id: string;
   object_type_key: string;
   display_name: string;
   description: string;
+  plural_name: string;
+  icon: string;
+  groups: string[];
+  status: string;
   created_at: string;
   updated_at: string | null;
   dataset_name: string | null;
@@ -504,6 +547,8 @@ export interface EntityDetail {
   // Revision content — preferred over mapping when available
   published_revision: EntityRevisionDetail | null;
   draft_revision: EntityRevisionDetail | null;
+  // Entity-centered lineage graph (PRD 0021)
+  lineage: EntityLineageGraph | null;
 }
 
 export interface EntityMappingDetail {

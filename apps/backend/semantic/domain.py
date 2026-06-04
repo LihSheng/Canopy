@@ -54,8 +54,12 @@ class ObjectType:
     tenant_id: str
     object_type_key: str
     display_name: str
-    description: str = ""
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    description: str
+    plural_name: str = ""
+    icon: str = ""
+    groups: list[str] = field(default_factory=list)
+    status: str = "in_progress"
+    created_at: datetime | None = None
     updated_at: datetime | None = None
 
 

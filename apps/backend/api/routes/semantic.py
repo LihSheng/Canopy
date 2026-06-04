@@ -33,6 +33,10 @@ class ObjectTypeResponse(BaseModel):
     object_type_key: str
     display_name: str
     description: str
+    plural_name: str = ""
+    icon: str = ""
+    groups: list[str] = []
+    status: str = "in_progress"
     created_at: str
     updated_at: str | None
 
@@ -43,9 +47,26 @@ class CreateObjectTypeRequest(BaseModel):
     description: str = ""
 
 
+class CreateEntityRequest(BaseModel):
+    """Create a new entity shell with server-generated object_type_key.
+
+    Follows the Palantir-style helper flow: the client provides metadata and the
+    server generates a stable key from the display name.
+    """
+
+    display_name: str = Field(..., min_length=1, max_length=255)
+    description: str = ""
+    plural_name: str = ""
+    icon: str = ""
+    groups: list[str] = []
+
+
 class UpdateObjectTypeRequest(BaseModel):
     display_name: str | None = None
     description: str | None = None
+    plural_name: str | None = None
+    icon: str | None = None
+    groups: list[str] | None = None
 
 
 class SchemaColumnResponse(BaseModel):
@@ -180,6 +201,10 @@ def _obj_to_response(obj) -> ObjectTypeResponse:
         object_type_key=obj.object_type_key,
         display_name=obj.display_name,
         description=obj.description,
+        plural_name=getattr(obj, "plural_name", "") or "",
+        icon=getattr(obj, "icon", "") or "",
+        groups=getattr(obj, "groups", []) or [],
+        status=getattr(obj, "status", "in_progress") or "in_progress",
         created_at=obj.created_at.isoformat() if obj.created_at else "",
         updated_at=obj.updated_at.isoformat() if obj.updated_at else None,
     )
@@ -287,6 +312,30 @@ def create_object_type(
     return _obj_to_response(obj)
 
 
+@router.post("/create-entity", status_code=201, response_model=ObjectTypeResponse)
+def create_entity(
+    body: CreateEntityRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Create a new entity shell with server-generated object_type_key.
+
+    The Palantir-style helper calls this after metadata entry. The key is
+    generated from display_name on the server and stays fixed afterward.
+    """
+    service = ObjectTypeService(ObjectTypeRepository(db))
+    obj = service.create_entity(
+        tenant_id=ctx.tenant_id,
+        display_name=body.display_name,
+        description=body.description,
+        plural_name=body.plural_name,
+        icon=body.icon,
+        groups=body.groups,
+    )
+    return _obj_to_response(obj)
+
+
 @router.get("/object-types/{id}", response_model=ObjectTypeResponse)
 def get_object_type(
     id: str,
@@ -310,7 +359,15 @@ def update_object_type(
     user: SessionUser = Depends(get_current_user),
 ):
     service = ObjectTypeService(ObjectTypeRepository(db))
-    obj = service.update(id, tenant_id=ctx.tenant_id, display_name=body.display_name, description=body.description)
+    obj = service.update(
+        id,
+        tenant_id=ctx.tenant_id,
+        display_name=body.display_name,
+        description=body.description,
+        plural_name=body.plural_name,
+        icon=body.icon,
+        groups=body.groups,
+    )
     return _obj_to_response(obj)
 
 

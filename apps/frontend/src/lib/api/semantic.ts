@@ -27,6 +27,21 @@ export const createObjectType = (data: {
   });
 };
 
+// ─── Entity Creation Helper (Palantir-style flow) ───
+
+export const createEntity = (data: {
+  display_name: string;
+  description?: string;
+  plural_name?: string;
+  icon?: string;
+  groups?: string[];
+}): Promise<ObjectType> => {
+  return request<ObjectType>("/api/semantic/create-entity", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+
 export const fetchObjectType = (id: string): Promise<ObjectType> => {
   return request<ObjectType>(`/api/semantic/object-types/${id}`);
 };

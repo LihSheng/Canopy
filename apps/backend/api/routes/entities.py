@@ -9,6 +9,7 @@ from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError
 from context.tenant_context import TenantContext
+from entity_lineage.graph_builder import build_entity_lineage_graph
 from entity_revision.repository import EntityRevisionRepository
 from semantic.entity_registry import (
     get_entity_detail_read_model,
@@ -26,6 +27,10 @@ class EntityRegistryItem(BaseModel):
     object_type_key: str
     display_name: str
     description: str
+    plural_name: str = ""
+    icon: str = ""
+    groups: list[str] = []
+    status: str = "in_progress"
     created_at: str
     updated_at: str | None
     dataset_name: str | None
@@ -83,11 +88,49 @@ class ComputedPropertyResponse(BaseModel):
     included: bool
 
 
+class LineageNodeResponse(BaseModel):
+    """A node in the entity-centric lineage graph."""
+
+    id: str
+    kind: str  # LineageNodeKind value
+    label: str
+    properties: list[str] = []
+    collapsed: bool = False
+    collapsed_count: int = 0
+    subtype: str = ""
+
+
+class LineageEdgeResponse(BaseModel):
+    """An edge in the entity-centric lineage graph."""
+
+    id: str
+    kind: str  # LineageEdgeKind value
+    source_id: str
+    target_id: str
+    label: str = ""
+    source_handle: str = ""
+    target_handle: str = ""
+
+
+class EntityLineageGraphResponse(BaseModel):
+    """The complete entity-centered lineage graph read model."""
+
+    entity_id: str
+    entity_label: str
+    nodes: list[LineageNodeResponse]
+    edges: list[LineageEdgeResponse]
+    layout_state: dict = {}
+
+
 class EntityDetailResponse(BaseModel):
     id: str
     object_type_key: str
     display_name: str
     description: str
+    plural_name: str = ""
+    icon: str = ""
+    groups: list[str] = []
+    status: str = "in_progress"
     created_at: str
     updated_at: str | None
     dataset_name: str | None
@@ -100,9 +143,11 @@ class EntityDetailResponse(BaseModel):
     draft_lock_holder_id: str | None = None
     published_revision_number: int | None = None
     draft_revision_number: int | None = None
-    # Revision detail sections — preferred over mapping when available
+    # Revision detail sections - preferred over mapping when available
     published_revision: "EntityRevisionDetail | None" = None
     draft_revision: "EntityRevisionDetail | None" = None
+    # Entity-centered lineage graph (PRD 0021)
+    lineage: EntityLineageGraphResponse | None = None
 
 
 class EntityRevisionPropertyDetail(BaseModel):
@@ -223,6 +268,54 @@ def _build_revision_detail(rev) -> EntityRevisionDetail:
     )
 
 
+def _build_lineage_response(
+    revision,
+    entity_display_name: str,
+    dataset_id: str | None = None,
+    dataset_name: str | None = None,
+    dataset_version_id: str | None = None,
+    dataset_version_label: str | None = None,
+) -> EntityLineageGraphResponse:
+    """Build lineage graph response from a revision domain object."""
+    graph = build_entity_lineage_graph(
+        revision=revision,
+        entity_label=entity_display_name,
+        dataset_id=dataset_id,
+        dataset_name=dataset_name,
+        dataset_version_id=dataset_version_id,
+        dataset_version_label=dataset_version_label,
+    )
+    return EntityLineageGraphResponse(
+        entity_id=graph.entity_id,
+        entity_label=graph.entity_label,
+        nodes=[
+            LineageNodeResponse(
+                id=n.id,
+                kind=n.kind.value,
+                label=n.label,
+                properties=n.properties,
+                collapsed=n.collapsed,
+                collapsed_count=n.collapsed_count,
+                subtype=n.subtype,
+            )
+            for n in graph.nodes
+        ],
+        edges=[
+            LineageEdgeResponse(
+                id=e.id,
+                kind=e.kind.value,
+                source_id=e.source_id,
+                target_id=e.target_id,
+                label=e.label,
+                source_handle=e.source_handle,
+                target_handle=e.target_handle,
+            )
+            for e in graph.edges
+        ],
+        layout_state=graph.layout_state,
+    )
+
+
 # ─── Routes ───
 
 
@@ -248,6 +341,10 @@ def list_entities(
                 object_type_key=row.get("object_type_key", ""),
                 display_name=row.get("display_name", ""),
                 description=row.get("description", ""),
+                plural_name=row.get("plural_name", "") or "",
+                icon=row.get("icon", "") or "",
+                groups=row.get("groups", []) or [],
+                status=row.get("status", "in_progress") or "in_progress",
                 created_at=_fmt_isofmt(row.get("created_at"), ""),
                 updated_at=_fmt_isofmt(row.get("updated_at")),
                 dataset_name=row.get("dataset_name"),
@@ -364,11 +461,30 @@ def get_entity_by_dataset(
             updated_at=m.updated_at.isoformat() if m.updated_at else None,
         )
 
+    # Build entity-centered lineage graph from revision data
+    lineage_by_ds = None
+    revision_for_lineage_by_ds = published or draft
+    if revision_for_lineage_by_ds is not None:
+        ds_version_id_by_ds = detail.get("mapping").dataset_version_id if detail.get("mapping") else None
+        ds_version_label_by_ds = f"v{detail['mapping'].version_number}" if detail.get("mapping") else None
+        lineage_by_ds = _build_lineage_response(
+            revision=revision_for_lineage_by_ds,
+            entity_display_name=detail["display_name"],
+            dataset_id=detail.get("dataset_id"),
+            dataset_name=detail.get("dataset_name"),
+            dataset_version_id=ds_version_id_by_ds,
+            dataset_version_label=ds_version_label_by_ds,
+        )
+
     return EntityDetailResponse(
         id=detail["id"],
         object_type_key=detail["object_type_key"],
         display_name=detail["display_name"],
         description=detail["description"],
+        plural_name=detail.get("plural_name", "") or "",
+        icon=detail.get("icon", "") or "",
+        groups=detail.get("groups", []) or [],
+        status=detail.get("status", "in_progress") or "in_progress",
         created_at=detail["created_at"].isoformat() if detail.get("created_at") else "",
         updated_at=detail["updated_at"].isoformat() if detail.get("updated_at") else None,
         dataset_name=detail.get("dataset_name"),
@@ -382,6 +498,7 @@ def get_entity_by_dataset(
         draft_revision_number=draft.revision_number if draft else None,
         published_revision=_build_revision_detail(published) if published else None,
         draft_revision=_build_revision_detail(draft) if draft else None,
+        lineage=lineage_by_ds,
     )
 
 
@@ -463,11 +580,30 @@ def get_entity(
             updated_at=m.updated_at.isoformat() if m.updated_at else None,
         )
 
+    # Build entity-centered lineage graph from revision data
+    lineage = None
+    revision_for_lineage = published or draft
+    if revision_for_lineage is not None:
+        ds_version_id = detail.get("mapping").dataset_version_id if detail.get("mapping") else None
+        ds_version_label = f"v{detail['mapping'].version_number}" if detail.get("mapping") else None
+        lineage = _build_lineage_response(
+            revision=revision_for_lineage,
+            entity_display_name=detail["display_name"],
+            dataset_id=detail.get("dataset_id"),
+            dataset_name=detail.get("dataset_name"),
+            dataset_version_id=ds_version_id,
+            dataset_version_label=ds_version_label,
+        )
+
     return EntityDetailResponse(
         id=detail["id"],
         object_type_key=detail["object_type_key"],
         display_name=detail["display_name"],
         description=detail["description"],
+        plural_name=detail.get("plural_name", "") or "",
+        icon=detail.get("icon", "") or "",
+        groups=detail.get("groups", []) or [],
+        status=detail.get("status", "in_progress") or "in_progress",
         created_at=detail["created_at"].isoformat() if detail.get("created_at") else "",
         updated_at=detail["updated_at"].isoformat() if detail.get("updated_at") else None,
         dataset_name=detail.get("dataset_name"),
@@ -481,4 +617,5 @@ def get_entity(
         draft_revision_number=draft.revision_number if draft else None,
         published_revision=_build_revision_detail(published) if published else None,
         draft_revision=_build_revision_detail(draft) if draft else None,
+        lineage=lineage,
     )

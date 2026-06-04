@@ -15,6 +15,10 @@ class ObjectTypeModel(Base):
     object_type_key: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    plural_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    icon: Mapped[str] = mapped_column(String(100), default="", nullable=False)
+    groups: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(50), default="in_progress", nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )

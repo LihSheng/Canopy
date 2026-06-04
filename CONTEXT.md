@@ -91,6 +91,8 @@ The internal management surface and role used to configure operational settings 
 
 ### Entity
 The business-object configuration a user defines in Entity Manager. Entity is the user-facing term for the semantic configuration model, and the canvas is the primary authoring surface for properties and source bindings.
+The Entity is the center of the lineage canvas; upstream datasets, source nodes, properties, and links radiate around it.
+The Entity canvas shows the backing Dataset / Dataset Version by default, but the Entity remains the visual center.
 
 ### Object Type
 The tenant-scoped reusable business-object definition that an Entity mapping can select or create. Object Types are shared across dataset versions within the tenant.
@@ -119,6 +121,21 @@ Phase 1 source nodes are reusable across multiple Entities.
 Phase 1 Entities can connect to multiple source nodes.
 Phase 1 source nodes are an unordered set in the Entity config.
 Phase 1 canvas source creation only registers already known table/file sources; it does not start a full new connector import flow.
+The Entity canvas should be designed to allow intermediate derived lineage nodes later, even if the first visible release only shows the direct path that exists today.
+Phase 1 lineage storage should use a generic node kind model (`dataset`, `source`, `derived`, `entity`) with edge kinds for lineage, binding, and links so future canvas depth does not require a storage redesign.
+The `derived` lineage kind should stay broad for now; finer subtype labels can be added later as optional metadata instead of new node kinds.
+Canvas collapse/expand should start with `derived` chains only, not arbitrary branches of the lineage graph.
+The Entity canvas should load fully expanded by default unless a concrete performance issue appears.
+Entity properties should appear as labels on the Entity node first; separate property nodes can be added later when the graph needs more detail.
+Entity-to-entity links should stay as edges for now; they are relationship metadata, not standalone graph nodes.
+Entity link edges should stay simple for now; richer relationship detail belongs in a future ontology-level graph, not the Entity canvas.
+The Entity canvas should show the direct upstream path into the Entity only; sibling or unrelated branches stay out of scope for now.
+The Entity canvas should represent both the Dataset container and the active Dataset Version when lineage context needs both levels.
+Dataset and Dataset Version should connect with a normal edge rather than visual nesting so the graph stays composable.
+Source nodes should connect into the Dataset Version, not directly into the Entity, so the lineage path stays explicit.
+Derived nodes may appear both before Dataset Version and between Dataset Version and Entity, depending on where the transformation happens.
+Collapsed derived chains should summarize as the last visible node label plus a hidden-step count, not as a bare count badge.
+Derived nodes should be rendered when they already exist in stored lineage data; manual creation can come later with the persistence model.
 
 ### Semantic Mapping
 The versioned configuration record that stores one Entity's Object Type selection, primary key, property mappings, source bindings, and canvas layout state for a specific dataset version.
@@ -189,6 +206,8 @@ _Avoid_: general analytics dashboard, tenant-facing reporting page
 - An **Entity** selects or creates one **Object Type**.
 - A **Semantic Mapping** stores the versioned configuration for an **Entity**.
 - A **Source Binding** connects cleaned source data from Data Studio to one **Entity** property.
+- The Entity canvas is Entity-centered, not Dataset-centered.
+- The Entity canvas shows the backing Dataset / Dataset Version node by default as upstream context.
 - The **Entity Manager** is the primary semantic authoring surface and hosts the editable canvas; dataset detail no longer hosts the canvas.
 - The legacy `Entity` tab is a route alias that opens the Entity Manager surface during the transition period, not a separate editor path.
 - **Live Explorer** will host **direct_query** datasets in a separate module outside the snapshot pipeline.
