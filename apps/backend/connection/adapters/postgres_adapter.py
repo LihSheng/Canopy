@@ -152,26 +152,23 @@ class PostgresAdapter(DatabaseAdapter):
         conninfo = self._build_conninfo(config)
 
         async def generator():
-            try:
-                async with await psycopg.AsyncConnection.connect(conninfo) as conn:
-                    async with conn.cursor() as cur:
-                        query = f'SELECT * FROM "{table}"'
-                        params: list = []
-                        if cursor_column:
-                            if cursor_value is not None:
-                                query += f' WHERE "{cursor_column}" > %s'
-                                params.append(cursor_value)
-                            query += f' ORDER BY "{cursor_column}"'
+            async with await psycopg.AsyncConnection.connect(conninfo) as conn:
+                async with conn.cursor() as cur:
+                    query = f'SELECT * FROM "{table}"'
+                    params: list = []
+                    if cursor_column:
+                        if cursor_value is not None:
+                            query += f' WHERE "{cursor_column}" > %s'
+                            params.append(cursor_value)
+                        query += f' ORDER BY "{cursor_column}"'
 
-                        await cur.execute(query, tuple(params))
-                        while True:
-                            batch = await cur.fetchmany(500)
-                            if not batch:
-                                break
-                            # Build dict rows manually from cursor description
-                            col_names = [desc[0] for desc in cur.description] if cur.description else []
-                            yield [dict(zip(col_names, row)) for row in batch]
-            except Exception:
-                return
+                    await cur.execute(query, tuple(params))
+                    while True:
+                        batch = await cur.fetchmany(500)
+                        if not batch:
+                            break
+                        # Build dict rows manually from cursor description
+                        col_names = [desc[0] for desc in cur.description] if cur.description else []
+                        yield [dict(zip(col_names, row)) for row in batch]
 
-        return generator()  # type: ignore[no-any-return]
+        return generator()

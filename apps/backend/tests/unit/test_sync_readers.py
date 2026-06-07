@@ -324,145 +324,25 @@ class TestMysqlCdcReader:
         reader.stop()
         assert reader.running is False
 
-    async def test_run_simulation_writes_initial_event(self):
-        """lines 114-128: _run_simulation writes initial event."""
+    async def test_import_error_propagates(self):
+        """When mysql-replication is not installed, ImportError propagates (no simulation)."""
         from pathlib import Path
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
 
         from sync.readers.mysql_cdc_reader import MysqlCdcReader
 
         reader = MysqlCdcReader({}, "ds-1", "tbl")
-        reader.running = False  # prevent infinite loop
-
         mock_on_event = MagicMock()
-        mock_file = MagicMock()
 
-        with patch("builtins.open", return_value=mock_file):
-            await reader._run_simulation(Path("/tmp/test.jsonl"), mock_on_event)
+        # mysql-replication is not installed, so start_streaming will hit the import path
+        with pytest.raises(ImportError):
+            await reader.start_streaming(Path("/tmp/events.jsonl"), mock_on_event)
 
-        assert mock_file.__enter__.return_value.write.called
-        assert mock_on_event.called
+        # on_event should never have been called (no simulation)
+        assert not mock_on_event.called
 
     # ------------------------------------------------------------------
-    # start_streaming routing (lines 31-52)
-    # ------------------------------------------------------------------
-
-    async def test_start_streaming_creates_directory_and_falls_back_to_simulation(self, tmp_path):
-        """Cover lines 31-34 (running, mkdir), 36-41 (config), 44-52 (ImportError→_run_simulation)."""
-        from unittest.mock import MagicMock, patch
-
-        from sync.readers.mysql_cdc_reader import MysqlCdcReader
-
-        reader = MysqlCdcReader(
-            {
-                "host": "myhost",
-                "port": 3307,
-                "database": "mydb",
-                "username": "myuser",
-                "password": "mypass",
-                "cdc_parameters": {"server_id": 2002},
-            },
-            "ds-1",
-            "tbl",
-        )
-        assert reader.running is False
-
-        mock_on_event = MagicMock()
-        nested = tmp_path / "sub" / "events.jsonl"
-        with patch.object(reader, "_run_simulation") as mock_sim:
-            await reader.start_streaming(nested, mock_on_event)
-
-        assert reader.running is True
-        assert nested.parent.exists()
-        mock_sim.assert_called_once_with(nested, mock_on_event)
-
-    # ------------------------------------------------------------------
-    # _run_simulation while-loop coverage (lines 132-152)
-    # ------------------------------------------------------------------
-
-    async def test_run_simulation_loop_iteration(self):
-        """Cover lines 132-148: counter loop body executes one iteration."""
-        import json
-        import tempfile
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        from sync.readers.mysql_cdc_reader import MysqlCdcReader
-
-        reader = MysqlCdcReader({}, "ds-1", "tbl")
-        reader.running = True
-
-        async def stop_after_one_sleep(_duration):
-            reader.running = False
-
-        mock_on_event = MagicMock()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir) / "events.jsonl"
-            with patch("asyncio.sleep", stop_after_one_sleep):
-                await reader._run_simulation(path, mock_on_event)
-
-            lines = path.read_text(encoding="utf-8").strip().split("\n")
-            assert len(lines) == 2  # initial + 1 simulated
-            assert json.loads(lines[0])["op"] == "INSERT"
-            assert json.loads(lines[1])["op"] == "UPDATE"
-            assert mock_on_event.call_count == 2
-
-    async def test_run_simulation_cancelled_error(self):
-        """Cover lines 149-150: CancelledError caught, loop exits."""
-        import tempfile
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        from sync.readers.mysql_cdc_reader import MysqlCdcReader
-
-        reader = MysqlCdcReader({}, "ds-1", "tbl")
-        reader.running = True
-
-        async def raise_cancelled(_duration):
-            raise asyncio.CancelledError()
-
-        mock_on_event = MagicMock()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir) / "events.jsonl"
-            with patch("asyncio.sleep", raise_cancelled):
-                await reader._run_simulation(path, mock_on_event)
-
-            lines = path.read_text(encoding="utf-8").strip().split("\n")
-            assert len(lines) == 1  # only initial event
-            assert mock_on_event.call_count == 1
-
-    async def test_run_simulation_generic_error(self):
-        """Cover lines 151-152: generic exception caught, loop continues."""
-        import tempfile
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        from sync.readers.mysql_cdc_reader import MysqlCdcReader
-
-        reader = MysqlCdcReader({}, "ds-1", "tbl")
-        reader.running = True
-
-        call_idx = 0
-
-        async def sleep_with_error(_duration):
-            nonlocal call_idx
-            call_idx += 1
-            if call_idx == 1:
-                raise RuntimeError("simulated error")
-            reader.running = False
-
-        mock_on_event = MagicMock()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir) / "events.jsonl"
-            with patch("asyncio.sleep", sleep_with_error):
-                await reader._run_simulation(path, mock_on_event)
-
-            lines = path.read_text(encoding="utf-8").strip().split("\n")
-            assert len(lines) == 2  # initial + 1 simulated (after error caught)
-            assert mock_on_event.call_count == 2
-
-    # ------------------------------------------------------------------
-    # binlog streaming path (lines 54-112)
+    # binlog streaming path
     # ------------------------------------------------------------------
 
     async def test_start_streaming_binlog_success_import(self):
@@ -540,48 +420,6 @@ class TestMysqlCdcReader:
                 await reader.start_streaming(path, mock_on_event)
 
                 assert "mysql-bin.000001" in path.read_text(encoding="utf-8")
-                assert mock_on_event.called
-
-    async def test_start_streaming_binlog_exception_fallback(self):
-        """Cover lines 110-112: exception during binlog streaming falls back to simulation."""
-        import sys
-        import tempfile
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        # Fake mysqlreplication module - BinLogStreamReader raises on init
-        fake_mysqlreplication = MagicMock()
-        fake_row_event = MagicMock()
-        fake_mysqlreplication.row_event = fake_row_event
-        fake_mysqlreplication.BinLogStreamReader = MagicMock(side_effect=ConnectionError("connection refused"))
-        fake_row_event.WriteRowsEvent = MagicMock()
-        fake_row_event.UpdateRowsEvent = MagicMock()
-        fake_row_event.DeleteRowsEvent = MagicMock()
-
-        patched_modules = {
-            "mysqlreplication": fake_mysqlreplication,
-            "mysqlreplication.row_event": fake_row_event,
-        }
-        with patch.dict(sys.modules, patched_modules):
-            from sync.readers.mysql_cdc_reader import MysqlCdcReader
-
-            reader = MysqlCdcReader(
-                {"host": "myhost", "port": 3307, "database": "mydb", "username": "myuser", "password": "mypass"},
-                "ds-1",
-                "tbl",
-            )
-
-            async def stop_loop(_duration):
-                reader.running = False
-
-            mock_on_event = MagicMock()
-            with tempfile.TemporaryDirectory() as tmpdir:
-                path = Path(tmpdir) / "events.jsonl"
-                with patch("asyncio.sleep", stop_loop):
-                    await reader.start_streaming(path, mock_on_event)
-
-                # Fallback simulation should have written initial seed event
-                assert "MySQL CDC Initial Seed" in path.read_text(encoding="utf-8")
                 assert mock_on_event.called
 
     async def test_start_streaming_binlog_update_event(self):
@@ -708,181 +546,32 @@ class TestPostgresCdcReader:
         reader.stop()
         assert reader.running is False
 
-    async def test_run_simulation_writes_initial_event(self):
-        """lines 114-128: _run_simulation writes initial event."""
+    async def test_connection_failure_propagates(self):
+        """CDC connection failure propagates out of start_streaming (no simulation fallback)."""
         from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        from sync.readers.pg_cdc_reader import PostgresCdcReader
-
-        reader = PostgresCdcReader({}, "ds-1", "tbl")
-        reader.running = False  # prevent infinite loop
-
-        mock_on_event = MagicMock()
-        mock_file = MagicMock()
-
-        with patch("builtins.open", return_value=mock_file):
-            await reader._run_simulation(Path("/tmp/test.jsonl"), mock_on_event)
-
-        assert mock_file.__enter__.return_value.write.called
-        assert mock_on_event.called
-
-    # ------------------------------------------------------------------
-    # start_streaming: mock-mode shortcut (lines 33-50)
-    # ------------------------------------------------------------------
-
-    async def test_start_streaming_mock_mode(self):
-        """Cover lines 33-36 (running, mkdir), 38-44 (config), 47-50 (mock branch→_run_simulation)."""
-        import json
-        import tempfile
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import AsyncMock, MagicMock, patch
 
         from sync.readers.pg_cdc_reader import PostgresCdcReader
 
         reader = PostgresCdcReader(
-            {"host": "localhost", "database": "testdb_mock"},
+            {"host": "realdb", "port": 5432, "database": "proddb", "username": "usr", "password": "pwd"},
             "ds-1",
             "tbl",
         )
-        assert reader.running is False
-
-        async def stop_loop(_duration):
-            reader.running = False
 
         mock_on_event = MagicMock()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir) / "events.jsonl"
-            with patch("asyncio.sleep", stop_loop):
-                await reader.start_streaming(path, mock_on_event)
+        with patch(
+            "psycopg.AsyncConnection.connect",
+            AsyncMock(side_effect=ConnectionError("replication slot unavailable")),
+        ):
+            with pytest.raises(ConnectionError, match="replication slot unavailable"):
+                await reader.start_streaming(Path("/tmp/events.jsonl"), mock_on_event)
 
-            assert path.parent.exists()
-            first_line = json.loads(path.read_text(encoding="utf-8").strip().split("\n")[0])
-            assert first_line["op"] == "INSERT"
-
-        assert mock_on_event.called
-
-    # ------------------------------------------------------------------
-    # start_streaming: exception fallback (lines 110-112)
-    # ------------------------------------------------------------------
-
-    async def test_start_streaming_exception_fallback(self):
-        """Cover lines 33-36 (running, mkdir), 110-112 (exception→_run_simulation)."""
-        import tempfile
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        from sync.readers.pg_cdc_reader import PostgresCdcReader
-
-        # host != localhost → bypasses mock branch, enters try block
-        reader = PostgresCdcReader(
-            {"host": "nohost", "port": 5433, "database": "x", "username": "u", "password": "p"},
-            "ds-1",
-            "tbl",
-        )
-        assert reader.running is False
-
-        async def stop_loop(_duration):
-            reader.running = False
-
-        mock_on_event = MagicMock()
-        with patch("psycopg.AsyncConnection.connect", side_effect=ConnectionError("mock fail")):
-            with tempfile.TemporaryDirectory() as tmpdir:
-                path = Path(tmpdir) / "events.jsonl"
-                with patch("asyncio.sleep", stop_loop):
-                    await reader.start_streaming(path, mock_on_event)
-
-                assert "CDC Initial Seed" in path.read_text(encoding="utf-8")
-
-        assert mock_on_event.called
+        # on_event should never have been called (no simulation)
+        assert not mock_on_event.called
 
     # ------------------------------------------------------------------
-    # _run_simulation while-loop coverage (lines 132-152)
-    # ------------------------------------------------------------------
-
-    async def test_run_simulation_loop_iteration(self):
-        """Cover lines 132-148: counter loop body executes one iteration."""
-        import json
-        import tempfile
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        from sync.readers.pg_cdc_reader import PostgresCdcReader
-
-        reader = PostgresCdcReader({}, "ds-1", "tbl")
-        reader.running = True
-
-        async def stop_after_one_sleep(_duration):
-            reader.running = False
-
-        mock_on_event = MagicMock()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir) / "events.jsonl"
-            with patch("asyncio.sleep", stop_after_one_sleep):
-                await reader._run_simulation(path, mock_on_event)
-
-            lines = path.read_text(encoding="utf-8").strip().split("\n")
-            assert len(lines) == 2  # initial + 1 simulated
-            assert json.loads(lines[0])["op"] == "INSERT"
-            assert json.loads(lines[1])["op"] == "UPDATE"
-            assert mock_on_event.call_count == 2
-
-    async def test_run_simulation_cancelled_error(self):
-        """Cover lines 149-150: CancelledError caught, loop exits."""
-        import tempfile
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        from sync.readers.pg_cdc_reader import PostgresCdcReader
-
-        reader = PostgresCdcReader({}, "ds-1", "tbl")
-        reader.running = True
-
-        async def raise_cancelled(_duration):
-            raise asyncio.CancelledError()
-
-        mock_on_event = MagicMock()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir) / "events.jsonl"
-            with patch("asyncio.sleep", raise_cancelled):
-                await reader._run_simulation(path, mock_on_event)
-
-            lines = path.read_text(encoding="utf-8").strip().split("\n")
-            assert len(lines) == 1  # only initial event
-            assert mock_on_event.call_count == 1
-
-    async def test_run_simulation_generic_error(self):
-        """Cover lines 151-152: generic exception caught, loop continues."""
-        import tempfile
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        from sync.readers.pg_cdc_reader import PostgresCdcReader
-
-        reader = PostgresCdcReader({}, "ds-1", "tbl")
-        reader.running = True
-
-        call_idx = 0
-
-        async def sleep_with_error(_duration):
-            nonlocal call_idx
-            call_idx += 1
-            if call_idx == 1:
-                raise RuntimeError("simulated error")
-            reader.running = False
-
-        mock_on_event = MagicMock()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir) / "events.jsonl"
-            with patch("asyncio.sleep", sleep_with_error):
-                await reader._run_simulation(path, mock_on_event)
-
-            lines = path.read_text(encoding="utf-8").strip().split("\n")
-            assert len(lines) == 2  # initial + 1 simulated (after error caught)
-            assert mock_on_event.call_count == 2
-
-    # ------------------------------------------------------------------
-    # replication streaming path (lines 58-108)
+    # ------ replication streaming path ------
     # ------------------------------------------------------------------
 
     async def test_start_streaming_replication_success(self):
