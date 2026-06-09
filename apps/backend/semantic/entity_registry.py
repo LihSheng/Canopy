@@ -16,12 +16,21 @@ from semantic.repository import SemanticMappingRepository
 from semantic.schema import ObjectTypeModel, SemanticMappingModel
 
 
-def list_entity_registry_items(db: Session, tenant_id: str, search: str | None = None) -> list[dict]:
+def list_entity_registry_items(
+    db: Session,
+    tenant_id: str,
+    search: str | None = None,
+    exclude_deprecated: bool = False,
+) -> list[dict]:
     """Return a flat read model of all entities (object types + latest mapping).
 
     Each row includes object_type info, latest mapping summary, and backing
     dataset name.  The result is a list of dicts suitable for direct
     serialisation to an API response.
+
+    When exclude_deprecated is True, entities with status='deprecated' are
+    hidden from the listing (normal creation flows). Historical views should
+    pass exclude_deprecated=False.
     """
 
     # Subquery: best mapping per object_type_id within the tenant.
@@ -98,6 +107,9 @@ def list_entity_registry_items(db: Session, tenant_id: str, search: str | None =
             | (ObjectTypeModel.object_type_key.ilike(like))
             | (DatasetModel.name.ilike(like))
         )
+
+    if exclude_deprecated:
+        q = q.filter(ObjectTypeModel.status != "deprecated")
 
     q = q.order_by(ObjectTypeModel.updated_at.desc())
 

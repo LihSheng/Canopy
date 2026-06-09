@@ -4,10 +4,14 @@ import uuid
 from datetime import UTC, datetime
 
 from common.errors import NotFoundError, ValidationError
+from entity_formula_engine.engine import FormulaEngine
 from entity_revision.domain import (
+    ComputedProperty,
+    EntityLink,
     EntityProperty,
     EntityRevision,
     EntityRevisionDependency,
+    LinkCardinality,
     RevisionStatus,
     SourceBinding,
 )
@@ -97,12 +101,35 @@ class EntityRevisionService:
                     property_key=b.property_key,
                     source_node_id=b.source_node_id,
                     source_field_name=b.source_field_name,
+                    is_active=b.is_active,
                 )
                 for b in published.source_bindings
             ],
+            planned_bindings=[
+                SourceBinding(
+                    property_key=b.property_key,
+                    source_node_id=b.source_node_id,
+                    source_field_name=b.source_field_name,
+                    is_active=b.is_active,
+                )
+                for b in published.planned_bindings
+            ],
             links=published.links,
             source_nodes=published.source_nodes,
-            computed_properties=published.computed_properties,
+            computed_properties=[
+                ComputedProperty(
+                    id=cp.id,
+                    property_key=cp.property_key,
+                    display_name=cp.display_name,
+                    formula=cp.formula,
+                    formula_type=cp.formula_type,
+                    inputs=cp.inputs,
+                    output_type=cp.output_type,
+                    sort_order=cp.sort_order,
+                    is_active=cp.is_active,
+                )
+                for cp in published.computed_properties
+            ],
             layout_state=published.layout_state,
             lock_holder_id=lock_holder_id,
             locked_at=now,
@@ -127,9 +154,10 @@ class EntityRevisionService:
         tenant_id: str,
         properties: list[EntityProperty] | None = None,
         source_bindings: list[SourceBinding] | None = None,
+        planned_bindings: list[SourceBinding] | None = None,
         links: list[dict] | None = None,
         source_nodes: list[dict] | None = None,
-        computed_properties: list[dict] | None = None,
+        computed_properties: list[ComputedProperty] | None = None,
         layout_state: dict | None = None,
         lock_holder_id: str | None = None,
     ) -> EntityRevision:
@@ -145,6 +173,10 @@ class EntityRevisionService:
         if draft is None:
             raise NotFoundError("No active draft found for this entity")
 
+        # Immutability guard: only drafts can be mutated
+        if draft.status != RevisionStatus.DRAFT.value:
+            raise ValidationError(f"Cannot mutate a {draft.status} revision. Only draft revisions are editable.")
+
         # Lock check: only lock holder can update
         if draft.lock_holder_id and lock_holder_id:
             if draft.lock_holder_id != lock_holder_id:
@@ -159,6 +191,8 @@ class EntityRevisionService:
             draft.properties = properties
         if source_bindings is not None:
             draft.source_bindings = source_bindings
+        if planned_bindings is not None:
+            draft.planned_bindings = planned_bindings
         if links is not None:
             draft.links = links
         if source_nodes is not None:
@@ -271,6 +305,7 @@ class EntityRevisionService:
         # Remove any source bindings that reference this property_key
         if removed_key:
             draft.source_bindings = [b for b in draft.source_bindings if b.property_key != removed_key]
+            draft.planned_bindings = [b for b in draft.planned_bindings if b.property_key != removed_key]
         draft.updated_at = datetime.now(UTC)
         return self._revision_repo.save(draft)
 
@@ -303,6 +338,203 @@ class EntityRevisionService:
         draft.updated_at = datetime.now(UTC)
         return self._revision_repo.save(draft)
 
+    # ── Link CRUD (within draft) ───────────────────────────────────────────
+
+    def add_link(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        link: EntityLink,
+        lock_holder_id: str | None = None,
+    ) -> EntityRevision:
+        """Add a new link to the active draft."""
+        draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
+        # Ensure link_id is set
+        if not link.link_id:
+            link.link_id = str(uuid.uuid4())
+        # Check for duplicate link_id
+        if any(lnk.link_id == link.link_id for lnk in draft.links):
+            raise ValidationError(f"Link with id '{link.link_id}' already exists.")
+        draft.links.append(link)
+        draft.updated_at = datetime.now(UTC)
+        return self._revision_repo.save(draft)
+
+    def update_link(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        link_id: str,
+        updates: dict,
+        lock_holder_id: str | None = None,
+    ) -> EntityRevision:
+        """Update a single link in the active draft."""
+        draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
+        for i, lnk in enumerate(draft.links):
+            if isinstance(lnk, dict):
+                lnk = EntityLink.from_dict(lnk)
+            if lnk.link_id == link_id:
+                updated = EntityLink(
+                    link_id=lnk.link_id,
+                    display_name=updates.get("display_name", lnk.display_name),
+                    source_property_key=updates.get("source_property_key", lnk.source_property_key),
+                    target_entity_id=updates.get("target_entity_id", lnk.target_entity_id),
+                    target_property_key=updates.get("target_property_key", lnk.target_property_key),
+                    cardinality=updates.get("cardinality", lnk.cardinality),
+                    is_optional=updates.get("is_optional", lnk.is_optional),
+                    is_active=updates.get("is_active", lnk.is_active),
+                )
+                draft.links[i] = updated
+                draft.updated_at = datetime.now(UTC)
+                return self._revision_repo.save(draft)
+        raise NotFoundError(f"Link '{link_id}' not found in draft links")
+
+    def remove_link(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        link_id: str,
+        lock_holder_id: str | None = None,
+    ) -> EntityRevision:
+        """Remove a link from the active draft."""
+        draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
+        found = False
+        for i, lnk in enumerate(draft.links):
+            if isinstance(lnk, dict):
+                lnk = EntityLink.from_dict(lnk)
+            if lnk.link_id == link_id:
+                draft.links.pop(i)
+                found = True
+                break
+        if not found:
+            raise NotFoundError(f"Link '{link_id}' not found in draft links")
+        draft.updated_at = datetime.now(UTC)
+        return self._revision_repo.save(draft)
+
+    def list_links(self, entity_id: str, tenant_id: str) -> list[EntityLink]:
+        """Return links from the active draft or published revision."""
+        obj = self._object_type_repo.get(entity_id, tenant_id=tenant_id)
+        if obj is None:
+            raise NotFoundError("Entity not found")
+        draft = self._revision_repo.get_draft(entity_id)
+        if draft is not None:
+            return [lnk if isinstance(lnk, EntityLink) else EntityLink.from_dict(lnk) for lnk in draft.links]
+        published = self._revision_repo.get_published(entity_id)
+        if published is not None:
+            return [lnk if isinstance(lnk, EntityLink) else EntityLink.from_dict(lnk) for lnk in published.links]
+        return []
+
+    # ── Computed Property CRUD (within draft) ──────────────────────────────
+
+    def add_computed_property(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        prop: ComputedProperty,
+        lock_holder_id: str | None = None,
+    ) -> EntityRevision:
+        """Add a computed property to the active draft."""
+        draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
+        if not prop.id:
+            prop.id = str(uuid.uuid4())
+        self._validate_computed_property(draft, prop)
+        draft.computed_properties.append(prop)
+        draft.updated_at = datetime.now(UTC)
+        return self._revision_repo.save(draft)
+
+    def update_computed_property(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        computed_property_id: str,
+        updates: dict,
+        lock_holder_id: str | None = None,
+    ) -> EntityRevision:
+        """Update a computed property in the active draft."""
+        draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
+        for i, cp in enumerate(draft.computed_properties):
+            if cp.id == computed_property_id:
+                updated = ComputedProperty(
+                    id=cp.id,
+                    property_key=updates.get("property_key", cp.property_key),
+                    display_name=updates.get("display_name", cp.display_name),
+                    formula=updates.get("formula", cp.formula),
+                    formula_type=updates.get("formula_type", cp.formula_type),
+                    inputs=updates.get("inputs", cp.inputs),
+                    output_type=updates.get("output_type", cp.output_type),
+                    sort_order=updates.get("sort_order", cp.sort_order),
+                    is_active=updates.get("is_active", cp.is_active),
+                )
+                self._validate_computed_property(draft, updated)
+                draft.computed_properties[i] = updated
+                draft.updated_at = datetime.now(UTC)
+                return self._revision_repo.save(draft)
+        raise NotFoundError(f"Computed property '{computed_property_id}' not found")
+
+    def remove_computed_property(
+        self,
+        entity_id: str,
+        tenant_id: str,
+        computed_property_id: str,
+        lock_holder_id: str | None = None,
+    ) -> EntityRevision:
+        """Remove a computed property from the active draft."""
+        draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
+        found = False
+        for i, cp in enumerate(draft.computed_properties):
+            if cp.id == computed_property_id:
+                draft.computed_properties.pop(i)
+                found = True
+                break
+        if not found:
+            raise NotFoundError(f"Computed property '{computed_property_id}' not found")
+        draft.updated_at = datetime.now(UTC)
+        return self._revision_repo.save(draft)
+
+    def list_computed_properties(self, entity_id: str, tenant_id: str) -> list[ComputedProperty]:
+        """Return computed properties from the active draft or published revision."""
+        obj = self._object_type_repo.get(entity_id, tenant_id=tenant_id)
+        if obj is None:
+            raise NotFoundError("Entity not found")
+        draft = self._revision_repo.get_draft(entity_id)
+        if draft is not None:
+            return draft.computed_properties
+        published = self._revision_repo.get_published(entity_id)
+        if published is not None:
+            return published.computed_properties
+        return []
+
+    def _validate_computed_property(self, draft: EntityRevision, prop: ComputedProperty) -> None:
+        """Ensure computed property references only valid property keys and has valid syntax."""
+        property_keys = {p.property_key for p in draft.properties}
+        # Validate formula syntax first (catches unknown functions, unbalanced parens, cross-entity refs)
+        self._validate_computed_property_syntax(prop.formula)
+        # Validate inputs exist in properties
+        for inp in prop.inputs or []:
+            if inp not in property_keys:
+                raise ValidationError(f"Computed property '{prop.property_key}' references unknown property '{inp}'.")
+        # Validate formula references only existing properties and inputs
+        try:
+            refs = FormulaEngine().extract_property_references(prop.formula)
+        except ValidationError as e:
+            raise ValidationError(f"Computed property '{prop.property_key}' formula syntax error: {e}")
+        for ref in refs:
+            if ref not in property_keys:
+                raise ValidationError(f"Computed property '{prop.property_key}' references unknown property '{ref}'.")
+            if ref not in (prop.inputs or []):
+                raise ValidationError(
+                    f"Computed property '{prop.property_key}' formula references "
+                    f"property '{ref}' which is not listed in inputs."
+                )
+
+    def _validate_computed_property_syntax(self, formula: str) -> None:
+        """Basic syntax validation: reject empty formulas and parse with engine."""
+        if not formula or not formula.strip():
+            raise ValidationError("Computed property formula cannot be empty.")
+        try:
+            FormulaEngine().evaluate(formula, inputs=[], row_data={})
+        except ValidationError as e:
+            raise ValidationError(f"Computed property formula syntax error: {e}")
+
     def _get_editable_draft(
         self,
         entity_id: str,
@@ -316,6 +548,11 @@ class EntityRevisionService:
         draft = self._revision_repo.get_draft(entity_id)
         if draft is None:
             raise NotFoundError("No active draft found for this entity")
+
+        # Immutability guard: only drafts can be edited
+        if draft.status != RevisionStatus.DRAFT.value:
+            raise ValidationError(f"Cannot edit a {draft.status} revision. Only draft revisions are editable.")
+
         if draft.lock_holder_id and lock_holder_id:
             if draft.lock_holder_id != lock_holder_id:
                 raise ValidationError(
@@ -380,6 +617,83 @@ class EntityRevisionService:
                     f"Bind it to a source field before publishing."
                 )
 
+        # Rule 3: Link cardinality and target validation
+        for raw_link in draft.links or []:
+            try:
+                link = raw_link if isinstance(raw_link, EntityLink) else EntityLink.from_dict(raw_link)
+            except ValueError as ve:
+                errors.append(str(ve))
+                continue
+            if link.cardinality not in {LinkCardinality.ONE_TO_ONE.value, LinkCardinality.ONE_TO_MANY.value}:
+                errors.append(
+                    f"Link '{link.link_id}' has invalid cardinality '{link.cardinality}'. "
+                    f"Only '{LinkCardinality.ONE_TO_ONE.value}' and '{LinkCardinality.ONE_TO_MANY.value}' are allowed."
+                )
+                continue
+            target_published = self._revision_repo.get_published(link.target_entity_id)
+            if target_published is None:
+                if not link.is_optional:
+                    errors.append(
+                        f"Link '{link.link_id}' references target entity "
+                        f"'{link.target_entity_id}' which is not published."
+                    )
+                continue
+            source_keys = {p.property_key for p in draft.properties}
+            if link.source_property_key not in source_keys:
+                errors.append(
+                    f"Link '{link.link_id}' source_property_key "
+                    f"'{link.source_property_key}' does not exist in entity properties."
+                )
+            if target_published is not None:
+                target_keys = {p.property_key for p in target_published.properties}
+                if link.target_property_key not in target_keys:
+                    errors.append(
+                        f"Link '{link.link_id}' target_property_key "
+                        f"'{link.target_property_key}' does not exist in target entity properties."
+                    )
+
+        # Rule 4: Planned bindings must reference published entities
+        for pb in draft.planned_bindings or []:
+            target_published = self._revision_repo.get_published(pb.source_node_id)
+            if target_published is None:
+                errors.append(
+                    f"Planned binding for property '{pb.property_key}' references "
+                    f"an unpublished entity ({pb.source_node_id}). "
+                    f"The target entity must be published before this entity can be published."
+                )
+
+        # Rule 5: Computed property semantic validation
+        property_keys = {p.property_key for p in draft.properties}
+        computed_keys = {cp.property_key for cp in draft.computed_properties if cp.is_active}
+        for cp in draft.computed_properties or []:
+            if not cp.is_active:
+                continue
+            # Check all inputs exist in base properties
+            for inp in cp.inputs or []:
+                if inp not in property_keys:
+                    errors.append(
+                        f"Computed property '{cp.property_key}' references removed or renamed property '{inp}'."
+                    )
+            # Check formula references only base properties (no circular deps)
+            try:
+                refs = FormulaEngine().extract_property_references(cp.formula)
+            except ValidationError as e:
+                errors.append(f"Computed property '{cp.property_key}' formula syntax error: {e}")
+                continue
+            for ref in refs:
+                if ref in computed_keys:
+                    errors.append(
+                        f"Computed property '{cp.property_key}' references another computed property '{ref}'. "
+                        f"Circular dependencies are not allowed."
+                    )
+            # Check output type mismatch (best-effort inference)
+            inferred = FormulaEngine().infer_output_type(cp.formula)
+            if inferred and inferred != cp.output_type:
+                errors.append(
+                    f"Computed property '{cp.property_key}' output type mismatch: "
+                    f"formula produces {inferred} but declared output_type is {cp.output_type}."
+                )
+
         if errors:
             raise ValidationError(f"Publish validation failed: {'; '.join(errors)}")
 
@@ -424,6 +738,38 @@ class EntityRevisionService:
             self._revision_repo.save_dependencies(published.id, deps)
 
         return published
+
+    # ── Computed property warnings (draft state) ─────────────────────────
+
+    def get_computed_property_warnings(self, entity_id: str) -> list[str]:
+        """Return warnings for computed properties in the active draft.
+
+        Warns if a computed property references a property that has been removed
+        or whose property_key has changed.
+        """
+        draft = self._revision_repo.get_draft(entity_id)
+        if draft is None:
+            return []
+        return self._check_computed_property_dependencies(draft)
+
+    def _check_computed_property_dependencies(self, draft: EntityRevision) -> list[str]:
+        """Return warnings for computed properties that reference missing or renamed properties."""
+        property_keys = {p.property_key for p in draft.properties}
+        warnings: list[str] = []
+        for cp in draft.computed_properties or []:
+            if not cp.is_active:
+                continue
+            try:
+                refs = FormulaEngine().extract_property_references(cp.formula)
+            except ValidationError:
+                continue
+            for ref in refs:
+                if ref not in property_keys:
+                    warnings.append(
+                        f"Computed property '{cp.property_key}' references "
+                        f"property '{ref}' which is missing or renamed."
+                    )
+        return warnings
 
     # ── Revert to a prior revision ───────────────────────────────────────
 
@@ -494,12 +840,35 @@ class EntityRevisionService:
                     property_key=b.property_key,
                     source_node_id=b.source_node_id,
                     source_field_name=b.source_field_name,
+                    is_active=b.is_active,
                 )
                 for b in target.source_bindings
             ],
+            planned_bindings=[
+                SourceBinding(
+                    property_key=b.property_key,
+                    source_node_id=b.source_node_id,
+                    source_field_name=b.source_field_name,
+                    is_active=b.is_active,
+                )
+                for b in target.planned_bindings
+            ],
             links=target.links,
             source_nodes=target.source_nodes,
-            computed_properties=target.computed_properties,
+            computed_properties=[
+                ComputedProperty(
+                    id=cp.id,
+                    property_key=cp.property_key,
+                    display_name=cp.display_name,
+                    formula=cp.formula,
+                    formula_type=cp.formula_type,
+                    inputs=cp.inputs,
+                    output_type=cp.output_type,
+                    sort_order=cp.sort_order,
+                    is_active=cp.is_active,
+                )
+                for cp in target.computed_properties
+            ],
             layout_state=target.layout_state,
             lock_holder_id=lock_holder_id,
             locked_at=now,
@@ -543,9 +912,10 @@ class EntityRevisionService:
         tenant_id: str,
         properties: list[EntityProperty] | None = None,
         source_bindings: list[SourceBinding] | None = None,
+        planned_bindings: list[SourceBinding] | None = None,
         links: list[dict] | None = None,
         source_nodes: list[dict] | None = None,
-        computed_properties: list[dict] | None = None,
+        computed_properties: list[ComputedProperty] | None = None,
         layout_state: dict | None = None,
         lock_holder_id: str | None = None,
         publish: bool = False,
@@ -573,6 +943,7 @@ class EntityRevisionService:
             status=RevisionStatus.PUBLISHED.value if publish else RevisionStatus.DRAFT.value,
             properties=properties or [],
             source_bindings=source_bindings or [],
+            planned_bindings=planned_bindings or [],
             links=links or [],
             source_nodes=source_nodes or [],
             computed_properties=computed_properties or [],
@@ -607,6 +978,41 @@ class EntityRevisionService:
             self._revision_repo.save_dependencies(saved.id, deps)
 
         return saved
+
+    # ── Runtime reader (version pinning) ──────────────────────────────────
+
+    def get_latest_published_entity(self, entity_id: str, tenant_id: str) -> EntityRevision:
+        """Return the current active published EntityRevision for runtime consumption.
+
+        Raises NotFoundError if the entity or its published revision does not exist.
+        """
+        obj = self._object_type_repo.get(entity_id, tenant_id=tenant_id)
+        if obj is None:
+            raise NotFoundError("Entity not found")
+
+        published = self._revision_repo.get_published(entity_id)
+        if published is None:
+            raise NotFoundError("No published revision found for this entity")
+        return published
+
+    def get_entity_at_version(self, entity_id: str, revision_number: int, tenant_id: str) -> EntityRevision:
+        """Return a specific published or archived revision by revision_number.
+
+        Only published and archived revisions are exposed for runtime pinning.
+        Drafts are not pinnable. Raises NotFoundError if not found or is a draft.
+        """
+        obj = self._object_type_repo.get(entity_id, tenant_id=tenant_id)
+        if obj is None:
+            raise NotFoundError("Entity not found")
+
+        revisions = self._revision_repo.list_by_entity(entity_id)
+        for rev in revisions:
+            if rev.revision_number == revision_number:
+                if rev.status == RevisionStatus.DRAFT.value:
+                    raise NotFoundError("Draft revisions cannot be pinned")
+                return rev
+
+        raise NotFoundError(f"Revision number {revision_number} not found for this entity")
 
     # ── Get entity status summary ─────────────────────────────────────────
 

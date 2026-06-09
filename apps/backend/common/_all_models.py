@@ -10,6 +10,7 @@ import control_plane.schemas.jobs  # noqa: F401
 import control_plane.schemas.memberships  # noqa: F401
 import control_plane.schemas.tenants  # noqa: F401
 import dataset.schema  # noqa: F401
+import entity_materialization.schema  # noqa: F401
 import entity_revision.schema  # noqa: F401
 import exports.schema  # noqa: F401
 import feature_flags.schema  # noqa: F401

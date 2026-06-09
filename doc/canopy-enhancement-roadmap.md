@@ -109,9 +109,9 @@ Recommended order:
 
 ## Phase 8: Dynamic Ontology Builder
 
-**Goal:** Replace the 6 hardcoded domain types with a user-definable ontology system.
+**Goal:** Replace the 6 hardcoded domain types with a user-definable Entity system that materializes runtime Entities and supports same-Entity computed properties.
 
-**Why now:** Once data can come from any source (Phase 7), users need a way to define what business objects exist in that data. A dynamic ontology is the bridge between raw data and meaningful analytics.
+**Why now:** Once data can come from any source (Phase 7), users need a way to define what business objects exist in that data, how they materialize at runtime, and how derived business meaning is computed within the Entity itself. A dynamic Entity system is the bridge between raw data and meaningful analytics.
 
 **Deliverables:**
 
@@ -127,12 +127,90 @@ Recommended order:
 | 8.8 | **Ontology Migration from v1** | Migrate the 6 hardcoded domain types to the dynamic ontology system with zero downtime | High | 3w |
 | 8.9 | **Property Value Formatting** | Configurable display formats, conditional formatting, render hints | Low | 2w |
 | 8.10 | **Derived Properties** | Properties computed from other properties (e.g., `full_name = first_name + " " + last_name`) | Medium | 3w |
+| 8.11 | **Computed Property Formula Engine** | Expression model for deterministic formulas, validation, dependency tracking, and safe evaluation | High | 4w |
+| 8.12 | **Computed Property Dependency Engine** | Recompute and invalidation behavior when same-Entity upstream properties change | High | 4w |
+| 8.13 | **Computed Property Editor UI** | Formula builder, preview, dependency visualization, and edit flow for computed properties | High | 4w |
+| 8.14 | **Computed Property Publish Safety** | Cycle detection, versioning, rollback behavior, and publish-time validation for computed properties | High | 3w |
 
-**Resource estimate:** 3-4 engineers, 33 engineering weeks
+**Resource estimate:** 3-4 engineers, 48 engineering weeks
 
-**Verification:** A user can create a new object type "Vendor" from a PostgreSQL table, define properties, set the primary key, and see the objects indexed automatically after the next sync. The user can also create a link type "Vendor→PurchaseOrder" and query linked objects.
+**Verification:** A user can create a new Entity "Vendor" from a PostgreSQL table, define properties, set the primary key, add a simple same-Entity computed property, and see the runtime objects indexed automatically after the next sync. The user can also create a link type "Vendor→PurchaseOrder" and query linked objects.
 
 **Dependencies:** Phase 7 (Universal Connector Framework) — must have source data to index.
+
+**Excludes:** computed properties that traverse into linked Entities or perform aggregations across related Entities. Those are deferred to later phases.
+
+---
+
+## Phase 8.5: Linked-Entity Formula Engine
+
+**Goal:** Extend the Entity runtime so computed properties can reference directly linked Entities with safe dependency tracking and publish-time validation.
+
+**Why now:** Once Phase 8 establishes runtime Entities and same-Entity computed properties, the next ontology step is to allow formulas that follow explicit links to other Entities. That requires a separate dependency and recompute model, so it should not be collapsed into the Phase 8 same-Entity release.
+
+**Deliverables:**
+
+| # | Deliverable | Description | Risk | Effort |
+|---|---|---|---|---|
+| 8.15 | **Linked-Entity Formula Syntax** | Expression support for formulas that can traverse explicit Entity links | High | 3w |
+| 8.16 | **Cross-Entity Dependency Graph** | Track dependencies across linked Entities for safe recompute ordering | High | 4w |
+| 8.17 | **Linked-Entity Recompute Orchestration** | Recompute invalidated formulas when linked upstream Entities change | High | 4w |
+| 8.18 | **Linked-Entity Formula UI** | Editor, preview, and validation flow for cross-Entity formulas | High | 3w |
+| 8.19 | **Linked-Entity Publish Safety** | Cycle detection, rollback rules, and publish validation for cross-Entity formulas | High | 3w |
+
+**Resource estimate:** 2-3 engineers, 17 engineering weeks
+
+**Verification:** A user can define a formula on one Entity that reads a property from a directly linked Entity, publish it safely, and see it recompute when the linked Entity changes.
+
+**Dependencies:** Phase 8 (Dynamic Ontology Builder) and Phase 7 (Universal Connector Framework).
+
+---
+
+## Phase 8.6: Incremental Materialization Engine
+
+**Goal:** Add incremental upsert materialization after the initial full snapshot replace path is stable.
+
+**Why later:** Phase 8 should prove the runtime Entity model with full snapshot replace first. Once that is stable, the platform can add incremental materialization, tombstone handling, and merge semantics as an optimization and scale step.
+
+**Deliverables:**
+
+| # | Deliverable | Description | Risk | Effort |
+|---|---|---|---|---|
+| 8.20 | **Incremental Upsert Engine** | Merge incoming source changes into runtime Entities using stable identity keys | High | 5w |
+| 8.21 | **Watermark Tracking** | Persist cursor/watermark state per Entity materialization stream | High | 3w |
+| 8.22 | **Tombstone Handling** | Represent deleted or missing source rows as explicit tombstone events | High | 3w |
+| 8.23 | **Merge Conflict Resolution** | Define deterministic behavior when incremental updates collide or arrive out of order | High | 3w |
+| 8.24 | **Incremental Recovery Flow** | Recover from partial failures without requiring a full republish every time | High | 3w |
+
+**Resource estimate:** 2-3 engineers, 17 engineering weeks
+
+**Verification:** A user can refresh a published Entity incrementally, see updated rows merge in without a full replace, and observe deletes through tombstone handling.
+
+**Dependencies:** Phase 8 (Dynamic Ontology Builder).
+
+---
+
+## Phase 9.5: Aggregate Formula Engine
+
+**Goal:** Allow Entities to define computed values that aggregate across related runtime Entities in a controlled and deterministic way.
+
+**Why now:** Linked-Entity formulas and same-Entity formulas are not enough for all business meaning. Some values are counts, sums, averages, and existence checks across related Entities. That logic belongs after the base Entity and linked-Entity formula model exists.
+
+**Deliverables:**
+
+| # | Deliverable | Description | Risk | Effort |
+|---|---|---|---|---|
+| 9.15 | **Aggregate Formula Syntax** | Expression support for count, sum, average, min, max, and existence checks across related Entities | High | 3w |
+| 9.16 | **Aggregate Dependency Graph** | Track aggregate dependencies across linked Entity collections | High | 4w |
+| 9.17 | **Aggregate Recompute Orchestration** | Recompute aggregate formulas when related runtime Entities change | High | 4w |
+| 9.18 | **Aggregate Formula UI** | Editor, preview, and validation flow for aggregate formulas | High | 3w |
+| 9.19 | **Aggregate Publish Safety** | Cycle detection, versioning, rollback behavior, and publish validation for aggregates | High | 3w |
+
+**Resource estimate:** 2-3 engineers, 17 engineering weeks
+
+**Verification:** A user can define a count or sum across related Entities, publish it safely, and see it recompute when the related data changes.
+
+**Dependencies:** Phase 8.5 (Linked-Entity Formula Engine), Phase 8 (Dynamic Ontology Builder), and Phase 7 (Universal Connector Framework).
 
 ---
 
@@ -294,8 +372,8 @@ Phase 13                                                                        
 | **Q1 2027** | Phase 7 complete, Phase 8 start | Connector wizard UI, sync policies, health monitoring; ontology schema |
 | **Q2 2027** | Phase 8 early | Object type editor, backing datasource binding, auto-indexing |
 | **Q3 2027** | Phase 8 mid | Link types, link resolution, materialization views |
-| **Q4 2027** | Phase 8 complete, Phase 9 start | Ontology migration, derived properties; time series framework |
-| **Q1 2028** | Phase 9 early | Object set operations, multi-dimensional aggregation, window functions |
+| **Q4 2027** | Phase 8 complete, Phase 9 start | Ontology migration, computed properties; time series framework |
+| **Q1 2028** | Phase 8.6 / Phase 9 early | Incremental materialization; object set operations, multi-dimensional aggregation, window functions |
 | **Q2 2028** | Phase 9 complete, Phase 10 start | Chart data API, dashboard builder; widget registry, core widgets |
 | **Q3 2028** | Phase 10 mid | Visualization widgets, filter widgets, widget canvas |
 | **Q4 2028** | Phase 10 complete, Phase 11 start | Variable system, page routing, templates; model catalog, context pipeline |
@@ -314,13 +392,15 @@ Phase 13                                                                        
 | Phase | Weeks | Engineers |
 |---|---|---|
 | 7. Universal Connector Framework | 22 | 2-3 |
-| 8. Dynamic Ontology Builder | 33 | 3-4 |
+| 8. Dynamic Ontology Builder | 48 | 3-4 |
+| 8.5. Linked-Entity Formula Engine | 17 | 2-3 |
+| 8.6. Incremental Materialization Engine | 17 | 2-3 |
 | 9. Multi-Modal Analytics Engine | 32 | 2-3 |
 | 10. Application Builder & Widget System | 32 | 3-4 |
 | 11. AI Platform | 32 | 2-3 + ML |
 | 12. Developer Platform & API | 21 | 2 |
 | 13. Automation & Observability | 24 | 2 |
-| **Total** | **196** | **Peak 4-5** |
+| **Total** | **245** | **Peak 4-5** |
 
 ### Team Composition
 
@@ -341,11 +421,11 @@ Existing v1-v6 features require ongoing maintenance. Budget 10-15% of capacity p
 
 | Category | Cost |
 |---|---|
-| Engineering (196 weeks × $3k/week blended rate) | ~$588k |
+| Engineering (245 weeks × $3k/week blended rate) | ~$735k |
 | Infrastructure (cloud, storage, LLM API costs) | ~$50k/year |
 | Design/UX (widget system, dashboard builder) | ~$40k |
 | Security audit (Phase 13) | ~$20k |
-| **3.5-year total** | **~$698k** |
+| **3.5-year total** | **~$845k** |
 
 ---
 
@@ -429,6 +509,8 @@ Before committing to this roadmap, the following decisions must be made:
 | Ontology creation time | < 10 minutes | Time from selecting a source table to indexed objects |
 | Link type coverage | ≥ 50% | Percentage of object types with at least one link |
 | Migration downtime | 0 minutes | Zero downtime during v1→v8 ontology migration |
+| Computed properties created | ≥ 20 | Count of user-created computed properties |
+| Computed property recompute latency | < 60 seconds | Time from upstream change to recomputed value visible |
 
 ### Phase 9: Multi-Modal Analytics Engine
 

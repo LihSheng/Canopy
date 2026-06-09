@@ -6,6 +6,8 @@ Models the lifecycle of an Entity through revisions:
 - Publishing validates all required properties and pins source dependencies.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -15,6 +17,67 @@ class RevisionStatus(StrEnum):
     DRAFT = "draft"
     PUBLISHED = "published"
     ARCHIVED = "archived"
+
+
+class LinkCardinality(StrEnum):
+    ONE_TO_ONE = "1:1"
+    ONE_TO_MANY = "1:M"
+
+
+@dataclass
+class EntityLink:
+    """A direct link from one entity to another, with cardinality and optionality.
+
+    link_id: Immutable UUID for the link.
+    display_name: User-visible label.
+    source_property_key: Property key on the source entity that holds the link value.
+    target_entity_id: UUID of the target entity.
+    target_property_key: Property key on the target entity to match against.
+    cardinality: "1:1" or "1:M" (Phase 8 only).
+    is_optional: If True, the link may resolve to None; if False, the target must exist.
+    is_active: Soft-delete flag.
+    """
+
+    link_id: str
+    display_name: str
+    source_property_key: str
+    target_entity_id: str
+    target_property_key: str
+    cardinality: str
+    is_optional: bool = False
+    is_active: bool = True
+
+    def __post_init__(self):
+        if self.cardinality not in {LinkCardinality.ONE_TO_ONE.value, LinkCardinality.ONE_TO_MANY.value}:
+            raise ValueError(
+                f"Invalid cardinality '{self.cardinality}'. "
+                f"Only '{LinkCardinality.ONE_TO_ONE.value}' and '{LinkCardinality.ONE_TO_MANY.value}' are allowed."
+            )
+
+    def to_dict(self) -> dict:
+        return {
+            "link_id": self.link_id,
+            "display_name": self.display_name,
+            "source_property_key": self.source_property_key,
+            "target_entity_id": self.target_entity_id,
+            "target_property_key": self.target_property_key,
+            "cardinality": self.cardinality,
+            "is_optional": self.is_optional,
+            "is_active": self.is_active,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> EntityLink:
+        return cls(
+            link_id=d.get("link_id", ""),
+            display_name=d.get("display_name", ""),
+            source_property_key=d.get("source_property_key", ""),
+            target_entity_id=d.get("target_entity_id", ""),
+            target_property_key=d.get("target_property_key", ""),
+            cardinality=d.get("cardinality", ""),
+            is_optional=d.get("is_optional", False),
+            is_active=d.get("is_active", True),
+        )
 
 
 @dataclass
@@ -46,6 +109,7 @@ class SourceBinding:
     source_node_id: str
     source_field_name: str
     source_column: str = ""  # Deprecated alias; retained for backward compat
+    is_active: bool = True  # False = planned binding (not yet active)
 
 
 @dataclass
@@ -64,15 +128,40 @@ class EntityRevision:
     forked_from_revision_id: str | None = None
     properties: list[EntityProperty] = field(default_factory=list)
     source_bindings: list[SourceBinding] = field(default_factory=list)
+    planned_bindings: list[SourceBinding] = field(default_factory=list)
     links: list[dict] = field(default_factory=list)
     source_nodes: list[dict] = field(default_factory=list)
-    computed_properties: list[dict] = field(default_factory=list)
+    computed_properties: list[ComputedProperty] = field(default_factory=list)
     layout_state: dict = field(default_factory=dict)
     lock_holder_id: str | None = None
     locked_at: datetime | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     published_at: datetime | None = None
+
+
+@dataclass
+class ComputedProperty:
+    """A derived Entity property composed from a formula.
+
+    id is a stable UUID.
+    property_key is the stable semantic key (e.g., 'total_comp').
+    display_name is the user-visible label.
+    formula is the expression string (e.g., 'salary * 1.1').
+    formula_type is the category (e.g., 'arithmetic', 'concat', 'lookup').
+    inputs is a list of property_key strings referenced by the formula.
+    output_type is the semantic type of the result.
+    """
+
+    id: str
+    property_key: str
+    display_name: str
+    formula: str = ""
+    formula_type: str = "arithmetic"
+    inputs: list[str] = field(default_factory=list)
+    output_type: str = "string"
+    sort_order: int = 0
+    is_active: bool = True
 
 
 @dataclass

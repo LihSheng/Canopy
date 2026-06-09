@@ -42,7 +42,7 @@
   "agent": {
     "build": {
       "description": "Primary coding agent for Canopy Intelligence",
-      "model": "opencode-go/kimi-k2.6",
+      "model": "opencode-go/deepseek-v4-pro",
       "permission": {
         "bash": "deny"
       },

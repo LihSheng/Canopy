@@ -11,7 +11,10 @@ from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError, ValidationError
 from context.tenant_context import TenantContext
-from entity_revision.domain import EntityProperty, SourceBinding
+from entity_formula_engine.engine import FormulaEngine
+from entity_revision.deprecation_service import EntityDeprecationService
+from entity_revision.domain import ComputedProperty, EntityLink, EntityProperty, SourceBinding
+from entity_revision.recovery_service import BindingRecoveryService
 from entity_revision.repository import EntityRevisionRepository
 from entity_revision.service import EntityRevisionService
 from semantic.repository import ObjectTypeRepository
@@ -52,6 +55,7 @@ class SourceBindingRequest(BaseModel):
     property_key: str = Field(..., min_length=1, description="Entity property key")
     source_node_id: str = Field(..., min_length=1, description="Source node ID")
     source_field_name: str = Field(..., min_length=1, description="Source field name")
+    is_active: bool = True
 
 
 class SourceBindingResponse(BaseModel):
@@ -60,6 +64,21 @@ class SourceBindingResponse(BaseModel):
     property_key: str
     source_node_id: str
     source_field_name: str
+    is_active: bool = True
+
+
+class ComputedPropertyResponse(BaseModel):
+    """Response shape for a computed property."""
+
+    id: str
+    property_key: str
+    display_name: str
+    formula: str
+    formula_type: str = "arithmetic"
+    inputs: list[str] = []
+    output_type: str = "string"
+    sort_order: int = 0
+    is_active: bool = True
 
 
 class SourceDependencyRequest(BaseModel):
@@ -79,9 +98,10 @@ class EntityRevisionResponse(BaseModel):
     forked_from_revision_id: str | None = None
     properties: list[EntityPropertyResponse] = []
     source_bindings: list[SourceBindingResponse] = []
+    planned_bindings: list[SourceBindingResponse] = []
     links: list[dict] = []
     source_nodes: list[dict] = []
-    computed_properties: list[dict] = []
+    computed_properties: list[ComputedPropertyResponse] = []
     layout_state: dict = {}
     lock_holder_id: str | None = None
     locked_at: str | None = None
@@ -112,6 +132,7 @@ class UpdateDraftRequest(BaseModel):
 
     properties: list[EntityPropertyRequest] | None = None
     source_bindings: list[SourceBindingRequest] | None = None
+    planned_bindings: list[SourceBindingRequest] | None = None
     links: list[dict] | None = None
     source_nodes: list[dict] | None = None
     computed_properties: list[dict] | None = None
@@ -129,6 +150,7 @@ class CreateInitialRevisionRequest(BaseModel):
 
     properties: list[EntityPropertyRequest] | None = None
     source_bindings: list[SourceBindingRequest] | None = None
+    planned_bindings: list[SourceBindingRequest] | None = None
     links: list[dict] | None = None
     source_nodes: list[dict] | None = None
     computed_properties: list[dict] | None = None
@@ -171,6 +193,32 @@ class SetBindingsRequest(BaseModel):
     bindings: list[SourceBindingRequest] = []
 
 
+class AddComputedPropertyRequest(BaseModel):
+    """Request to add a computed property to a draft."""
+
+    property_key: str = Field(..., min_length=1, max_length=255, pattern=r"^[a-z][a-z0-9_]*$")
+    display_name: str = Field(..., min_length=1, max_length=255)
+    formula: str = Field(..., min_length=1)
+    formula_type: str = "arithmetic"
+    inputs: list[str] = []
+    output_type: str = "string"
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class UpdateComputedPropertyRequest(BaseModel):
+    """Request to update a computed property in a draft."""
+
+    property_key: str | None = None
+    display_name: str | None = None
+    formula: str | None = None
+    formula_type: str | None = None
+    inputs: list[str] | None = None
+    output_type: str | None = None
+    sort_order: int | None = None
+    is_active: bool | None = None
+
+
 # ─── Helpers ──────────────────────────────────────────────────────────────
 
 
@@ -198,12 +246,35 @@ def _revision_to_response(rev) -> EntityRevisionResponse:
                 property_key=b.property_key,
                 source_node_id=b.source_node_id,
                 source_field_name=b.source_field_name,
+                is_active=b.is_active,
             )
             for b in (rev.source_bindings or [])
         ],
-        links=rev.links or [],
+        planned_bindings=[
+            SourceBindingResponse(
+                property_key=b.property_key,
+                source_node_id=b.source_node_id,
+                source_field_name=b.source_field_name,
+                is_active=b.is_active,
+            )
+            for b in (rev.planned_bindings or [])
+        ],
+        links=[lnk.to_dict() if hasattr(lnk, "to_dict") else lnk for lnk in (rev.links or [])],
         source_nodes=rev.source_nodes or [],
-        computed_properties=rev.computed_properties or [],
+        computed_properties=[
+            ComputedPropertyResponse(
+                id=cp.id,
+                property_key=cp.property_key,
+                display_name=cp.display_name,
+                formula=cp.formula,
+                formula_type=cp.formula_type,
+                inputs=cp.inputs,
+                output_type=cp.output_type,
+                sort_order=cp.sort_order,
+                is_active=cp.is_active,
+            )
+            for cp in (rev.computed_properties or [])
+        ],
         layout_state=rev.layout_state or {},
         lock_holder_id=rev.lock_holder_id,
         locked_at=rev.locked_at.isoformat() if rev.locked_at else None,
@@ -334,8 +405,38 @@ def update_draft(
                 property_key=b.property_key,
                 source_node_id=b.source_node_id,
                 source_field_name=b.source_field_name,
+                is_active=b.is_active,
             )
             for b in body.source_bindings
+        ]
+
+    planned_bindings_domain = None
+    if body.planned_bindings is not None:
+        planned_bindings_domain = [
+            SourceBinding(
+                property_key=b.property_key,
+                source_node_id=b.source_node_id,
+                source_field_name=b.source_field_name,
+                is_active=b.is_active,
+            )
+            for b in body.planned_bindings
+        ]
+
+    computed_properties_domain = None
+    if body.computed_properties is not None:
+        computed_properties_domain = [
+            ComputedProperty(
+                id=p.get("id", str(uuid.uuid4())),
+                property_key=p.get("property_key", ""),
+                display_name=p.get("display_name", ""),
+                formula=p.get("formula", ""),
+                formula_type=p.get("formula_type", "arithmetic"),
+                inputs=p.get("inputs", []),
+                output_type=p.get("output_type", "string"),
+                sort_order=p.get("sort_order", 0),
+                is_active=p.get("is_active", True),
+            )
+            for p in body.computed_properties
         ]
 
     try:
@@ -344,9 +445,10 @@ def update_draft(
             tenant_id=ctx.tenant_id,
             properties=properties_domain,
             source_bindings=bindings_domain,
+            planned_bindings=planned_bindings_domain,
             links=body.links,
             source_nodes=body.source_nodes,
-            computed_properties=body.computed_properties,
+            computed_properties=computed_properties_domain,
             layout_state=body.layout_state,
             lock_holder_id=user.id,
         )
@@ -672,8 +774,38 @@ def create_initial_revision(
                 property_key=b.property_key,
                 source_node_id=b.source_node_id,
                 source_field_name=b.source_field_name,
+                is_active=b.is_active,
             )
             for b in body.source_bindings
+        ]
+
+    planned_bindings_domain = None
+    if body.planned_bindings is not None:
+        planned_bindings_domain = [
+            SourceBinding(
+                property_key=b.property_key,
+                source_node_id=b.source_node_id,
+                source_field_name=b.source_field_name,
+                is_active=b.is_active,
+            )
+            for b in body.planned_bindings
+        ]
+
+    computed_properties_domain = None
+    if body.computed_properties is not None:
+        computed_properties_domain = [
+            ComputedProperty(
+                id=p.get("id", str(uuid.uuid4())),
+                property_key=p.get("property_key", ""),
+                display_name=p.get("display_name", ""),
+                formula=p.get("formula", ""),
+                formula_type=p.get("formula_type", "arithmetic"),
+                inputs=p.get("inputs", []),
+                output_type=p.get("output_type", "string"),
+                sort_order=p.get("sort_order", 0),
+                is_active=p.get("is_active", True),
+            )
+            for p in body.computed_properties
         ]
 
     source_deps = None
@@ -686,9 +818,10 @@ def create_initial_revision(
             tenant_id=ctx.tenant_id,
             properties=properties_domain,
             source_bindings=bindings_domain,
+            planned_bindings=planned_bindings_domain,
             links=body.links,
             source_nodes=body.source_nodes,
-            computed_properties=body.computed_properties,
+            computed_properties=computed_properties_domain,
             layout_state=body.layout_state,
             lock_holder_id=user.id,
             publish=body.publish,
@@ -699,3 +832,364 @@ def create_initial_revision(
     except NotFoundError:
         raise
     return _revision_to_response(revision)
+
+
+# ─── Link CRUD Routes ────────────────────────────────────────────────────
+
+
+class EntityLinkRequest(BaseModel):
+    link_id: str = Field(..., min_length=1)
+    display_name: str = Field(..., min_length=1)
+    source_property_key: str = Field(..., min_length=1)
+    target_entity_id: str = Field(..., min_length=1)
+    target_property_key: str = Field(..., min_length=1)
+    cardinality: str = Field(..., pattern=r"^(1:1|1:M)$")
+    is_optional: bool = False
+    is_active: bool = True
+
+
+class EntityLinkResponse(BaseModel):
+    link_id: str
+    display_name: str
+    source_property_key: str
+    target_entity_id: str
+    target_property_key: str
+    cardinality: str
+    is_optional: bool
+    is_active: bool
+
+
+@router.post("/{entity_id}/draft/links", status_code=201, response_model=EntityRevisionResponse)
+def add_link(
+    entity_id: str,
+    body: EntityLinkRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Add a new link to the active draft."""
+    service = _build_service(db)
+    link = EntityLink(
+        link_id=body.link_id,
+        display_name=body.display_name,
+        source_property_key=body.source_property_key,
+        target_entity_id=body.target_entity_id,
+        target_property_key=body.target_property_key,
+        cardinality=body.cardinality,
+        is_optional=body.is_optional,
+        is_active=body.is_active,
+    )
+    try:
+        draft = service.add_link(entity_id, ctx.tenant_id, link, lock_holder_id=user.id)
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+@router.put("/{entity_id}/draft/links/{link_id}", response_model=EntityRevisionResponse)
+def update_link(
+    entity_id: str,
+    link_id: str,
+    body: EntityLinkRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Update a link in the active draft."""
+    service = _build_service(db)
+    updates = body.model_dump(exclude={"link_id"})
+    try:
+        draft = service.update_link(entity_id, ctx.tenant_id, link_id, updates, lock_holder_id=user.id)
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+@router.delete("/{entity_id}/draft/links/{link_id}", response_model=EntityRevisionResponse)
+def remove_link(
+    entity_id: str,
+    link_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Remove a link from the active draft."""
+    service = _build_service(db)
+    try:
+        draft = service.remove_link(entity_id, ctx.tenant_id, link_id, lock_holder_id=user.id)
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+@router.get("/{entity_id}/draft/links", response_model=list[EntityLinkResponse])
+def list_links(
+    entity_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """List all links from the active draft or published revision."""
+    service = _build_service(db)
+    try:
+        links = service.list_links(entity_id, ctx.tenant_id)
+    except NotFoundError:
+        raise
+    return [
+        EntityLinkResponse(
+            link_id=lnk.link_id,
+            display_name=lnk.display_name,
+            source_property_key=lnk.source_property_key,
+            target_entity_id=lnk.target_entity_id,
+            target_property_key=lnk.target_property_key,
+            cardinality=lnk.cardinality,
+            is_optional=lnk.is_optional,
+            is_active=lnk.is_active,
+        )
+        for lnk in links
+    ]
+
+
+# ─── Computed Property CRUD Routes ────────────────────────────────────────
+
+
+@router.post("/{entity_id}/draft/computed-properties", status_code=201, response_model=EntityRevisionResponse)
+def add_computed_property(
+    entity_id: str,
+    body: AddComputedPropertyRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Add a computed property to the active draft."""
+    service = _build_service(db)
+    prop = ComputedProperty(
+        id=str(uuid.uuid4()),
+        property_key=body.property_key,
+        display_name=body.display_name,
+        formula=body.formula,
+        formula_type=body.formula_type,
+        inputs=body.inputs,
+        output_type=body.output_type,
+        sort_order=body.sort_order,
+        is_active=body.is_active,
+    )
+    try:
+        draft = service.add_computed_property(
+            entity_id=entity_id,
+            tenant_id=ctx.tenant_id,
+            prop=prop,
+            lock_holder_id=user.id,
+        )
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+@router.put("/{entity_id}/draft/computed-properties/{computed_property_id}", response_model=EntityRevisionResponse)
+def update_computed_property(
+    entity_id: str,
+    computed_property_id: str,
+    body: UpdateComputedPropertyRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Update a computed property in the active draft."""
+    service = _build_service(db)
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not updates:
+        raise ValidationError("No update fields provided")
+    try:
+        draft = service.update_computed_property(
+            entity_id=entity_id,
+            tenant_id=ctx.tenant_id,
+            computed_property_id=computed_property_id,
+            updates=updates,
+            lock_holder_id=user.id,
+        )
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+@router.delete("/{entity_id}/draft/computed-properties/{computed_property_id}", response_model=EntityRevisionResponse)
+def remove_computed_property(
+    entity_id: str,
+    computed_property_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Remove a computed property from the active draft."""
+    service = _build_service(db)
+    try:
+        draft = service.remove_computed_property(
+            entity_id=entity_id,
+            tenant_id=ctx.tenant_id,
+            computed_property_id=computed_property_id,
+            lock_holder_id=user.id,
+        )
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(draft)
+
+
+@router.get("/{entity_id}/draft/computed-properties", response_model=list[ComputedPropertyResponse])
+def list_computed_properties(
+    entity_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """List computed properties from the active draft or published revision."""
+    service = _build_service(db)
+    try:
+        props = service.list_computed_properties(entity_id, ctx.tenant_id)
+    except NotFoundError:
+        raise
+    return [
+        ComputedPropertyResponse(
+            id=p.id,
+            property_key=p.property_key,
+            display_name=p.display_name,
+            formula=p.formula,
+            formula_type=p.formula_type,
+            inputs=p.inputs,
+            output_type=p.output_type,
+            sort_order=p.sort_order,
+            is_active=p.is_active,
+        )
+        for p in props
+    ]
+
+
+class EvaluateComputedPropertyRequest(BaseModel):
+    """Request to evaluate a computed property formula against a sample row."""
+
+    formula: str
+    inputs: list[str] = []
+    sample_row: dict = {}
+
+
+class EvaluateComputedPropertyResponse(BaseModel):
+    """Response for computed property formula evaluation."""
+
+    result: object | None = None
+    errors: list[str] = []
+    warnings: list[str] = []
+
+
+@router.post("/{entity_id}/computed-properties/evaluate", response_model=EvaluateComputedPropertyResponse)
+def evaluate_computed_property(
+    entity_id: str,
+    body: EvaluateComputedPropertyRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Evaluate a computed property formula against a sample row.
+
+    This is a draft helper that allows users to test their formula before saving.
+    """
+    service = _build_service(db)
+    obj = service._object_type_repo.get(entity_id, tenant_id=ctx.tenant_id)
+    if obj is None:
+        raise NotFoundError("Entity not found")
+
+    errors: list[str] = []
+    result = None
+    try:
+        result = FormulaEngine().evaluate(body.formula, body.inputs, body.sample_row)
+    except ValidationError as e:
+        errors.append(str(e))
+
+    warnings: list[str] = []
+    return EvaluateComputedPropertyResponse(
+        result=result,
+        errors=errors,
+        warnings=warnings,
+    )
+
+
+# ─── Recovery mapping routes ──────────────────────────────────────────────
+
+
+@router.get("/{entity_id}/draft/bindings/recover", response_model=dict)
+def get_recovery_suggestions(
+    entity_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Get recovery suggestions for broken bindings in the active draft."""
+    rev_repo = EntityRevisionRepository(db)
+    draft = rev_repo.get_draft(entity_id)
+    if draft is None:
+        raise NotFoundError("No active draft found")
+    recovery = BindingRecoveryService(rev_repo)
+    return recovery.get_recovery_suggestions(entity_id, draft.id)
+
+
+@router.put("/{entity_id}/draft/bindings/recover", response_model=EntityRevisionResponse)
+def apply_recovery_mapping(
+    entity_id: str,
+    body: dict,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Apply recovery mapping to broken bindings in the active draft."""
+    rev_repo = EntityRevisionRepository(db)
+    draft = rev_repo.get_draft(entity_id)
+    if draft is None:
+        raise NotFoundError("No active draft found")
+    recovery = BindingRecoveryService(rev_repo)
+    try:
+        updated = recovery.apply_recovery(entity_id, draft.id, body)
+    except ValidationError:
+        raise
+    except NotFoundError:
+        raise
+    return _revision_to_response(updated)
+
+
+# ─── Deprecation route ──────────────────────────────────────────────────────
+
+
+class DeprecateEntityResponse(BaseModel):
+    """Response after deprecating an entity."""
+
+    entity_id: str
+    status: str
+    deprecated: bool
+
+
+@router.post("/{entity_id}/deprecate", response_model=DeprecateEntityResponse)
+def deprecate_entity(
+    entity_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Mark an entity as deprecated. Keeps published revision intact for audit."""
+    object_type_repo = ObjectTypeRepository(db)
+    service = EntityDeprecationService(object_type_repo)
+    entity = service.deprecate_entity(entity_id, ctx.tenant_id)
+    return DeprecateEntityResponse(
+        entity_id=entity.id,
+        status=entity.status,
+        deprecated=True,
+    )

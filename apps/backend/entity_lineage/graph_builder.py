@@ -163,9 +163,14 @@ def build_entity_lineage_graph(
 
     # ── Link edges (entity → linked entity) ─────────────────────────────
     for link in revision.links or []:
-        target_id = link.get("target_object_type_id", "")
+        if isinstance(link, dict):
+            target_id = link.get("target_object_type_id", "")
+            display_name = link.get("display_name", target_id)
+        else:
+            target_id = getattr(link, "target_entity_id", "")
+            display_name = getattr(link, "display_name", target_id)
+
         target_node_id = f"target-{target_id}"
-        display_name = link.get("display_name", target_id)
 
         # Target entity node
         nodes.append(

@@ -4,12 +4,21 @@ from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 from entity_revision.domain import (
+    ComputedProperty,
+    EntityLink,
     EntityProperty,
     EntityRevision,
     EntityRevisionDependency,
     SourceBinding,
 )
 from entity_revision.schema import EntityRevisionDependencyModel, EntityRevisionModel
+
+
+def _try_link_from_dict(lnk: dict) -> EntityLink | dict:
+    try:
+        return EntityLink.from_dict(lnk)
+    except ValueError:
+        return lnk
 
 
 class EntityRevisionRepository:
@@ -212,12 +221,35 @@ class EntityRevisionRepository:
                     "property_key": b.property_key,
                     "source_node_id": b.source_node_id,
                     "source_field_name": b.source_field_name,
+                    "is_active": b.is_active,
                 }
                 for b in d.source_bindings
             ],
-            links=d.links or [],
+            planned_bindings=[
+                {
+                    "property_key": b.property_key,
+                    "source_node_id": b.source_node_id,
+                    "source_field_name": b.source_field_name,
+                    "is_active": b.is_active,
+                }
+                for b in d.planned_bindings
+            ],
+            links=[lnk.to_dict() if isinstance(lnk, EntityLink) else lnk for lnk in (d.links or [])],
             source_nodes=d.source_nodes or [],
-            computed_properties=d.computed_properties or [],
+            computed_properties=[
+                {
+                    "id": cp.id,
+                    "property_key": cp.property_key,
+                    "display_name": cp.display_name,
+                    "formula": cp.formula,
+                    "formula_type": cp.formula_type,
+                    "inputs": cp.inputs,
+                    "output_type": cp.output_type,
+                    "sort_order": cp.sort_order,
+                    "is_active": cp.is_active,
+                }
+                for cp in d.computed_properties
+            ],
             layout_state=d.layout_state or {},
             lock_holder_id=d.lock_holder_id,
             locked_at=d.locked_at,
@@ -250,12 +282,35 @@ class EntityRevisionRepository:
                     property_key=b.get("property_key", ""),
                     source_node_id=b.get("source_node_id", ""),
                     source_field_name=b.get("source_field_name", ""),
+                    is_active=b.get("is_active", True),
                 )
                 for b in (m.source_bindings or [])
             ],
-            links=m.links or [],
+            planned_bindings=[
+                SourceBinding(
+                    property_key=b.get("property_key", ""),
+                    source_node_id=b.get("source_node_id", ""),
+                    source_field_name=b.get("source_field_name", ""),
+                    is_active=b.get("is_active", True),
+                )
+                for b in (m.planned_bindings or [])
+            ],
+            links=[(_try_link_from_dict(lnk) if isinstance(lnk, dict) else lnk) for lnk in (m.links or [])],
             source_nodes=m.source_nodes or [],
-            computed_properties=m.computed_properties or [],
+            computed_properties=[
+                ComputedProperty(
+                    id=cp.get("id", ""),
+                    property_key=cp.get("property_key", ""),
+                    display_name=cp.get("display_name", ""),
+                    formula=cp.get("formula", ""),
+                    formula_type=cp.get("formula_type", "arithmetic"),
+                    inputs=cp.get("inputs", []),
+                    output_type=cp.get("output_type", "string"),
+                    sort_order=cp.get("sort_order", 0),
+                    is_active=cp.get("is_active", True),
+                )
+                for cp in (m.computed_properties or [])
+            ],
             layout_state=m.layout_state or {},
             lock_holder_id=m.lock_holder_id,
             locked_at=m.locked_at,

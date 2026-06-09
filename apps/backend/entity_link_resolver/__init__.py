@@ -1,0 +1,1 @@
+"""Entity link resolver module."""

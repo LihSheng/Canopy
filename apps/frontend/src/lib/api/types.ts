@@ -523,6 +523,26 @@ export interface EntityLineageGraph {
   layout_state: Record<string, { x: number; y: number }>;
 }
 
+export interface FieldDetail {
+  field_id: string;
+  field_kind: "base" | "computed";
+  property_key: string;
+  display_name: string;
+  semantic_type: string;
+  is_required: boolean;
+  is_primary_key: boolean;
+  sort_order: number;
+  formula: string | null;
+  formula_type: string | null;
+  is_active: boolean;
+}
+
+export interface FieldGroup {
+  group_name: string;
+  field_kind: "base" | "computed";
+  fields: FieldDetail[];
+}
+
 export interface EntityDetail {
   id: string;
   object_type_key: string;
@@ -549,6 +569,10 @@ export interface EntityDetail {
   draft_revision: EntityRevisionDetail | null;
   // Entity-centered lineage graph (PRD 0021)
   lineage: EntityLineageGraph | null;
+  // Issue 6: unified field groups, preview, link status
+  field_groups: FieldGroup[];
+  materialized_preview: Record<string, unknown>[];
+  link_status: { link_id: string; display_name: string; target_entity_id: string; cardinality: string; resolvable: boolean }[];
 }
 
 export interface EntityMappingDetail {
@@ -613,6 +637,9 @@ export interface EntityRevisionDetail {
   computed_properties: ComputedProperty[];
   layout_state: Record<string, unknown>;
   published_at: string | null;
+  // Issue 6: unified field groups and computed warnings
+  field_groups: FieldGroup[];
+  computed_property_warnings: string[];
 }
 
 export interface EntityStatus {

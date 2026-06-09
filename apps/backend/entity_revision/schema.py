@@ -33,6 +33,7 @@ class EntityRevisionModel(Base):
     forked_from_revision_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     properties: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     source_bindings: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
+    planned_bindings: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     links: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     source_nodes: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     computed_properties: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)

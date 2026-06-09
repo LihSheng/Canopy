@@ -9,7 +9,12 @@ from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError
 from context.tenant_context import TenantContext
+from entity_detail.service import EntityDetailService
+from entity_formula_engine.engine import FormulaEngine
 from entity_lineage.graph_builder import build_entity_lineage_graph
+from entity_link_resolver.service import LinkResolverService
+from entity_materialization.repository import EntityMaterializationRepository
+from entity_materialization.service import EntityMaterializationService, build_source_data_reader
 from entity_revision.repository import EntityRevisionRepository
 from semantic.entity_registry import (
     get_entity_detail_read_model,
@@ -78,14 +83,28 @@ class FieldRefResponse(BaseModel):
     field_name: str
 
 
+class SourceBindingResponse(BaseModel):
+    property_key: str
+    source_node_id: str
+    source_field_name: str
+    is_active: bool = True
+
+
 class ComputedPropertyResponse(BaseModel):
     id: str
-    property_name: str
-    semantic_type: str
-    composition_kind: str
-    expression: str
-    inputs: list[FieldRefResponse] = []
-    included: bool
+    property_name: str = ""
+    property_key: str = ""
+    display_name: str = ""
+    semantic_type: str = ""
+    composition_kind: str = ""
+    formula: str = ""
+    formula_type: str = ""
+    expression: str = ""
+    inputs: list[FieldRefResponse | str] = []
+    included: bool = False
+    is_active: bool = True
+    output_type: str = ""
+    sort_order: int = 0
 
 
 class LineageNodeResponse(BaseModel):
@@ -122,6 +141,30 @@ class EntityLineageGraphResponse(BaseModel):
     layout_state: dict = {}
 
 
+class FieldDetailResponse(BaseModel):
+    """Unified field detail for base or computed property."""
+
+    field_id: str
+    field_kind: str
+    property_key: str
+    display_name: str
+    semantic_type: str
+    is_required: bool
+    is_primary_key: bool
+    sort_order: int
+    formula: str | None = None
+    formula_type: str | None = None
+    is_active: bool = True
+
+
+class FieldGroupResponse(BaseModel):
+    """A named group of fields of a single kind."""
+
+    group_name: str
+    field_kind: str
+    fields: list[FieldDetailResponse]
+
+
 class EntityDetailResponse(BaseModel):
     id: str
     object_type_key: str
@@ -146,8 +189,14 @@ class EntityDetailResponse(BaseModel):
     # Revision detail sections - preferred over mapping when available
     published_revision: "EntityRevisionDetail | None" = None
     draft_revision: "EntityRevisionDetail | None" = None
+    # Pinned version detail (for version pinning endpoint)
+    pinned_revision: "EntityRevisionDetail | None" = None
     # Entity-centered lineage graph (PRD 0021)
     lineage: EntityLineageGraphResponse | None = None
+    # Issue 6: unified field groups and computed warnings
+    field_groups: list[FieldGroupResponse] = []
+    materialized_preview: list[dict] = []
+    link_status: list[dict] = []
 
 
 class EntityRevisionPropertyDetail(BaseModel):
@@ -171,9 +220,14 @@ class EntityRevisionDetail(BaseModel):
     properties: list[EntityRevisionPropertyDetail] = []
     source_nodes: list[SourceNodeResponse] = []
     links: list[EntityLinkResponse] = []
+    source_bindings: list[SourceBindingResponse] = []
+    planned_bindings: list[SourceBindingResponse] = []
     computed_properties: list[ComputedPropertyResponse] = []
     layout_state: dict = {}
     published_at: str | None = None
+    # Issue 6: unified field groups and computed warnings
+    field_groups: list[FieldGroupResponse] = []
+    computed_property_warnings: list[str] = []
 
 
 class EntityMappingDetail(BaseModel):
@@ -207,6 +261,51 @@ def _fmt_isofmt(val: Any, default: str | None = None) -> str | None:
 
 def _build_revision_detail(rev) -> EntityRevisionDetail:
     """Build EntityRevisionDetail from an EntityRevision domain object."""
+    from entity_detail.field_model import FieldUnifier
+
+    field_groups = FieldUnifier.group_fields(rev.properties or [], rev.computed_properties or [])
+    field_group_responses = [
+        FieldGroupResponse(
+            group_name=fg.group_name,
+            field_kind=fg.field_kind,
+            fields=[
+                FieldDetailResponse(
+                    field_id=f.field_id,
+                    field_kind=f.field_kind,
+                    property_key=f.property_key,
+                    display_name=f.display_name,
+                    semantic_type=f.semantic_type,
+                    is_required=f.is_required,
+                    is_primary_key=f.is_primary_key,
+                    sort_order=f.sort_order,
+                    formula=f.formula,
+                    formula_type=f.formula_type,
+                    is_active=f.is_active,
+                )
+                for f in fg.fields
+            ],
+        )
+        for fg in field_groups
+    ]
+
+    # Build computed property warnings for drafts
+    computed_property_warnings: list[str] = []
+    if rev.status == "draft":
+        property_keys = {p.property_key for p in (rev.properties or [])}
+        for cp in rev.computed_properties or []:
+            if not cp.is_active:
+                continue
+            try:
+                refs = FormulaEngine().extract_property_references(cp.formula)
+            except Exception:
+                continue
+            for ref in refs:
+                if ref not in property_keys:
+                    computed_property_warnings.append(
+                        f"Computed property '{cp.property_key}' references "
+                        f"property '{ref}' which is missing or renamed."
+                    )
+
     return EntityRevisionDetail(
         id=rev.id,
         revision_number=rev.revision_number,
@@ -235,36 +334,59 @@ def _build_revision_detail(rev) -> EntityRevisionDetail:
         ],
         links=[
             EntityLinkResponse(
-                link_id=ln.get("link_id", ""),
-                display_name=ln.get("display_name", ""),
-                source_property_key=ln.get("source_property_key", ""),
-                target_object_type_id=ln.get("target_object_type_id", ""),
-                target_property_key=ln.get("target_property_key", ""),
-                cardinality=ln.get("cardinality", ""),
+                link_id=ln.get("link_id", "") if isinstance(ln, dict) else getattr(ln, "link_id", ""),
+                display_name=ln.get("display_name", "") if isinstance(ln, dict) else getattr(ln, "display_name", ""),
+                source_property_key=ln.get("source_property_key", "")
+                if isinstance(ln, dict)
+                else getattr(ln, "source_property_key", ""),
+                target_object_type_id=ln.get("target_object_type_id", "")
+                if isinstance(ln, dict)
+                else getattr(ln, "target_entity_id", ""),
+                target_property_key=ln.get("target_property_key", "")
+                if isinstance(ln, dict)
+                else getattr(ln, "target_property_key", ""),
+                cardinality=ln.get("cardinality", "") if isinstance(ln, dict) else getattr(ln, "cardinality", ""),
             )
             for ln in (rev.links or [])
         ],
+        source_bindings=[
+            SourceBindingResponse(
+                property_key=b.property_key,
+                source_node_id=b.source_node_id,
+                source_field_name=b.source_field_name,
+                is_active=b.is_active,
+            )
+            for b in (rev.source_bindings or [])
+        ],
+        planned_bindings=[
+            SourceBindingResponse(
+                property_key=b.property_key,
+                source_node_id=b.source_node_id,
+                source_field_name=b.source_field_name,
+                is_active=b.is_active,
+            )
+            for b in (rev.planned_bindings or [])
+        ],
         computed_properties=[
             ComputedPropertyResponse(
-                id=cp.get("id", ""),
-                property_name=cp.get("property_name", ""),
-                semantic_type=cp.get("semantic_type", ""),
-                composition_kind=cp.get("composition_kind", ""),
-                expression=cp.get("expression", ""),
-                included=cp.get("included", False),
-                inputs=[
-                    FieldRefResponse(
-                        source_id=inp.get("source_id", ""),
-                        source_name=inp.get("source_name", ""),
-                        field_name=inp.get("field_name", ""),
-                    )
-                    for inp in (cp.get("inputs") or [])
-                ],
+                id=cp.id,
+                property_name=cp.property_key,
+                property_key=cp.property_key,
+                display_name=cp.display_name,
+                formula=cp.formula,
+                formula_type=cp.formula_type,
+                expression=cp.formula,
+                inputs=cp.inputs,
+                output_type=cp.output_type,
+                sort_order=cp.sort_order,
+                is_active=cp.is_active,
             )
             for cp in (rev.computed_properties or [])
         ],
         layout_state=rev.layout_state or {},
         published_at=_fmt_isofmt(rev.published_at) if rev.published_at else None,
+        field_groups=field_group_responses,
+        computed_property_warnings=computed_property_warnings,
     )
 
 
@@ -322,11 +444,12 @@ def _build_lineage_response(
 @router.get("", response_model=list[EntityRegistryItem])
 def list_entities(
     q: str | None = Query(default=None, description="Search by name, key, or dataset"),
+    include_deprecated: bool = Query(default=False, description="Include deprecated entities in listing"),
     ctx: TenantContext = Depends(require_tenant_context),
     db: Session = Depends(get_db),
     user: SessionUser = Depends(get_current_user),
 ):
-    rows = list_entity_registry_items(db, ctx.tenant_id, search=q)
+    rows = list_entity_registry_items(db, ctx.tenant_id, search=q, exclude_deprecated=not include_deprecated)
     revision_repo = EntityRevisionRepository(db)
 
     result: list[EntityRegistryItem] = []
@@ -476,6 +599,31 @@ def get_entity_by_dataset(
             dataset_version_label=ds_version_label_by_ds,
         )
 
+    # Build detail service extras
+    detail_service_by_ds = EntityDetailService(
+        revision_repo=EntityRevisionRepository(db),
+        materialization_repo=EntityMaterializationRepository(db),
+        link_resolver=LinkResolverService(
+            EntityRevisionRepository(db),
+            EntityMaterializationService(
+                revision_repo=EntityRevisionRepository(db),
+                materialization_repo=EntityMaterializationRepository(db),
+                source_data_reader=build_source_data_reader(db),
+            ),
+        ),
+        formula_engine=FormulaEngine(),
+    )
+
+    materialized_preview_by_ds = []
+    if published is not None:
+        materialized_preview_by_ds = detail_service_by_ds.get_entity_preview(
+            entity_id=detail["id"], revision_id=published.id
+        )
+
+    link_status_by_ds = []
+    if published is not None:
+        link_status_by_ds = detail_service_by_ds.get_link_status(detail["id"], published)
+
     return EntityDetailResponse(
         id=detail["id"],
         object_type_key=detail["object_type_key"],
@@ -499,6 +647,119 @@ def get_entity_by_dataset(
         published_revision=_build_revision_detail(published) if published else None,
         draft_revision=_build_revision_detail(draft) if draft else None,
         lineage=lineage_by_ds,
+        field_groups=(_build_revision_detail(published) if published else _build_revision_detail(draft)).field_groups
+        if (published or draft)
+        else [],
+        materialized_preview=materialized_preview_by_ds,
+        link_status=link_status_by_ds,
+    )
+
+
+# ─── Version pinning routes (must be before /{object_type_id}) ────────────
+
+
+@router.get("/{entity_id}/versions/latest", response_model=EntityDetailResponse)
+def get_latest_published_entity(
+    entity_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Return the entity detail with the latest published revision."""
+    detail = get_entity_detail_read_model(db, ctx.tenant_id, entity_id)
+    if detail is None:
+        raise NotFoundError("Entity not found")
+
+    revision_repo = EntityRevisionRepository(db)
+    published = revision_repo.get_published(entity_id)
+    if published is None:
+        raise NotFoundError("No published revision found for this entity")
+
+    return EntityDetailResponse(
+        id=detail["id"],
+        object_type_key=detail["object_type_key"],
+        display_name=detail["display_name"],
+        description=detail["description"],
+        plural_name=detail.get("plural_name", "") or "",
+        icon=detail.get("icon", "") or "",
+        groups=detail.get("groups", []) or [],
+        status=detail.get("status", "in_progress") or "in_progress",
+        created_at=detail["created_at"].isoformat() if detail.get("created_at") else "",
+        updated_at=detail["updated_at"].isoformat() if detail.get("updated_at") else None,
+        dataset_name=detail.get("dataset_name"),
+        dataset_id=detail.get("dataset_id"),
+        project_id=detail.get("project_id"),
+        mapping=None,
+        has_published_revision=True,
+        has_draft=False,
+        draft_lock_holder_id=None,
+        published_revision_number=published.revision_number,
+        draft_revision_number=None,
+        published_revision=_build_revision_detail(published),
+        draft_revision=None,
+        pinned_revision=None,
+        lineage=None,
+        field_groups=_build_revision_detail(published).field_groups,
+        materialized_preview=[],
+        link_status=[],
+    )
+
+
+@router.get("/{entity_id}/versions/{revision_number:int}", response_model=EntityDetailResponse)
+def get_entity_at_version(
+    entity_id: str,
+    revision_number: int,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Return the entity detail pinned to a specific published or archived revision."""
+    detail = get_entity_detail_read_model(db, ctx.tenant_id, entity_id)
+    if detail is None:
+        raise NotFoundError("Entity not found")
+
+    revision_repo = EntityRevisionRepository(db)
+
+    # Find revision by number, rejecting drafts
+    revisions = revision_repo.list_by_entity(entity_id)
+    pinned = None
+    for rev in revisions:
+        if rev.revision_number == revision_number:
+            if rev.status == "draft":
+                raise NotFoundError("Draft revisions cannot be pinned")
+            pinned = rev
+            break
+
+    if pinned is None:
+        raise NotFoundError(f"Revision number {revision_number} not found for this entity")
+
+    return EntityDetailResponse(
+        id=detail["id"],
+        object_type_key=detail["object_type_key"],
+        display_name=detail["display_name"],
+        description=detail["description"],
+        plural_name=detail.get("plural_name", "") or "",
+        icon=detail.get("icon", "") or "",
+        groups=detail.get("groups", []) or [],
+        status=detail.get("status", "in_progress") or "in_progress",
+        created_at=detail["created_at"].isoformat() if detail.get("created_at") else "",
+        updated_at=detail["updated_at"].isoformat() if detail.get("updated_at") else None,
+        dataset_name=detail.get("dataset_name"),
+        dataset_id=detail.get("dataset_id"),
+        project_id=detail.get("project_id"),
+        mapping=None,
+        has_published_revision=True,
+        has_draft=False,
+        draft_lock_holder_id=None,
+        published_revision_number=None,
+        draft_revision_number=None,
+        published_revision=None,
+        draft_revision=None,
+        pinned_revision=_build_revision_detail(pinned),
+        lineage=None,
+        field_groups=_build_revision_detail(pinned).field_groups,
+        materialized_preview=[],
+        link_status=[],
     )
 
 
@@ -595,6 +856,29 @@ def get_entity(
             dataset_version_label=ds_version_label,
         )
 
+    # Build detail service extras
+    detail_service = EntityDetailService(
+        revision_repo=EntityRevisionRepository(db),
+        materialization_repo=EntityMaterializationRepository(db),
+        link_resolver=LinkResolverService(
+            EntityRevisionRepository(db),
+            EntityMaterializationService(
+                revision_repo=EntityRevisionRepository(db),
+                materialization_repo=EntityMaterializationRepository(db),
+                source_data_reader=build_source_data_reader(db),
+            ),
+        ),
+        formula_engine=FormulaEngine(),
+    )
+
+    materialized_preview = []
+    if published is not None:
+        materialized_preview = detail_service.get_entity_preview(entity_id=detail["id"], revision_id=published.id)
+
+    link_status = []
+    if published is not None:
+        link_status = detail_service.get_link_status(detail["id"], published)
+
     return EntityDetailResponse(
         id=detail["id"],
         object_type_key=detail["object_type_key"],
@@ -618,4 +902,259 @@ def get_entity(
         published_revision=_build_revision_detail(published) if published else None,
         draft_revision=_build_revision_detail(draft) if draft else None,
         lineage=lineage,
+        field_groups=(_build_revision_detail(published) if published else _build_revision_detail(draft)).field_groups
+        if (published or draft)
+        else [],
+        materialized_preview=materialized_preview,
+        link_status=link_status,
     )
+
+
+# ─── Materialization Routes ───────────────────────────────────────────────
+
+
+class MaterializeRequest(BaseModel):
+    revision_id: str | None = None
+
+
+class MaterializeResponse(BaseModel):
+    rows_inserted: int
+    rows_updated: int
+    rows_tombstoned: int
+
+
+class MaterializedRowResponse(BaseModel):
+    id: str
+    entity_id: str
+    revision_id: str
+    row_id: str
+    row_data: dict
+    is_tombstone: bool
+    materialized_at: str
+    deleted_at: str | None = None
+
+
+@router.post("/{entity_id}/materialize", response_model=MaterializeResponse)
+def trigger_materialization(
+    entity_id: str,
+    body: MaterializeRequest | None = None,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Trigger full snapshot replace materialization for an entity.
+
+    Uses the current published revision by default, or the specified revision_id."""
+    service = EntityMaterializationService(
+        revision_repo=EntityRevisionRepository(db),
+        materialization_repo=EntityMaterializationRepository(db),
+        source_data_reader=build_source_data_reader(db),
+    )
+
+    revision_id = body.revision_id if body else None
+    if revision_id is None:
+        revision = EntityRevisionRepository(db).get_published(entity_id)
+        if revision is None:
+            raise NotFoundError("No published revision found for this entity")
+        revision_id = revision.id
+
+    try:
+        stats = service.materialize_entity(entity_id, revision_id)
+    except NotFoundError:
+        raise
+    return MaterializeResponse(**stats)
+
+
+@router.get("/{entity_id}/materialized", response_model=list[MaterializedRowResponse])
+def get_materialized_rows(
+    entity_id: str,
+    version: int | None = Query(default=None, description="Pin to specific revision number"),
+    include_tombstones: bool = Query(default=False, description="Include tombstoned rows"),
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Return materialized rows for an entity (latest published by default)."""
+    service = EntityMaterializationService(
+        revision_repo=EntityRevisionRepository(db),
+        materialization_repo=EntityMaterializationRepository(db),
+        source_data_reader=build_source_data_reader(db),
+    )
+
+    revision_id = None
+    if version is not None:
+        revisions = EntityRevisionRepository(db).list_by_entity(entity_id)
+        pinned = None
+        for rev in revisions:
+            if rev.revision_number == version:
+                if rev.status == "draft":
+                    raise NotFoundError("Draft revisions cannot be pinned")
+                pinned = rev
+                break
+        if pinned is None:
+            raise NotFoundError(f"Revision number {version} not found for this entity")
+        revision_id = pinned.id
+
+    rows = service.get_rows(entity_id, revision_id=revision_id, include_tombstones=include_tombstones)
+    return [
+        MaterializedRowResponse(
+            id=r.id,
+            entity_id=r.entity_id,
+            revision_id=r.revision_id,
+            row_id=r.row_id,
+            row_data=r.row_data,
+            is_tombstone=r.is_tombstone,
+            materialized_at=r.materialized_at.isoformat() if r.materialized_at else "",
+            deleted_at=r.deleted_at.isoformat() if r.deleted_at else None,
+        )
+        for r in rows
+    ]
+
+
+@router.get("/{entity_id}/materialized/{row_id}", response_model=MaterializedRowResponse)
+def get_materialized_row(
+    entity_id: str,
+    row_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Return a single materialized row by entity_id + row_id."""
+    service = EntityMaterializationService(
+        revision_repo=EntityRevisionRepository(db),
+        materialization_repo=EntityMaterializationRepository(db),
+        source_data_reader=build_source_data_reader(db),
+    )
+    row = service.get_row(entity_id, row_id)
+    if row is None:
+        raise NotFoundError("Row not found")
+    return MaterializedRowResponse(
+        id=row.id,
+        entity_id=row.entity_id,
+        revision_id=row.revision_id,
+        row_id=row.row_id,
+        row_data=row.row_data,
+        is_tombstone=row.is_tombstone,
+        materialized_at=row.materialized_at.isoformat() if row.materialized_at else "",
+        deleted_at=row.deleted_at.isoformat() if row.deleted_at else None,
+    )
+
+
+# ─── Link Resolution Routes ───────────────────────────────────────────────
+
+
+@router.get("/{entity_id}/links/{link_id}/resolve")
+def resolve_link(
+    entity_id: str,
+    link_id: str,
+    row_id: str,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Resolve a single link for a specific source row."""
+    revision_repo = EntityRevisionRepository(db)
+    mat_service = EntityMaterializationService(
+        revision_repo=revision_repo,
+        materialization_repo=EntityMaterializationRepository(db),
+        source_data_reader=build_source_data_reader(db),
+    )
+    resolver = LinkResolverService(revision_repo, mat_service)
+
+    # Get the source row
+    source_row = mat_service.get_row(entity_id, row_id)
+    if source_row is None:
+        raise NotFoundError("Source row not found")
+
+    result = resolver.resolve_link(entity_id, link_id, source_row)
+    if result is None:
+        from fastapi import Response
+
+        return Response(status_code=204)
+
+    if isinstance(result, list):
+        return [
+            MaterializedRowResponse(
+                id=r.id,
+                entity_id=r.entity_id,
+                revision_id=r.revision_id,
+                row_id=r.row_id,
+                row_data=r.row_data,
+                is_tombstone=r.is_tombstone,
+                materialized_at=r.materialized_at.isoformat() if r.materialized_at else "",
+                deleted_at=r.deleted_at.isoformat() if r.deleted_at else None,
+            )
+            for r in result
+        ]
+
+    return MaterializedRowResponse(
+        id=result.id,
+        entity_id=result.entity_id,
+        revision_id=result.revision_id,
+        row_id=result.row_id,
+        row_data=result.row_data,
+        is_tombstone=result.is_tombstone,
+        materialized_at=result.materialized_at.isoformat() if result.materialized_at else "",
+        deleted_at=result.deleted_at.isoformat() if result.deleted_at else None,
+    )
+
+
+class ResolveBatchRequest(BaseModel):
+    row_ids: list[str]
+
+
+@router.post("/{entity_id}/links/{link_id}/resolve-batch")
+def resolve_link_batch(
+    entity_id: str,
+    link_id: str,
+    body: ResolveBatchRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    """Resolve a link for multiple source rows (batch)."""
+    revision_repo = EntityRevisionRepository(db)
+    mat_service = EntityMaterializationService(
+        revision_repo=revision_repo,
+        materialization_repo=EntityMaterializationRepository(db),
+        source_data_reader=build_source_data_reader(db),
+    )
+    resolver = LinkResolverService(revision_repo, mat_service)
+
+    # Fetch source rows
+    source_rows = [mat_service.get_row(entity_id, rid) for rid in body.row_ids]
+    if any(r is None for r in source_rows):
+        missing = [rid for rid, r in zip(body.row_ids, source_rows) if r is None]
+        raise NotFoundError(f"Source rows not found: {missing}")
+
+    results = resolver.resolve_link_batch(entity_id, link_id, source_rows)
+
+    def _to_response(row):
+        if row is None:
+            return None
+        if isinstance(row, list):
+            return [
+                MaterializedRowResponse(
+                    id=r.id,
+                    entity_id=r.entity_id,
+                    revision_id=r.revision_id,
+                    row_id=r.row_id,
+                    row_data=r.row_data,
+                    is_tombstone=r.is_tombstone,
+                    materialized_at=r.materialized_at.isoformat() if r.materialized_at else "",
+                    deleted_at=r.deleted_at.isoformat() if r.deleted_at else None,
+                )
+                for r in row
+            ]
+        return MaterializedRowResponse(
+            id=row.id,
+            entity_id=row.entity_id,
+            revision_id=row.revision_id,
+            row_id=row.row_id,
+            row_data=row.row_data,
+            is_tombstone=row.is_tombstone,
+            materialized_at=row.materialized_at.isoformat() if row.materialized_at else "",
+            deleted_at=row.deleted_at.isoformat() if row.deleted_at else None,
+        )
+
+    return {rid: _to_response(r) for rid, r in results.items()}
