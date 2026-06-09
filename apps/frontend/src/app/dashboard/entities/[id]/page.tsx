@@ -40,6 +40,7 @@ import { EntityGraphTab } from "@/components/entity-graph/entity-graph-tab";
 import { EntityLineageCanvas } from "@/components/entity-graph/entity-lineage-canvas";
 import { EntityVersionHistory } from "@/components/entity-graph/entity-version-history";
 import type { EntityLineageGraph } from "@/lib/api/types";
+import { WorkshopChartXY } from "@/components/data-studio/workshop/WorkshopChartXY";
 
 export const EntityDetailPage = () => {
   const params = useParams();
@@ -597,6 +598,14 @@ export const EntityDetailPage = () => {
                 : `Canvas unavailable: ${canvasError}`}
             </div>
           ) : null}
+
+          {/* Entity Visualization (Workshop Chart) */}
+          {entity.mapping && (
+            <WorkshopChartXY
+              objectTypeId={entity.id}
+              mappingProperties={entity.mapping.properties}
+            />
+          )}
 
           {/* Entity detail sections — prefers revision over legacy mapping */}
           {hasContent ? (

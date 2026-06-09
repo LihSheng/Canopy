@@ -4,6 +4,10 @@ Use the versioned folders for planning and design docs.
 
 ## Live References
 
+- [Current State vs Palantir](../doc/current-state-vs-palantir.md): current repo snapshot and a plain comparison against Palantir Foundry / Ontology / Workshop concepts
+- [Palantir-Canopy Comparison](../doc/palantir-canopy-comparison.md): detailed architecture comparison, data flow mapping, feature matrix, and gap analysis
+- [Canopy Enhancement Roadmap](../doc/canopy-enhancement-roadmap.md): Phase 7-13 plan with deliverables, resource estimates, timeline, and success metrics
+- [Phase 7 Universal Connector Framework PRD](../doc/prd/0023-phase-7-universal-connector-framework.md): umbrella PRD for the connector framework, connector actions, sync policy, health, and iteration order
 - [Foundry / Ontology Platform Hardening PRD](../doc/prd/0014-foundry-ontology-platform-hardening.md): draft umbrella PRD for permissions, audit, telemetry, ontology contract, relationship, action API, and cleaning/lineage hardening
 - [Codebase Map](../doc/codebase-map.md): current snapshot and navigation aid
 - [Task Index](../doc/tasks/progress.md): entrypoint to the versioned task trackers

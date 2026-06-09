@@ -154,3 +154,42 @@ export const validateMapping = (
     }
   );
 };
+
+// ─── Aggregation ───
+
+export type AggregationType = "count" | "sum" | "avg" | "min" | "max" | "count_distinct";
+
+export type AggregationRequest = {
+  object_type_id: string;
+  dimension: string;
+  metric: {
+    property: string;
+    type: AggregationType;
+  };
+  filter_expression?: Record<string, unknown> | null;
+};
+
+export type AggregationBucket = {
+  dimension_value: string;
+  metric_value: number;
+};
+
+export type AggregationResponse = {
+  object_type: string;
+  results: AggregationBucket[];
+  truncated: boolean;
+};
+
+export const aggregateObjectSet = (
+  objectTypeId: string,
+  data: AggregationRequest
+): Promise<AggregationResponse> => {
+  return request<AggregationResponse>(
+    `/api/semantic/object-types/${objectTypeId}/aggregate`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+};
+

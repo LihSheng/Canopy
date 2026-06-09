@@ -58,6 +58,13 @@ class DatabaseAdapter(ABC):
         MUST support streaming batches to avoid memory exhaustion.
         """
 
+    @abstractmethod
+    async def execute_query(self, config: dict, query: str, params: tuple | None = None) -> list[dict]:
+        """Execute a custom query and return all rows as list of dicts.
+
+        The query should be parameterized to prevent SQL injection.
+        """
+
 
 def get_adapter(source_type: str) -> DatabaseAdapter:
     """Return the adapter for a given source type key.

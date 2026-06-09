@@ -8,6 +8,7 @@ from api.schemas.auth import SessionUser
 from common.database import get_db
 from common.errors import NotFoundError
 from context.tenant_context import TenantContext
+from semantic.aggregation_service import AggregationRequest, AggregationService, MetricSpec
 from semantic.domain import (
     Cardinality,
     ComputedProperty,
@@ -683,4 +684,73 @@ async def validate_mapping_endpoint(
     return ValidationResponse(
         valid=result["valid"],
         errors=[ValidationErrorItem(**e) for e in result["errors"]],
+    )
+
+
+# ─── Aggregation Endpoint ───
+
+
+class MetricSpecSchema(BaseModel):
+    property: str
+    type: str
+
+
+class ObjectSetAggregationRequest(BaseModel):
+    object_type_id: str
+    dimension: str
+    metric: MetricSpecSchema
+    filter_expression: dict | None = None
+
+
+class AggregationBucketResponse(BaseModel):
+    dimension_value: str
+    metric_value: float
+
+
+class AggregationResultResponse(BaseModel):
+    object_type: str
+    results: list[AggregationBucketResponse]
+    truncated: bool
+
+
+@router.post("/object-types/{id}/aggregate", response_model=AggregationResultResponse)
+async def aggregate_object_type(
+    id: str,
+    body: ObjectSetAggregationRequest,
+    ctx: TenantContext = Depends(require_tenant_context),
+    db: Session = Depends(get_db),
+    user: SessionUser = Depends(get_current_user),
+):
+    # 1. Fetch object type to verify existence & tenant access
+    service = ObjectTypeService(ObjectTypeRepository(db))
+    obj = service.get(id, tenant_id=ctx.tenant_id)
+    if obj is None:
+        raise NotFoundError("Object type not found")
+
+    # 2. Get the latest semantic mapping for this object type
+    mapping_repo = SemanticMappingRepository(db)
+    mapping = mapping_repo.get_latest_by_object_type_id(ctx.tenant_id, id)
+    if mapping is None:
+        raise NotFoundError("Semantic mapping not found for this object type")
+
+    # 3. Call the aggregation service
+    agg_service = AggregationService(db)
+    req = AggregationRequest(
+        object_type_id=body.object_type_id,
+        dimension=body.dimension,
+        metric=MetricSpec(property=body.metric.property, type=body.metric.type),
+        filter_expression=body.filter_expression,
+    )
+    res = await agg_service.aggregate(req, mapping)
+
+    return AggregationResultResponse(
+        object_type=res.object_type,
+        results=[
+            AggregationBucketResponse(
+                dimension_value=b.dimension_value,
+                metric_value=b.metric_value,
+            )
+            for b in res.results
+        ],
+        truncated=res.truncated,
     )

@@ -1,6 +1,6 @@
 # Canopy Intelligence
 
-Executive HR spend intelligence platform. Read-only system for C-level users.
+Executive HR spend intelligence platform for C-level users.
 It consolidates internal operational data, maps it into business objects,
 computes monthly spend views, detects anomalies, and presents dashboard insight
 plus AI-generated recommendations.
@@ -15,9 +15,10 @@ Visual design source of truth: `DESIGN.md`
 
 ## Three rules that nothing overrides
 
-**1. The application never writes back to the source system.**
-The internal database is read-only input for v1. No approvals, no mutations,
-no operational callbacks, no side effects into Canopy Intelligence or any upstream system.
+**1. The application only performs explicit, audited actions.**
+Reads, writes, approvals, and operational callbacks must go through a connector
+or workflow boundary with policy checks and audit logging. No hidden side
+effects into Canopy Intelligence or any upstream system.
 
 **2. Deterministic analytics decide. The LLM narrates.**
 Monthly totals, anomaly detection, rankings, and contributing-driver logic are
@@ -38,7 +39,7 @@ Frontend        Next.js + TypeScript
 Backend         FastAPI + Python
 Primary DB      Application database for normalized ontology data,
                 derived analytics, auth, and refresh metadata
-Source System   Internal database, read-only
+Connected Systems  Internal database and approved external systems
 Jobs            Background worker for scheduled sync and summary generation
 AI              LLM provider for natural-language summaries
 Export          Excel export library
@@ -57,7 +58,8 @@ Why:
 - simpler delivery than early microservices
 - clear internal boundaries around sync, ontology, analytics, anomaly logic,
   AI summarization, API delivery, connection management, data studio,
-  ingestion pipelines, cleaning engines, multi-tenant isolation, and
+  ingestion pipelines, cleaning engines, multi-tenant isolation, connector
+  actions, and
   dataset versioning
 - easier to evolve while requirements are still settling
 - enough structure to extract workers or services later if scale demands it
@@ -195,7 +197,7 @@ source-facing mapping boundaries.
 Do not let analytics, API handlers, exports, or insight builders depend
 directly on raw source tables or raw source naming.
 
-Future connector-based ingestion depends on this isolation.
+Future connector-based ingestion and actions depend on this isolation.
 
 ### No hidden global-state rule
 
@@ -297,7 +299,7 @@ Responsibilities:
 Rules:
 
 - only this module knows the raw source schema in detail
-- source access is read-only
+- source access is connector-mediated, policy-checked, and audited
 - downstream code consumes normalized business objects, not raw tables
 - each source entity family should have its own reader and mapper boundary
 
@@ -498,9 +500,9 @@ Main API capability groups:
 
 Exact routes and payload schemas belong in detailed design.
 
-### Backend to source system
+### Backend to connected systems
 
-- read-only internal database connection
+- connector-mediated access to internal and external systems
 
 This interface stays isolated behind Source Sync.
 
@@ -534,7 +536,7 @@ The backend sends facts, not raw operational data with open-ended prompts.
 ### Security
 
 - auth uses standard password hashing and secure session or token handling
-- source access stays read-only
+- source access stays connector-mediated and audited
 - AI module cannot become a write path
 
 ### Observability
@@ -553,8 +555,8 @@ The backend sends facts, not raw operational data with open-ended prompts.
 
 Not in scope. Do not build. Do not scaffold placeholders.
 
-- write-back into Canopy Intelligence or any operational source system
-- triggered approvals or operational actions
+- uncontrolled or ad hoc mutation paths into Canopy Intelligence or any operational source system
+- operational actions without explicit policy, approval, and audit control
 - forecasting or predictive planning
 - chat assistant workflows
 - real-time or near-real-time synchronization (real_time sync mode defined,

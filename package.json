@@ -7,9 +7,7 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "apps/frontend/src/**/*.{ts,tsx,js,jsx}": [
-      "node apps/frontend/node_modules/eslint/bin/eslint.js --fix --config apps/frontend/eslint.config.mjs"
-    ],
+    "apps/frontend/src/**/*.{ts,tsx,js,jsx}": "node apps/frontend/node_modules/eslint/bin/eslint.js --fix --config apps/frontend/eslint.config.mjs",
     "apps/backend/**/*.py": [
       "apps/backend/.venv/Scripts/ruff check --fix",
       "apps/backend/.venv/Scripts/ruff format"

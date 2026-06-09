@@ -172,3 +172,14 @@ class PostgresAdapter(DatabaseAdapter):
                         yield [dict(zip(col_names, row)) for row in batch]
 
         return generator()
+
+    async def execute_query(self, config: dict, query: str, params: tuple | None = None) -> list[dict]:
+        conninfo = self._build_conninfo(config)
+        async with await psycopg.AsyncConnection.connect(conninfo) as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(query, params or ())
+                if cur.description:
+                    col_names = [desc[0] for desc in cur.description]
+                    rows = await cur.fetchall()
+                    return [dict(zip(col_names, row)) for row in rows]
+                return []

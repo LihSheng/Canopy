@@ -2,6 +2,7 @@ import analytics.schema  # noqa: F401
 import anomalies.schema  # noqa: F401
 import auth.schema  # noqa: F401
 import connection.schema  # noqa: F401
+import connector.schema  # noqa: F401
 import control_plane.schemas.audit  # noqa: F401
 import control_plane.schemas.config  # noqa: F401
 import control_plane.schemas.database_targets  # noqa: F401

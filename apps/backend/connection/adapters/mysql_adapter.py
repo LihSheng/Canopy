@@ -197,3 +197,16 @@ class MysqlAdapter(DatabaseAdapter):
                 conn.close()
 
         return generator()  # type: ignore[no-any-return]
+
+    async def execute_query(self, config: dict, query: str, params: tuple | None = None) -> list[dict]:
+        try:
+            conn = self._connect(config, dict_cursor=True)
+        except ImportError:
+            return []
+        try:
+            with conn.cursor() as cur:
+                cur.execute(query, params or ())
+                rows = cur.fetchall()
+                return [dict(row) for row in rows] if rows else []
+        finally:
+            conn.close()
