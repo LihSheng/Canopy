@@ -194,7 +194,7 @@ class EntityRevisionService:
         if planned_bindings is not None:
             draft.planned_bindings = planned_bindings
         if links is not None:
-            draft.links = links
+            draft.links = [EntityLink.from_dict(lnk) for lnk in links]
         if source_nodes is not None:
             draft.source_nodes = source_nodes
         if computed_properties is not None:
@@ -370,8 +370,6 @@ class EntityRevisionService:
         """Update a single link in the active draft."""
         draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
         for i, lnk in enumerate(draft.links):
-            if isinstance(lnk, dict):
-                lnk = EntityLink.from_dict(lnk)
             if lnk.link_id == link_id:
                 updated = EntityLink(
                     link_id=lnk.link_id,
@@ -399,8 +397,6 @@ class EntityRevisionService:
         draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
         found = False
         for i, lnk in enumerate(draft.links):
-            if isinstance(lnk, dict):
-                lnk = EntityLink.from_dict(lnk)
             if lnk.link_id == link_id:
                 draft.links.pop(i)
                 found = True
@@ -944,7 +940,7 @@ class EntityRevisionService:
             properties=properties or [],
             source_bindings=source_bindings or [],
             planned_bindings=planned_bindings or [],
-            links=links or [],
+            links=[EntityLink.from_dict(lnk) for lnk in links] if links else [],
             source_nodes=source_nodes or [],
             computed_properties=computed_properties or [],
             layout_state=layout_state or {},

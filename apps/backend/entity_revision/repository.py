@@ -14,11 +14,8 @@ from entity_revision.domain import (
 from entity_revision.schema import EntityRevisionDependencyModel, EntityRevisionModel
 
 
-def _try_link_from_dict(lnk: dict) -> EntityLink | dict:
-    try:
-        return EntityLink.from_dict(lnk)
-    except ValueError:
-        return lnk
+def _try_link_from_dict(lnk: dict) -> EntityLink:
+    return EntityLink.from_dict(lnk)
 
 
 class EntityRevisionRepository:
@@ -234,7 +231,7 @@ class EntityRevisionRepository:
                 }
                 for b in d.planned_bindings
             ],
-            links=[lnk.to_dict() if isinstance(lnk, EntityLink) else lnk for lnk in (d.links or [])],
+            links=[lnk.to_dict() for lnk in (d.links or [])],
             source_nodes=d.source_nodes or [],
             computed_properties=[
                 {

@@ -74,7 +74,7 @@ class EntityLink:
             source_property_key=d.get("source_property_key", ""),
             target_entity_id=d.get("target_entity_id", ""),
             target_property_key=d.get("target_property_key", ""),
-            cardinality=d.get("cardinality", ""),
+            cardinality=d.get("cardinality", "1:1"),
             is_optional=d.get("is_optional", False),
             is_active=d.get("is_active", True),
         )
@@ -129,7 +129,7 @@ class EntityRevision:
     properties: list[EntityProperty] = field(default_factory=list)
     source_bindings: list[SourceBinding] = field(default_factory=list)
     planned_bindings: list[SourceBinding] = field(default_factory=list)
-    links: list[dict] = field(default_factory=list)
+    links: list[EntityLink] = field(default_factory=list)
     source_nodes: list[dict] = field(default_factory=list)
     computed_properties: list[ComputedProperty] = field(default_factory=list)
     layout_state: dict = field(default_factory=dict)

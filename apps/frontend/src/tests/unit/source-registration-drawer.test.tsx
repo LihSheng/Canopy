@@ -44,6 +44,7 @@ const baseConnection = (overrides: Partial<Connection> = {}): Connection => ({
   name: "budget.xlsx",
   source_type: "static_file",
   status: "connected",
+  config_json: {},
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
   ...overrides,

@@ -289,7 +289,7 @@ export const EntityVersionHistory = ({ entityId, publishedRevisionId, onRevert }
               </h5>
               {selectedRevision.source_nodes && selectedRevision.source_nodes.length > 0 ? (
                 <ul className="space-y-0.5">
-                  {selectedRevision.source_nodes.map((sn, i) => (
+                  {(selectedRevision.source_nodes as Array<{ source_id?: string; name?: string; source_type?: string }>).map((sn, i) => (
                     <li key={sn.source_id || i} className="text-zinc-700">
                       <span className="font-medium">{sn.name}</span>
                       <span className="ml-1 text-zinc-400">({sn.source_type})</span>
@@ -308,7 +308,7 @@ export const EntityVersionHistory = ({ entityId, publishedRevisionId, onRevert }
               </h5>
               {selectedRevision.links && selectedRevision.links.length > 0 ? (
                 <ul className="space-y-0.5">
-                  {selectedRevision.links.map((link) => (
+                  {(selectedRevision.links as Array<{ link_id?: string; display_name?: string; source_property_key?: string; target_property_key?: string }>).map((link) => (
                     <li key={link.link_id} className="text-zinc-700">
                       <span className="font-medium">{link.display_name}</span>
                       <span className="ml-1 text-zinc-400">

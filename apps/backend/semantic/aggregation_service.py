@@ -150,7 +150,8 @@ class AggregationService:
             other_rows = await adapter.execute_query(config, other_query, tuple(top_50_dims))
             other_val = 0.0
             if other_rows and other_rows[0].get("metric_value") is not None:
-                other_val = float(other_rows[0].get("metric_value"))
+                metric_val = other_rows[0].get("metric_value")
+                other_val = float(metric_val) if metric_val is not None else 0.0
 
             final_results = results[:50]
             final_results.append(AggregationBucket(dimension_value="Other", metric_value=other_val))

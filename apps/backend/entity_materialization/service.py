@@ -1,6 +1,7 @@
 """Entity materialization service — full snapshot replace materialization."""
 
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 from common.errors import NotFoundError
@@ -23,7 +24,7 @@ class EntityMaterializationService:
         self,
         revision_repo: EntityRevisionRepository,
         materialization_repo: EntityMaterializationRepository,
-        source_data_reader,
+        source_data_reader: Callable[[dict], list[dict]],
     ):
         self._revision_repo = revision_repo
         self._materialization_repo = materialization_repo

@@ -296,7 +296,7 @@ export const EntityDetailPage = () => {
       const added = nodes.filter((n) => !existingIds.has(n.source_id));
       const updated = [...currentSources, ...added];
       if (updated.length !== currentSources.length) {
-        await updateDraft(id, { source_nodes: updated as Record<string, unknown>[] });
+        await updateDraft(id, { source_nodes: updated as unknown as Record<string, unknown>[] });
       }
       await refreshSilently();
     } catch (err) {

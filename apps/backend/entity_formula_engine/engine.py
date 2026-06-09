@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from common.errors import ValidationError
@@ -409,7 +410,9 @@ def _less_than(a, b):
     return a < b
 
 
-_FUNCTIONS = {
+_Func = Callable[..., object]
+
+_FUNCTIONS: dict[str, _Func] = {
     "upper": _upper,
     "lower": _lower,
     "trim": _trim,

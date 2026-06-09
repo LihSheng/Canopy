@@ -175,7 +175,7 @@ export const EntityGraphTab = ({ dataset, versions }: Props) => {
     );
   };
 
-  const handleAddSource = (nodes: SourceNode[]) => {
+  const handleAddSource = async (nodes: SourceNode[]) => {
     const current = mapping?.source_nodes || [];
     const existingIds = new Set(current.map((sn) => sn.source_id));
     const added = nodes.filter((n) => !existingIds.has(n.source_id));

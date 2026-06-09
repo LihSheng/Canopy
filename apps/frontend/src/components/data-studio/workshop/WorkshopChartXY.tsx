@@ -208,9 +208,11 @@ export const WorkshopChartXY = ({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
-              onClick={(state: BarClickEvent) => {
-                if (state && state.activePayload && state.activePayload.length > 0) {
-                  handleBarClick(state.activePayload[0].payload);
+              onClick={(state) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const payload = (state as any)?.activePayload;
+                if (payload && payload.length > 0) {
+                  handleBarClick(payload[0].payload);
                 }
               }}
             >

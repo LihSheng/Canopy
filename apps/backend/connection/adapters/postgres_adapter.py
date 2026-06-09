@@ -171,7 +171,7 @@ class PostgresAdapter(DatabaseAdapter):
                         col_names = [desc[0] for desc in cur.description] if cur.description else []
                         yield [dict(zip(col_names, row)) for row in batch]
 
-        return generator()
+        return generator()  # type: ignore[no-any-return]
 
     async def execute_query(self, config: dict, query: str, params: tuple | None = None) -> list[dict]:
         conninfo = self._build_conninfo(config)

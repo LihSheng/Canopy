@@ -588,8 +588,9 @@ def get_entity_by_dataset(
     lineage_by_ds = None
     revision_for_lineage_by_ds = published or draft
     if revision_for_lineage_by_ds is not None:
-        ds_version_id_by_ds = detail.get("mapping").dataset_version_id if detail.get("mapping") else None
-        ds_version_label_by_ds = f"v{detail['mapping'].version_number}" if detail.get("mapping") else None
+        mapping = detail.get("mapping")
+        ds_version_id_by_ds = mapping.dataset_version_id if mapping else None
+        ds_version_label_by_ds = f"v{mapping.version_number}" if mapping else None
         lineage_by_ds = _build_lineage_response(
             revision=revision_for_lineage_by_ds,
             entity_display_name=detail["display_name"],
@@ -845,8 +846,9 @@ def get_entity(
     lineage = None
     revision_for_lineage = published or draft
     if revision_for_lineage is not None:
-        ds_version_id = detail.get("mapping").dataset_version_id if detail.get("mapping") else None
-        ds_version_label = f"v{detail['mapping'].version_number}" if detail.get("mapping") else None
+        mapping = detail.get("mapping")
+        ds_version_id = mapping.dataset_version_id if mapping else None
+        ds_version_label = f"v{mapping.version_number}" if mapping else None
         lineage = _build_lineage_response(
             revision=revision_for_lineage,
             entity_display_name=detail["display_name"],
