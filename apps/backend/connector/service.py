@@ -162,11 +162,16 @@ class ConnectorRegistryService:
     def _encrypt_credentials(self, credentials: dict) -> dict:
         """Encrypt known sensitive credential keys."""
         result = dict(credentials)
+        targets = {
+            key: result[key]
+            for key in _CONNECTOR_CREDENTIAL_KEYS
+            if isinstance(result.get(key), str) and len(result[key]) > 0
+        }
+        if not targets:
+            return result
         store = self._secret_store or self._build_default_store()
-        for key in _CONNECTOR_CREDENTIAL_KEYS:
-            value = result.get(key)
-            if value and isinstance(value, str) and len(value) > 0:
-                result[key] = store.encrypt(value)
+        for key in targets:
+            result[key] = store.encrypt(result[key])
         return result
 
     def _decrypt_credentials(self, connector: ConnectorContract) -> dict:

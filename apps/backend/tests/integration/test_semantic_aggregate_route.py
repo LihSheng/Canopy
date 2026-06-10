@@ -54,7 +54,8 @@ def auth_headers_tenant2(client):
     )
     from common.database import session_factory
 
-    db = session_factory()
+    session_cls = session_factory()
+    db = session_cls()
     try:
         db.add(db_user)
         tenant2 = TenantModel(

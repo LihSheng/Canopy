@@ -47,13 +47,6 @@ class EntityLink:
     is_optional: bool = False
     is_active: bool = True
 
-    def __post_init__(self):
-        if self.cardinality not in {LinkCardinality.ONE_TO_ONE.value, LinkCardinality.ONE_TO_MANY.value}:
-            raise ValueError(
-                f"Invalid cardinality '{self.cardinality}'. "
-                f"Only '{LinkCardinality.ONE_TO_ONE.value}' and '{LinkCardinality.ONE_TO_MANY.value}' are allowed."
-            )
-
     def to_dict(self) -> dict:
         return {
             "link_id": self.link_id,
@@ -72,7 +65,7 @@ class EntityLink:
             link_id=d.get("link_id", ""),
             display_name=d.get("display_name", ""),
             source_property_key=d.get("source_property_key", ""),
-            target_entity_id=d.get("target_entity_id", ""),
+            target_entity_id=d.get("target_entity_id") or d.get("target_object_type_id", ""),
             target_property_key=d.get("target_property_key", ""),
             cardinality=d.get("cardinality", "1:1"),
             is_optional=d.get("is_optional", False),

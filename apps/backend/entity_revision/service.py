@@ -432,7 +432,7 @@ class EntityRevisionService:
         draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
         if not prop.id:
             prop.id = str(uuid.uuid4())
-        self._validate_computed_property_syntax(prop.formula)
+        self._validate_computed_property(draft, prop)
         draft.computed_properties.append(prop)
         draft.updated_at = datetime.now(UTC)
         return self._revision_repo.save(draft)
@@ -460,7 +460,7 @@ class EntityRevisionService:
                     sort_order=updates.get("sort_order", cp.sort_order),
                     is_active=updates.get("is_active", cp.is_active),
                 )
-                self._validate_computed_property_syntax(updated.formula)
+                self._validate_computed_property(draft, updated)
                 draft.computed_properties[i] = updated
                 draft.updated_at = datetime.now(UTC)
                 return self._revision_repo.save(draft)
@@ -500,27 +500,13 @@ class EntityRevisionService:
         return []
 
     def _validate_computed_property(self, draft: EntityRevision, prop: ComputedProperty) -> None:
-        """Ensure computed property references only valid property keys and has valid syntax."""
-        property_keys = {p.property_key for p in draft.properties}
-        # Validate formula syntax first (catches unknown functions, unbalanced parens, cross-entity refs)
+        """Validate computed property formula syntax at draft save time.
+
+        Only formula syntax is checked here. Property reference validation
+        (inputs, circular deps, output type) is enforced at publish time
+        in publish_draft() so users can save in-progress work.
+        """
         self._validate_computed_property_syntax(prop.formula)
-        # Validate inputs exist in properties
-        for inp in prop.inputs or []:
-            if inp not in property_keys:
-                raise ValidationError(f"Computed property '{prop.property_key}' references unknown property '{inp}'.")
-        # Validate formula references only existing properties and inputs
-        try:
-            refs = FormulaEngine().extract_property_references(prop.formula)
-        except ValidationError as e:
-            raise ValidationError(f"Computed property '{prop.property_key}' formula syntax error: {e}")
-        for ref in refs:
-            if ref not in property_keys:
-                raise ValidationError(f"Computed property '{prop.property_key}' references unknown property '{ref}'.")
-            if ref not in (prop.inputs or []):
-                raise ValidationError(
-                    f"Computed property '{prop.property_key}' formula references "
-                    f"property '{ref}' which is not listed in inputs."
-                )
 
     def _validate_computed_property_syntax(self, formula: str) -> None:
         """Basic syntax validation: reject empty formulas and parse with engine."""
@@ -600,11 +586,12 @@ class EntityRevisionService:
             if not rp.property_key or not rp.property_key.strip():
                 errors.append(f"Required property (id={rp.property_id}) has an empty property_key.")
 
-            # Check that the required property has at least one source binding (prefer explicit bindings)
-            if draft.source_bindings is not None:
-                bound = any(b.property_key == rp.property_key for b in draft.source_bindings)
-            else:
-                # Fallback to source_nodes.fields for backward compat (legacy data without explicit bindings)
+            # Check that the required property has at least one source binding
+            bound = any(b.property_key == rp.property_key for b in (draft.source_bindings or []))
+            if not bound and draft.source_bindings is None:
+                # Fallback to source_nodes.fields for backward compat when source_bindings
+                # was never set (legacy data). Explicitly empty list means bindings were
+                # cleared by the user — no fallback in that case.
                 bound = any(rp.property_key in (sn.get("fields") or []) for sn in source_nodes)
             if not bound:
                 errors.append(

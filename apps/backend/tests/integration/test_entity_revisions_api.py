@@ -8,7 +8,7 @@ import pytest
 from context.tenant_context import TenantContext, set_current_tenant_context
 from control_plane.schemas.memberships import TenantMembershipModel
 from control_plane.schemas.tenants import TenantModel
-from entity_revision.domain import EntityProperty, EntityRevision, RevisionStatus
+from entity_revision.domain import EntityProperty, EntityRevision, RevisionStatus, SourceBinding
 from entity_revision.repository import EntityRevisionRepository
 from semantic.domain import ObjectType
 from semantic.repository import ObjectTypeRepository
@@ -456,6 +456,10 @@ class TestPublishDraft:
             status=RevisionStatus.DRAFT.value,
             forked_from_revision_id=seed_published_revision.id,
             properties=seed_published_revision.properties,
+            source_bindings=[
+                SourceBinding(property_key="employee_id", source_node_id="src-1", source_field_name="employee_id"),
+                SourceBinding(property_key="employee_name", source_node_id="src-1", source_field_name="employee_name"),
+            ],
             links=[],
             source_nodes=[
                 {

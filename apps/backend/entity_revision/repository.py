@@ -231,7 +231,7 @@ class EntityRevisionRepository:
                 }
                 for b in d.planned_bindings
             ],
-            links=[lnk.to_dict() for lnk in (d.links or [])],
+            links=[lnk.to_dict() if isinstance(lnk, EntityLink) else lnk for lnk in (d.links or [])],
             source_nodes=d.source_nodes or [],
             computed_properties=[
                 {
