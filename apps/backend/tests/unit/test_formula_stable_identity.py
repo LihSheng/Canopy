@@ -70,7 +70,6 @@ class TestFormulaStableIdentity:
                     display_name="Adjusted",
                     formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
-                    inputs=["salary"],
                     output_type="number",
                     sort_order=1,
                     is_active=True,
@@ -118,7 +117,6 @@ class TestFormulaStableIdentity:
                     display_name="Adjusted",
                     formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
-                    inputs=["salary"],
                     output_type="number",
                     sort_order=1,
                     is_active=True,
@@ -180,7 +178,6 @@ class TestFormulaStableIdentity:
         engine = FormulaEngine()
         result = engine.evaluate(
             formula="multiply(salary, 2)",
-            inputs=["salary"],
             row_data={"salary": 1000},
         )
         assert result == 2000
@@ -207,7 +204,6 @@ class TestFormulaStableIdentity:
                     display_name="Adjusted",
                     formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
-                    inputs=["salary"],
                     output_type="number",
                     sort_order=1,
                     is_active=True,

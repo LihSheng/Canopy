@@ -103,7 +103,6 @@ class TestComputedPropertyValidation:
                 "display_name": "Total Compensation",
                 "formula": "add(salary, bonus)",
                 "formula_type": "arithmetic",
-                "inputs": ["salary", "bonus"],
                 "output_type": "number",
                 "sort_order": 3,
                 "is_active": True,
@@ -116,71 +115,60 @@ class TestComputedPropertyValidation:
             headers=auth_headers,
         )
 
-    def test_referencing_removed_property_fails_publish(self, client, auth_headers, seed_entity):
-        _create_draft(client, auth_headers, seed_entity)
-        resp = client.post(
-            f"/api/entities/{seed_entity.id}/draft/computed-properties",
-            json={
-                "property_key": "bad_ref",
-                "display_name": "Bad Ref",
-                "formula": "multiply(missing_prop, 2)",
-                "formula_type": "arithmetic",
-                "inputs": ["missing_prop"],
-                "output_type": "number",
-                "sort_order": 3,
-                "is_active": True,
-            },
-            headers=auth_headers,
-        )
-        assert resp.status_code == 201, resp.text
-        pub_resp = client.post(
-            f"/api/entities/{seed_entity.id}/draft/publish",
-            headers=auth_headers,
-        )
-        assert pub_resp.status_code == 400, pub_resp.text
-        detail = pub_resp.json()["detail"].lower()
-        assert "missing_prop" in detail or "publish validation failed" in detail
 
-    def test_circular_dependency_fails_publish(self, client, auth_headers, seed_entity):
-        _create_draft(client, auth_headers, seed_entity)
-        # Add first computed property
-        client.post(
-            f"/api/entities/{seed_entity.id}/draft/computed-properties",
-            json={
-                "property_key": "cp_a",
-                "display_name": "CP A",
-                "formula": "multiply(salary, 2)",
-                "formula_type": "arithmetic",
-                "inputs": ["salary"],
-                "output_type": "number",
-                "sort_order": 3,
-                "is_active": True,
-            },
-            headers=auth_headers,
-        )
-        # Add second that references first (circular-ish: cp_b -> cp_a)
-        resp = client.post(
-            f"/api/entities/{seed_entity.id}/draft/computed-properties",
-            json={
-                "property_key": "cp_b",
-                "display_name": "CP B",
-                "formula": "multiply(cp_a, 2)",
-                "formula_type": "arithmetic",
-                "inputs": ["cp_a"],
-                "output_type": "number",
-                "sort_order": 4,
-                "is_active": True,
-            },
-            headers=auth_headers,
-        )
-        assert resp.status_code == 201, resp.text
-        pub_resp = client.post(
-            f"/api/entities/{seed_entity.id}/draft/publish",
-            headers=auth_headers,
-        )
-        assert pub_resp.status_code == 400, pub_resp.text
-        detail = pub_resp.json()["detail"].lower()
-        assert "circular" in detail or "publish validation failed" in detail
+def test_referencing_removed_property_fails_at_draft_save(client, auth_headers, seed_entity):
+    _create_draft(client, auth_headers, seed_entity)
+    resp = client.post(
+        f"/api/entities/{seed_entity.id}/draft/computed-properties",
+        json={
+            "property_key": "bad_ref",
+            "display_name": "Bad Ref",
+            "formula": "multiply(missing_prop, 2)",
+            "formula_type": "arithmetic",
+            "output_type": "number",
+            "sort_order": 3,
+            "is_active": True,
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 400, resp.text
+    detail = resp.json()["detail"].lower()
+    assert "missing_prop" in detail
+
+
+def test_circular_dependency_fails_at_draft_save(client, auth_headers, seed_entity):
+    _create_draft(client, auth_headers, seed_entity)
+    # Add first computed property
+    client.post(
+        f"/api/entities/{seed_entity.id}/draft/computed-properties",
+        json={
+            "property_key": "cp_a",
+            "display_name": "CP A",
+            "formula": "multiply(salary, 2)",
+            "formula_type": "arithmetic",
+            "output_type": "number",
+            "sort_order": 3,
+            "is_active": True,
+        },
+        headers=auth_headers,
+    )
+    # Add second that references first (computed → computed cycle)
+    resp = client.post(
+        f"/api/entities/{seed_entity.id}/draft/computed-properties",
+        json={
+            "property_key": "cp_b",
+            "display_name": "CP B",
+            "formula": "multiply(cp_a, 2)",
+            "formula_type": "arithmetic",
+            "output_type": "number",
+            "sort_order": 4,
+            "is_active": True,
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 400, resp.text
+    detail = resp.json()["detail"].lower()
+    assert "cp_a" in detail
 
     def test_syntax_error_blocks_add_endpoint(self, client, auth_headers, seed_entity):
         _create_draft(client, auth_headers, seed_entity)
@@ -191,7 +179,6 @@ class TestComputedPropertyValidation:
                 "display_name": "Bad",
                 "formula": "",
                 "formula_type": "arithmetic",
-                "inputs": [],
                 "output_type": "number",
                 "sort_order": 1,
                 "is_active": True,
@@ -212,7 +199,6 @@ class TestComputedPropertyValidation:
                         "display_name": "Bad",
                         "formula": "!!!bad!!!",
                         "formula_type": "arithmetic",
-                        "inputs": [],
                         "output_type": "number",
                         "sort_order": 1,
                         "is_active": True,
@@ -239,7 +225,6 @@ class TestComputedPropertyEvaluation:
                 "display_name": "Total Compensation",
                 "formula": "add(salary, bonus)",
                 "formula_type": "arithmetic",
-                "inputs": ["salary", "bonus"],
                 "output_type": "number",
                 "sort_order": 3,
                 "is_active": True,
@@ -277,7 +262,6 @@ class TestComputedPropertyEvaluation:
                 "display_name": "Bad Division",
                 "formula": "divide(salary, bonus)",
                 "formula_type": "arithmetic",
-                "inputs": ["salary", "bonus"],
                 "output_type": "number",
                 "sort_order": 3,
                 "is_active": True,
@@ -311,7 +295,6 @@ class TestComputedPropertyEvaluation:
             f"/api/entities/{seed_entity.id}/computed-properties/evaluate",
             json={
                 "formula": 'concat("Hello", " ", "World")',
-                "inputs": [],
                 "sample_row": {},
             },
             headers=auth_headers,

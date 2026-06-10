@@ -86,7 +86,6 @@ class TestComputedPropertyApi:
             "display_name": "Total Compensation",
             "formula": "multiply(salary, 1.1)",
             "formula_type": "arithmetic",
-            "inputs": ["salary"],
             "output_type": "number",
             "sort_order": 1,
             "is_active": True,
@@ -134,7 +133,6 @@ class TestComputedPropertyApi:
                     display_name="Total Compensation",
                     formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
-                    inputs=["salary"],
                     output_type="number",
                     sort_order=1,
                     is_active=True,
@@ -145,7 +143,6 @@ class TestComputedPropertyApi:
 
         payload = {
             "formula": "multiply(salary, 1.2)",
-            "inputs": ["salary"],
         }
 
         response = client.put(
@@ -189,7 +186,6 @@ class TestComputedPropertyApi:
                     display_name="Total Compensation",
                     formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
-                    inputs=["salary"],
                     output_type="number",
                     sort_order=1,
                     is_active=True,
@@ -238,7 +234,6 @@ class TestComputedPropertyApi:
                     display_name="Total Compensation",
                     formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
-                    inputs=["salary"],
                     output_type="number",
                     sort_order=1,
                     is_active=True,
@@ -289,7 +284,6 @@ class TestComputedPropertyApi:
             "display_name": "Bad",
             "formula": "",
             "formula_type": "arithmetic",
-            "inputs": ["salary"],
             "output_type": "number",
             "sort_order": 1,
             "is_active": True,
@@ -334,7 +328,6 @@ class TestComputedPropertyApi:
                     display_name="Total Compensation",
                     formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
-                    inputs=["salary"],
                     output_type="number",
                     sort_order=1,
                     is_active=True,

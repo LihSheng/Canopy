@@ -599,6 +599,7 @@ export interface EntityRevisionProperty {
   is_required: boolean;
   is_primary_key: boolean;
   sort_order: number;
+  format_hint: string;
 }
 
 export interface SourceBinding {

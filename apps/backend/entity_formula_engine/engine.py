@@ -16,12 +16,11 @@ class FormulaEngine:
       coalesce, is_null, if, concat, length, equals, greater_than, less_than
     """
 
-    def evaluate(self, formula: str, inputs: list[str], row_data: dict) -> object:
+    def evaluate(self, formula: str, row_data: dict) -> object:
         """Evaluate a formula string against a row of data.
 
         Args:
             formula: The expression to evaluate.
-            inputs:  Property keys referenced by the formula (used for validation only).
             row_data: Dict of property_key -> value.
         """
         parser = _Parser(formula)

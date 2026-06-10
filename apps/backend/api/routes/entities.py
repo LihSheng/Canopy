@@ -155,6 +155,7 @@ class FieldDetailResponse(BaseModel):
     formula: str | None = None
     formula_type: str | None = None
     is_active: bool = True
+    format_hint: str = ""
 
 
 class FieldGroupResponse(BaseModel):
@@ -209,6 +210,7 @@ class EntityRevisionPropertyDetail(BaseModel):
     is_required: bool
     is_primary_key: bool
     sort_order: int
+    format_hint: str = ""
 
 
 class EntityRevisionDetail(BaseModel):
@@ -281,6 +283,7 @@ def _build_revision_detail(rev) -> EntityRevisionDetail:
                     formula=f.formula,
                     formula_type=f.formula_type,
                     is_active=f.is_active,
+                    format_hint=f.format_hint,
                 )
                 for f in fg.fields
             ],
@@ -319,6 +322,7 @@ def _build_revision_detail(rev) -> EntityRevisionDetail:
                 is_required=p.is_required,
                 is_primary_key=p.is_primary_key,
                 sort_order=p.sort_order,
+                format_hint=p.format_hint,
             )
             for p in (rev.properties or [])
         ],
@@ -376,7 +380,6 @@ def _build_revision_detail(rev) -> EntityRevisionDetail:
                 formula=cp.formula,
                 formula_type=cp.formula_type,
                 expression=cp.formula,
-                inputs=cp.inputs,
                 output_type=cp.output_type,
                 sort_order=cp.sort_order,
                 is_active=cp.is_active,

@@ -35,6 +35,7 @@ class EntityPropertyRequest(BaseModel):
     is_required: bool = False
     is_primary_key: bool = False
     sort_order: int = 0
+    format_hint: str = ""
 
 
 class EntityPropertyResponse(BaseModel):
@@ -47,6 +48,7 @@ class EntityPropertyResponse(BaseModel):
     is_required: bool
     is_primary_key: bool
     sort_order: int
+    format_hint: str = ""
 
 
 class SourceBindingRequest(BaseModel):
@@ -75,7 +77,6 @@ class ComputedPropertyResponse(BaseModel):
     display_name: str
     formula: str
     formula_type: str = "arithmetic"
-    inputs: list[str] = []
     output_type: str = "string"
     sort_order: int = 0
     is_active: bool = True
@@ -200,7 +201,6 @@ class AddComputedPropertyRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=255)
     formula: str = Field(..., min_length=1)
     formula_type: str = "arithmetic"
-    inputs: list[str] = []
     output_type: str = "string"
     sort_order: int = 0
     is_active: bool = True
@@ -213,7 +213,6 @@ class UpdateComputedPropertyRequest(BaseModel):
     display_name: str | None = None
     formula: str | None = None
     formula_type: str | None = None
-    inputs: list[str] | None = None
     output_type: str | None = None
     sort_order: int | None = None
     is_active: bool | None = None
@@ -238,6 +237,7 @@ def _revision_to_response(rev) -> EntityRevisionResponse:
                 is_required=p.is_required,
                 is_primary_key=p.is_primary_key,
                 sort_order=p.sort_order,
+                format_hint=p.format_hint,
             )
             for p in (rev.properties or [])
         ],
@@ -268,7 +268,6 @@ def _revision_to_response(rev) -> EntityRevisionResponse:
                 display_name=cp.display_name,
                 formula=cp.formula,
                 formula_type=cp.formula_type,
-                inputs=cp.inputs,
                 output_type=cp.output_type,
                 sort_order=cp.sort_order,
                 is_active=cp.is_active,
@@ -431,7 +430,6 @@ def update_draft(
                 display_name=p.get("display_name", ""),
                 formula=p.get("formula", ""),
                 formula_type=p.get("formula_type", "arithmetic"),
-                inputs=p.get("inputs", []),
                 output_type=p.get("output_type", "string"),
                 sort_order=p.get("sort_order", 0),
                 is_active=p.get("is_active", True),
@@ -800,7 +798,6 @@ def create_initial_revision(
                 display_name=p.get("display_name", ""),
                 formula=p.get("formula", ""),
                 formula_type=p.get("formula_type", "arithmetic"),
-                inputs=p.get("inputs", []),
                 output_type=p.get("output_type", "string"),
                 sort_order=p.get("sort_order", 0),
                 is_active=p.get("is_active", True),
@@ -975,7 +972,6 @@ def add_computed_property(
         display_name=body.display_name,
         formula=body.formula,
         formula_type=body.formula_type,
-        inputs=body.inputs,
         output_type=body.output_type,
         sort_order=body.sort_order,
         is_active=body.is_active,
@@ -1067,7 +1063,6 @@ def list_computed_properties(
             display_name=p.display_name,
             formula=p.formula,
             formula_type=p.formula_type,
-            inputs=p.inputs,
             output_type=p.output_type,
             sort_order=p.sort_order,
             is_active=p.is_active,
@@ -1080,7 +1075,6 @@ class EvaluateComputedPropertyRequest(BaseModel):
     """Request to evaluate a computed property formula against a sample row."""
 
     formula: str
-    inputs: list[str] = []
     sample_row: dict = {}
 
 
@@ -1112,7 +1106,7 @@ def evaluate_computed_property(
     errors: list[str] = []
     result = None
     try:
-        result = FormulaEngine().evaluate(body.formula, body.inputs, body.sample_row)
+        result = FormulaEngine().evaluate(body.formula, body.sample_row)
     except ValidationError as e:
         errors.append(str(e))
 

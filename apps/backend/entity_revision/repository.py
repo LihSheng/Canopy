@@ -210,6 +210,7 @@ class EntityRevisionRepository:
                     "is_required": p.is_required,
                     "is_primary_key": p.is_primary_key,
                     "sort_order": p.sort_order,
+                    "format_hint": p.format_hint,
                 }
                 for p in d.properties
             ],
@@ -240,7 +241,6 @@ class EntityRevisionRepository:
                     "display_name": cp.display_name,
                     "formula": cp.formula,
                     "formula_type": cp.formula_type,
-                    "inputs": cp.inputs,
                     "output_type": cp.output_type,
                     "sort_order": cp.sort_order,
                     "is_active": cp.is_active,
@@ -271,6 +271,7 @@ class EntityRevisionRepository:
                     is_required=p.get("is_required", False),
                     is_primary_key=p.get("is_primary_key", False),
                     sort_order=p.get("sort_order", 0),
+                    format_hint=p.get("format_hint", ""),
                 )
                 for p in (m.properties or [])
             ],
@@ -301,7 +302,6 @@ class EntityRevisionRepository:
                     display_name=cp.get("display_name", ""),
                     formula=cp.get("formula", ""),
                     formula_type=cp.get("formula_type", "arithmetic"),
-                    inputs=cp.get("inputs", []),
                     output_type=cp.get("output_type", "string"),
                     sort_order=cp.get("sort_order", 0),
                     is_active=cp.get("is_active", True),

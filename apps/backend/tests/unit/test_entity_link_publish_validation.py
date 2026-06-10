@@ -116,7 +116,7 @@ class TestEntityLinkPublishValidation:
         with patch.object(rev_repo, "get_draft", return_value=bad_draft):
             with pytest.raises(ValidationError) as exc_info:
                 service.publish_draft(source_id, tenant_context.tenant_id)
-        assert "Invalid cardinality" in str(exc_info.value)
+        assert "invalid cardinality" in str(exc_info.value).lower()
 
     def test_publish_fails_target_not_published(self, db_session, tenant_context):
         source_id = _make_entity(db_session, tenant_context.tenant_id, "source_2")

@@ -1,7 +1,5 @@
 """Unit tests for the typed EntityLink domain model."""
 
-import pytest
-
 from entity_revision.domain import EntityLink, LinkCardinality
 
 
@@ -52,27 +50,30 @@ class TestEntityLinkModel:
         assert LinkCardinality.ONE_TO_ONE.value == "1:1"
         assert LinkCardinality.ONE_TO_MANY.value == "1:M"
 
-    def test_invalid_cardinality_raises(self):
-        with pytest.raises(ValueError):
-            EntityLink(
-                link_id="link-4",
-                display_name="Bad",
-                source_property_key="bad_id",
-                target_entity_id="target-4",
-                target_property_key="id",
-                cardinality="M:M",
-            )
+    def test_invalid_cardinality_does_not_raise_at_construction(self):
+        """Invalid cardinality (e.g., M:M) is accepted at construction;
+        validation is deferred to publish time."""
+        link = EntityLink(
+            link_id="link-4",
+            display_name="Bad",
+            source_property_key="bad_id",
+            target_entity_id="target-4",
+            target_property_key="id",
+            cardinality="M:M",
+        )
+        assert link.cardinality == "M:M"
 
     def test_invalid_cardinality_many_to_one(self):
-        with pytest.raises(ValueError):
-            EntityLink(
-                link_id="link-5",
-                display_name="Bad",
-                source_property_key="bad_id",
-                target_entity_id="target-5",
-                target_property_key="id",
-                cardinality="M:1",
-            )
+        """Invalid cardinality 'M:1' is accepted at construction."""
+        link = EntityLink(
+            link_id="link-5",
+            display_name="Bad",
+            source_property_key="bad_id",
+            target_entity_id="target-5",
+            target_property_key="id",
+            cardinality="M:1",
+        )
+        assert link.cardinality == "M:1"
 
     def test_to_dict(self):
         link = EntityLink(

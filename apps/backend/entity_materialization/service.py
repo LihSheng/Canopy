@@ -61,7 +61,7 @@ class EntityMaterializationService:
                 if not cp.is_active:
                     continue
                 try:
-                    result = FormulaEngine().evaluate(cp.formula, cp.inputs, row_data)
+                    result = FormulaEngine().evaluate(cp.formula, row_data)
                 except Exception:
                     result = None
                 row_data[cp.property_key] = result
@@ -198,13 +198,42 @@ class EntityMaterializationService:
 def build_source_data_reader(db):
     """Build a source data reader callable for the given DB session.
 
-    Phase 8 uses a simplified read path. The actual dataset resolution
-    (connection preview, file storage, or database query) is abstracted
-    behind this adapter so tests can inject mock source rows easily."""
+    Resolves source_node.reference_id to a dataset version, reads all
+    materialized rows from the dataset version's storage, and returns
+    them as a list of dicts (column_name → value).
+
+    Phase 8 uses a simplified read path. Tests can inject mock source
+    rows by passing a custom callable instead of using this builder."""
+
+    from dataset.repository import DatasetVersionRepository
+
+    version_repo = DatasetVersionRepository(db)
 
     def _read(source_node: dict) -> list[dict]:
-        # Simplified Phase 8 implementation: returns empty list.
-        # Real dataset reads will be wired here in a future phase.
-        return []
+        reference_id = source_node.get("reference_id", "")
+        if not reference_id:
+            return []
+
+        version = version_repo.get(reference_id)
+        if version is None or not version.storage_path:
+            return []
+
+        rows: list[dict] = []
+        try:
+            with open(version.storage_path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    import json
+
+                    row = json.loads(line)
+                    if isinstance(row, dict):
+                        rows.append(row)
+        except (FileNotFoundError, OSError):
+            # Storage not available — return empty; caller handles gracefully
+            return []
+
+        return rows
 
     return _read

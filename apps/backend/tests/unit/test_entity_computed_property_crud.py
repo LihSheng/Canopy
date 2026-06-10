@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from common.errors import ValidationError
 from context.tenant_context import TenantContext, set_current_tenant_context
 from entity_revision.domain import (
     ComputedProperty,
@@ -66,7 +67,6 @@ class TestComputedPropertyCrud:
             display_name="Total Compensation",
             formula="multiply(salary, 1.1)",
             formula_type="arithmetic",
-            inputs=["salary"],
             output_type="number",
             sort_order=1,
             is_active=True,
@@ -115,7 +115,6 @@ class TestComputedPropertyCrud:
                     display_name="Total Compensation",
                     formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
-                    inputs=["salary"],
                     output_type="number",
                     sort_order=1,
                     is_active=True,
@@ -128,7 +127,7 @@ class TestComputedPropertyCrud:
             entity_id=entity_id,
             tenant_id=tenant_context.tenant_id,
             computed_property_id="cp1",
-            updates={"formula": "multiply(salary, 1.2)", "inputs": ["salary"]},
+            updates={"formula": "multiply(salary, 1.2)"},
             lock_holder_id="user-1",
         )
 
@@ -167,7 +166,6 @@ class TestComputedPropertyCrud:
                     display_name="Total Compensation",
                     formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
-                    inputs=["salary"],
                     output_type="number",
                     sort_order=1,
                     is_active=True,
@@ -220,29 +218,20 @@ class TestComputedPropertyCrud:
             display_name="Bad",
             formula="add(nonexistent, 1)",
             formula_type="arithmetic",
-            inputs=["nonexistent"],
             output_type="number",
             sort_order=1,
             is_active=True,
         )
 
-        # Draft save accepts invalid computed property (draft/publish safety pattern)
-        draft = service.add_computed_property(
-            entity_id=entity_id,
-            tenant_id=tenant_context.tenant_id,
-            prop=cp,
-            lock_holder_id="user-1",
-        )
-        assert len(draft.computed_properties) == 1
-
-        # Publish blocks it
-        with pytest.raises(Exception) as exc_info:
-            service.publish_draft(
+        # Draft save blocks formulas referencing nonexistent properties
+        with pytest.raises(ValidationError) as exc_info:
+            service.add_computed_property(
                 entity_id=entity_id,
                 tenant_id=tenant_context.tenant_id,
+                prop=cp,
+                lock_holder_id="user-1",
             )
-        error_msg = str(exc_info.value).lower()
-        assert "nonexistent" in error_msg or "unknown" in error_msg or "publish validation failed" in error_msg
+        assert "nonexistent" in str(exc_info.value).lower()
 
     def test_computed_property_preserved_through_publish(self, db_session, tenant_context):
         """Computed property survives publish."""
@@ -277,7 +266,6 @@ class TestComputedPropertyCrud:
                     display_name="Total Compensation",
                     formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
-                    inputs=["salary"],
                     output_type="number",
                     sort_order=1,
                     is_active=True,

@@ -79,7 +79,6 @@ class TestFormulaSyntaxValidation:
             display_name="Total",
             formula="",
             formula_type="arithmetic",
-            inputs=["salary"],
             output_type="number",
         )
         with pytest.raises(ValidationError) as exc:
@@ -95,7 +94,6 @@ class TestFormulaSyntaxValidation:
             display_name="Total",
             formula="foobar(salary)",
             formula_type="arithmetic",
-            inputs=["salary"],
             output_type="number",
         )
         with pytest.raises(ValidationError) as exc:
@@ -111,7 +109,6 @@ class TestFormulaSyntaxValidation:
             display_name="Total",
             formula="upper(salary",
             formula_type="arithmetic",
-            inputs=["salary"],
             output_type="string",
         )
         with pytest.raises(ValidationError) as exc:
@@ -127,7 +124,6 @@ class TestFormulaSyntaxValidation:
             display_name="Total",
             formula="add(salary, nonexistent)",
             formula_type="arithmetic",
-            inputs=["salary", "nonexistent"],
             output_type="number",
         )
         with pytest.raises(ValidationError) as exc:
@@ -143,7 +139,6 @@ class TestFormulaSyntaxValidation:
             display_name="Total",
             formula="other.salary",
             formula_type="arithmetic",
-            inputs=["other.salary"],
             output_type="number",
         )
         with pytest.raises(ValidationError) as exc:
@@ -161,7 +156,6 @@ class TestFormulaSyntaxValidation:
             display_name="Total",
             formula="add(salary, bonus)",
             formula_type="arithmetic",
-            inputs=["salary", "bonus"],
             output_type="number",
         )
         draft = service.add_computed_property(entity_id, tenant_context.tenant_id, cp, lock_holder_id="user-1")

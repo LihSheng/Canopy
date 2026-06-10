@@ -123,7 +123,6 @@ class EntityRevisionService:
                     display_name=cp.display_name,
                     formula=cp.formula,
                     formula_type=cp.formula_type,
-                    inputs=cp.inputs,
                     output_type=cp.output_type,
                     sort_order=cp.sort_order,
                     is_active=cp.is_active,
@@ -455,7 +454,6 @@ class EntityRevisionService:
                     display_name=updates.get("display_name", cp.display_name),
                     formula=updates.get("formula", cp.formula),
                     formula_type=updates.get("formula_type", cp.formula_type),
-                    inputs=updates.get("inputs", cp.inputs),
                     output_type=updates.get("output_type", cp.output_type),
                     sort_order=updates.get("sort_order", cp.sort_order),
                     is_active=updates.get("is_active", cp.is_active),
@@ -500,20 +498,30 @@ class EntityRevisionService:
         return []
 
     def _validate_computed_property(self, draft: EntityRevision, prop: ComputedProperty) -> None:
-        """Validate computed property formula syntax at draft save time.
+        """Validate computed property formula at draft save time.
 
-        Only formula syntax is checked here. Property reference validation
-        (inputs, circular deps, output type) is enforced at publish time
-        in publish_draft() so users can save in-progress work.
+        Checks formula syntax and that all property references in the formula
+        exist on the entity. Circular dependency and output type checks are
+        deferred to publish_draft().
         """
         self._validate_computed_property_syntax(prop.formula)
+        property_keys = {p.property_key for p in draft.properties}
+        try:
+            refs = FormulaEngine().extract_property_references(prop.formula)
+        except ValidationError:
+            return  # syntax already checked above; extraction failure is non-blocking here
+        for ref in refs:
+            if ref not in property_keys:
+                raise ValidationError(
+                    f"Computed property '{prop.property_key}' references property '{ref}' which does not exist."
+                )
 
     def _validate_computed_property_syntax(self, formula: str) -> None:
         """Basic syntax validation: reject empty formulas and parse with engine."""
         if not formula or not formula.strip():
             raise ValidationError("Computed property formula cannot be empty.")
         try:
-            FormulaEngine().evaluate(formula, inputs=[], row_data={})
+            FormulaEngine().evaluate(formula, row_data={})
         except ValidationError as e:
             raise ValidationError(f"Computed property formula syntax error: {e}")
 
@@ -651,19 +659,15 @@ class EntityRevisionService:
         for cp in draft.computed_properties or []:
             if not cp.is_active:
                 continue
-            # Check all inputs exist in base properties
-            for inp in cp.inputs or []:
-                if inp not in property_keys:
-                    errors.append(
-                        f"Computed property '{cp.property_key}' references removed or renamed property '{inp}'."
-                    )
-            # Check formula references only base properties (no circular deps)
+            # Extract refs from formula and check all exist in base properties
             try:
                 refs = FormulaEngine().extract_property_references(cp.formula)
             except ValidationError as e:
                 errors.append(f"Computed property '{cp.property_key}' formula syntax error: {e}")
                 continue
             for ref in refs:
+                if ref not in property_keys:
+                    errors.append(f"Computed property '{cp.property_key}' references missing property '{ref}'.")
                 if ref in computed_keys:
                     errors.append(
                         f"Computed property '{cp.property_key}' references another computed property '{ref}'. "
@@ -845,7 +849,6 @@ class EntityRevisionService:
                     display_name=cp.display_name,
                     formula=cp.formula,
                     formula_type=cp.formula_type,
-                    inputs=cp.inputs,
                     output_type=cp.output_type,
                     sort_order=cp.sort_order,
                     is_active=cp.is_active,

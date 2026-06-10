@@ -82,7 +82,6 @@ class TestFormulaEvaluateApi:
 
         payload = {
             "formula": "multiply(salary, 2)",
-            "inputs": ["salary"],
             "sample_row": {"salary": 5000},
         }
 
@@ -125,7 +124,6 @@ class TestFormulaEvaluateApi:
 
         payload = {
             "formula": "foobar(salary)",
-            "inputs": ["salary"],
             "sample_row": {"salary": 5000},
         }
 
@@ -156,7 +154,6 @@ class TestFormulaEvaluateApi:
 
         payload = {
             "formula": "upper(salary)",
-            "inputs": ["salary"],
             "sample_row": {"salary": "alice"},
         }
 

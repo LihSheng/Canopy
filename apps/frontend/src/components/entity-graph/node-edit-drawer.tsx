@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ComputedPropertyComposer } from "./computed-property-composer";
+import { ComputedPropertyComposer, type EntityComputedProperty } from "./computed-property-composer";
 
 type FieldRef = {
   source_id: string;
@@ -75,6 +75,7 @@ export type SelectedNode = {
 type Props = {
   node: SelectedNode;
   sourceNodes?: SourceNodeData[];
+  entityId?: string;
   onClose: () => void;
   onUpdateProperties?: (properties: Property[]) => void;
   onUpdateComputedProperties?: (computedProperties: ComputedProperty[]) => void;
@@ -88,6 +89,7 @@ const SEMANTIC_TYPES = ["string", "integer", "number", "boolean", "datetime", "d
 export const NodeEditDrawer = ({
   node,
   sourceNodes,
+  entityId,
   onClose,
   onUpdateProperties,
   onUpdateComputedProperties,
@@ -172,9 +174,19 @@ export const NodeEditDrawer = ({
     onUpdateProperties?.(updated);
   };
 
-  const handleAddComputedProperty = (cp: ComputedProperty) => {
+  const handleAddComputedProperty = (cp: EntityComputedProperty) => {
     const current = data.computedProperties || [];
-    const updated = [...current, cp];
+    // Bridge new EntityComputedProperty to old ComputedProperty shape for legacy consumers
+    const legacyCp: ComputedProperty = {
+      id: cp.id,
+      property_name: cp.property_key,
+      semantic_type: cp.output_type,
+      composition_kind: cp.formula_type,
+      expression: cp.formula,
+      inputs: [],
+      included: cp.is_active,
+    };
+    const updated = [...current, legacyCp];
     onUpdateComputedProperties?.(updated);
     setShowComposer(false);
   };
@@ -438,15 +450,11 @@ export const NodeEditDrawer = ({
             {showComposer && (
               <div className="mb-4">
                 <ComputedPropertyComposer
-                  sourceNodes={(sourceNodes || []).map((sn) => ({
-                    source_id: sn.source_id,
-                    name: sn.name,
-                    fields: sn.fields || [],
-                  }))}
-                  existingProps={[
-                    ...properties.map((p) => ({ name: p.property_name })),
-                    ...(data.computedProperties || []).map((cp) => ({ name: cp.property_name })),
+                  existingPropertyKeys={[
+                    ...properties.map((p) => p.property_name),
+                    ...(data.computedProperties || []).map((cp) => cp.property_name),
                   ]}
+                  entityId={entityId || ""}
                   onAdd={handleAddComputedProperty}
                   onCancel={() => setShowComposer(false)}
                 />

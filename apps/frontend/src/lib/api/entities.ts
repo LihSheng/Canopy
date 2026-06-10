@@ -212,3 +212,19 @@ export const revertToRevision = (
     { method: "POST" }
   );
 };
+
+// ─── Computed Properties ───
+
+export const evaluateFormula = (
+  entityId: string,
+  formula: string,
+  sampleRow?: Record<string, unknown>
+): Promise<{ result: unknown; errors: string[]; warnings: string[] }> => {
+  return request<{ result: unknown; errors: string[]; warnings: string[] }>(
+    `/api/entities/${entityId}/computed-properties/evaluate`,
+    {
+      method: "POST",
+      body: JSON.stringify({ formula, sample_row: sampleRow || {} }),
+    }
+  );
+};

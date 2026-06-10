@@ -24,6 +24,7 @@ class EntityField:
     formula: str | None = None
     formula_type: str | None = None
     is_active: bool = True
+    format_hint: str = ""
 
     @classmethod
     def from_base(cls, p: EntityProperty) -> "EntityField":
@@ -39,6 +40,7 @@ class EntityField:
             formula=None,
             formula_type=None,
             is_active=True,
+            format_hint=p.format_hint,
         )
 
     @classmethod
@@ -55,6 +57,7 @@ class EntityField:
             formula=cp.formula,
             formula_type=cp.formula_type,
             is_active=cp.is_active,
+            format_hint="",
         )
 
 

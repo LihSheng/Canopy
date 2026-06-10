@@ -37,4 +37,59 @@ export const getSeverityColor = (severity: Severity): string => {
     case "low":
       return "bg-blue-50 text-blue-700 border-blue-200";
   }
-}
+  return "bg-zinc-50 text-zinc-600 border-zinc-200";
+};
+
+// ── Entity property format hints ───────────────────────────────────────
+
+const number2dpFormatter = new Intl.NumberFormat(DEFAULT_LOCALE, {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const dateShortFormatter = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+
+const dateLongFormatter = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  weekday: "long",
+});
+
+/**
+ * Format a value according to an optional format hint.
+ * Used when displaying materialized entity rows.
+ */
+export const formatValue = (value: unknown, formatHint?: string): string => {
+  if (value === null || value === undefined) return "—";
+
+  switch (formatHint) {
+    case "currency":
+      if (typeof value === "number") return formatCurrency(value);
+      break;
+    case "percentage":
+      if (typeof value === "number") return formatPercent(value);
+      break;
+    case "number_2dp":
+      if (typeof value === "number") return number2dpFormatter.format(value);
+      break;
+    case "date_short":
+      if (value instanceof Date || typeof value === "string") {
+        return dateShortFormatter.format(new Date(value as string));
+      }
+      break;
+    case "date_long":
+      if (value instanceof Date || typeof value === "string") {
+        return dateLongFormatter.format(new Date(value as string));
+      }
+      break;
+    case "boolean_yesno":
+      return value ? "Yes" : "No";
+  }
+
+  return String(value);
+};

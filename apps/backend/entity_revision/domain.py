@@ -73,6 +73,17 @@ class EntityLink:
         )
 
 
+class PropertyFormatHint(StrEnum):
+    """Display format hint for entity properties."""
+
+    CURRENCY = "currency"
+    PERCENTAGE = "percentage"
+    DATE_SHORT = "date_short"
+    DATE_LONG = "date_long"
+    NUMBER_2DP = "number_2dp"
+    BOOLEAN_YESNO = "boolean_yesno"
+
+
 @dataclass
 class EntityProperty:
     """A canonical, business-owned property definition with stable identity.
@@ -80,6 +91,7 @@ class EntityProperty:
     property_id is an immutable UUID that survives renames.
     property_key is the stable semantic key (e.g., 'employee_name').
     display_name is the user-visible label (e.g., 'Employee Name').
+    format_hint is an optional display hint (e.g., 'currency', 'percentage').
     """
 
     property_id: str
@@ -89,6 +101,7 @@ class EntityProperty:
     is_required: bool = False
     is_primary_key: bool = False
     sort_order: int = 0
+    format_hint: str = ""
 
 
 @dataclass
@@ -142,8 +155,11 @@ class ComputedProperty:
     display_name is the user-visible label.
     formula is the expression string (e.g., 'salary * 1.1').
     formula_type is the category (e.g., 'arithmetic', 'concat', 'lookup').
-    inputs is a list of property_key strings referenced by the formula.
     output_type is the semantic type of the result.
+
+    Property references are extracted from the formula at validation time
+    via FormulaEngine.extract_property_references(), so there is no
+    separate inputs field to drift.
     """
 
     id: str
@@ -151,7 +167,6 @@ class ComputedProperty:
     display_name: str
     formula: str = ""
     formula_type: str = "arithmetic"
-    inputs: list[str] = field(default_factory=list)
     output_type: str = "string"
     sort_order: int = 0
     is_active: bool = True

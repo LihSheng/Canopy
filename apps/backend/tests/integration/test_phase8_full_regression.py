@@ -183,7 +183,6 @@ class TestFullRegressionScenario:
                 "display_name": "Full Name",
                 "formula": 'concat(first_name, " ", last_name)',
                 "formula_type": "arithmetic",
-                "inputs": ["first_name", "last_name"],
                 "output_type": "string",
                 "sort_order": 4,
                 "is_active": True,

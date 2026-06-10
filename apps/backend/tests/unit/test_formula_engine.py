@@ -16,7 +16,6 @@ class TestFormulaEngine:
         engine = FormulaEngine()
         result = engine.evaluate(
             formula="employee_name",
-            inputs=["employee_name"],
             row_data={"employee_name": "Alice"},
         )
         assert result == "Alice"
@@ -26,7 +25,6 @@ class TestFormulaEngine:
         engine = FormulaEngine()
         result = engine.evaluate(
             formula="upper(employee_name)",
-            inputs=["employee_name"],
             row_data={"employee_name": "Alice"},
         )
         assert result == "ALICE"
@@ -36,7 +34,6 @@ class TestFormulaEngine:
         engine = FormulaEngine()
         result = engine.evaluate(
             formula="coalesce(null, backup_value)",
-            inputs=["backup_value"],
             row_data={"backup_value": "fallback"},
         )
         assert result == "fallback"
@@ -46,7 +43,6 @@ class TestFormulaEngine:
         engine = FormulaEngine()
         result = engine.evaluate(
             formula="if(greater_than(salary, 50000), 'high', 'low')",
-            inputs=["salary"],
             row_data={"salary": 60000},
         )
         assert result == "high"
@@ -56,7 +52,6 @@ class TestFormulaEngine:
         engine = FormulaEngine()
         result = engine.evaluate(
             formula="add(base_salary, bonus)",
-            inputs=["base_salary", "bonus"],
             row_data={"base_salary": 5000, "bonus": 500},
         )
         assert result == 5500
@@ -66,7 +61,6 @@ class TestFormulaEngine:
         engine = FormulaEngine()
         result = engine.evaluate(
             formula="concat(first_name, ' ', last_name)",
-            inputs=["first_name", "last_name"],
             row_data={"first_name": "Alice", "last_name": "Smith"},
         )
         assert result == "Alice Smith"
@@ -76,7 +70,6 @@ class TestFormulaEngine:
         engine = FormulaEngine()
         result = engine.evaluate(
             formula="is_null(null)",
-            inputs=[],
             row_data={},
         )
         assert result is True
@@ -87,7 +80,6 @@ class TestFormulaEngine:
         with pytest.raises(ValidationError):
             engine.evaluate(
                 formula="upper(employee_name",
-                inputs=["employee_name"],
                 row_data={"employee_name": "Alice"},
             )
 
@@ -97,6 +89,5 @@ class TestFormulaEngine:
         with pytest.raises(ValidationError):
             engine.evaluate(
                 formula="foobar(employee_name)",
-                inputs=["employee_name"],
                 row_data={"employee_name": "Alice"},
             )
