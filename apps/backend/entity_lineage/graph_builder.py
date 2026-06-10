@@ -177,7 +177,7 @@ def build_entity_lineage_graph(
             LineageNode(
                 id=target_node_id,
                 kind=LineageNodeKind.ENTITY,
-                label=display_name,
+                label=str(display_name),
                 properties=[],
             )
         )
@@ -188,7 +188,7 @@ def build_entity_lineage_graph(
                 kind=LineageEdgeKind.LINK,
                 source_id="entity",
                 target_id=target_node_id,
-                label=display_name,
+                label=str(display_name),
             )
         )
 
