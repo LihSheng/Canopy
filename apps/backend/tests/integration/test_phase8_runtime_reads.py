@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from context.tenant_context import TenantContext, set_current_tenant_context
-from entity_revision.domain import EntityProperty, EntityRevision, RevisionStatus
+from entity_revision.domain import EntityProperty, EntityRevision, RevisionStatus, SourceBinding
 from entity_revision.repository import EntityRevisionRepository
 from semantic.domain import ObjectType
 from semantic.repository import ObjectTypeRepository
@@ -60,7 +60,13 @@ def seed_published_v1(db_session, seed_entity):
                     sort_order=1,
                 ),
             ],
-            source_bindings=[],
+            source_bindings=[
+                SourceBinding(
+                    property_key="name",
+                    source_node_id="src-1",
+                    source_field_name="name",
+                ),
+            ],
             source_nodes=[
                 {
                     "source_id": "src-1",
@@ -112,7 +118,18 @@ def seed_published_v2(db_session, seed_entity, seed_published_v1):
                     sort_order=2,
                 ),
             ],
-            source_bindings=[],
+            source_bindings=[
+                SourceBinding(
+                    property_key="name",
+                    source_node_id="src-1",
+                    source_field_name="name",
+                ),
+                SourceBinding(
+                    property_key="email",
+                    source_node_id="src-1",
+                    source_field_name="email",
+                ),
+            ],
             source_nodes=[
                 {
                     "source_id": "src-1",

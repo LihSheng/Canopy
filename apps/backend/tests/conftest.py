@@ -56,6 +56,17 @@ _TEST_SOURCE_URL = f"{_TEST_SERVER_URL.rstrip('/')}/{_TEST_SOURCE_DATABASE_NAME}
 _SNAPSHOT_ID = "test-snapshot-001"
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _set_event_loop_policy():
+    """Windows fix: psycopg requires SelectorEventLoop, not ProactorEventLoop."""
+    import sys
+
+    if sys.platform == "win32":
+        import asyncio
+
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "unit: pure logic tests (no DB/network)")
     config.addinivalue_line("markers", "integration: tests using DB or network fixtures")

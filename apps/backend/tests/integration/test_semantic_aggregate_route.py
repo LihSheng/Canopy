@@ -3,11 +3,103 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from common.errors import ValidationError
+from context.tenant_context import TenantContext, set_current_tenant_context
+from control_plane.schemas.memberships import TenantMembershipModel
+from control_plane.schemas.tenants import TenantModel
 from semantic.aggregation_service import AggregationBucket, AggregationResponse
-
-# Import fixtures from test_semantic_api
+from semantic.repository import ObjectTypeRepository
+from semantic.service import ObjectTypeService
 
 pytestmark = pytest.mark.api_schema
+
+
+@pytest.fixture(autouse=True)
+def tenant_context():
+    """Set up and activate a tenant context for all tests."""
+    ctx = TenantContext(
+        tenant_id="test-tenant-1",
+        tenant_role="admin",
+        membership_status="active",
+    )
+    set_current_tenant_context(ctx)
+    yield ctx
+
+
+@pytest.fixture
+def seed_object_type(db_session, tenant_context):
+    """Create a reusable object type for aggregation tests."""
+    service = ObjectTypeService(ObjectTypeRepository(db_session))
+    obj = service.create(
+        tenant_id=tenant_context.tenant_id,
+        object_type_key="test_aggregate_employee",
+        display_name="Test Aggregate Employee",
+        description="An object type for aggregate tests",
+    )
+    return obj
+
+
+@pytest.fixture
+def auth_headers_tenant2(client):
+    """Auth headers for a user who belongs to tenant-2."""
+    # Create tenant-2 with membership
+    from auth.hashing import hash_password
+    from auth.schema import UserModel
+
+    db_user = UserModel(
+        id="test-user-agg-2",
+        email="admin-agg2@canopy.dev",
+        password_hash=hash_password("admin123"),
+        display_name="Admin Tenant 2",
+        is_active=True,
+    )
+    from common.database import session_factory
+
+    db = session_factory()
+    try:
+        db.add(db_user)
+        tenant2 = TenantModel(
+            id="test-tenant-2",
+            tenant_uuid="tuuid-test-agg-2",
+            name="Tenant Two Agg",
+            slug="test-tenant-2-agg",
+            lifecycle_state="active",
+            status="active",
+        )
+        db.add(tenant2)
+        membership = TenantMembershipModel(
+            user_id=db_user.id,
+            tenant_id="test-tenant-2",
+            role="admin",
+            status="active",
+        )
+        db.add(membership)
+        db.commit()
+    finally:
+        db.close()
+
+    ctx2 = TenantContext(
+        tenant_id="test-tenant-2",
+        tenant_role="admin",
+        membership_status="active",
+    )
+    set_current_tenant_context(ctx2)
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "admin-agg2@canopy.dev", "password": "admin123"},
+    )
+    assert response.status_code == 200, response.text
+    token = response.json()["token"]
+
+    # Restore tenant-1 context
+    ctx1 = TenantContext(
+        tenant_id="test-tenant-1",
+        tenant_role="admin",
+        membership_status="active",
+    )
+    set_current_tenant_context(ctx1)
+
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture

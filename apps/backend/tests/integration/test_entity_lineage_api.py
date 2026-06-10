@@ -93,7 +93,7 @@ class TestEntityLineageInApiResponse:
                         "source_property_key": "dept_key",
                         "target_object_type_id": "ent-dept-1",
                         "target_property_key": "id",
-                        "cardinality": "many_to_one",
+                        "cardinality": "1:1",
                     },
                 ],
                 "publish": True,

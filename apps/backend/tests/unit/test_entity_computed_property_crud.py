@@ -64,7 +64,7 @@ class TestComputedPropertyCrud:
             id=str(uuid.uuid4()),
             property_key="total_comp",
             display_name="Total Compensation",
-            formula="salary * 1.1",
+            formula="multiply(salary, 1.1)",
             formula_type="arithmetic",
             inputs=["salary"],
             output_type="number",
@@ -113,7 +113,7 @@ class TestComputedPropertyCrud:
                     id="cp1",
                     property_key="total_comp",
                     display_name="Total Compensation",
-                    formula="salary * 1.1",
+                    formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
                     inputs=["salary"],
                     output_type="number",
@@ -128,11 +128,11 @@ class TestComputedPropertyCrud:
             entity_id=entity_id,
             tenant_id=tenant_context.tenant_id,
             computed_property_id="cp1",
-            updates={"formula": "salary * 1.2", "inputs": ["salary"]},
+            updates={"formula": "multiply(salary, 1.2)", "inputs": ["salary"]},
             lock_holder_id="user-1",
         )
 
-        assert draft.computed_properties[0].formula == "salary * 1.2"
+        assert draft.computed_properties[0].formula == "multiply(salary, 1.2)"
 
     def test_remove_computed_property(self, db_session, tenant_context):
         """Computed property can be removed from draft."""
@@ -165,7 +165,7 @@ class TestComputedPropertyCrud:
                     id="cp1",
                     property_key="total_comp",
                     display_name="Total Compensation",
-                    formula="salary * 1.1",
+                    formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
                     inputs=["salary"],
                     output_type="number",
@@ -186,7 +186,7 @@ class TestComputedPropertyCrud:
         assert len(draft.computed_properties) == 0
 
     def test_computed_property_references_valid_property_keys(self, db_session, tenant_context):
-        """Adding a computed property with an invalid property key raises ValidationError."""
+        """Draft accepts computed property with invalid refs; publish blocks it."""
         entity_id = str(uuid.uuid4())
         obj_repo = ObjectTypeRepository(db_session)
         obj_repo.save(
@@ -218,7 +218,7 @@ class TestComputedPropertyCrud:
             id=str(uuid.uuid4()),
             property_key="bad",
             display_name="Bad",
-            formula="nonexistent + 1",
+            formula="add(nonexistent, 1)",
             formula_type="arithmetic",
             inputs=["nonexistent"],
             output_type="number",
@@ -226,15 +226,23 @@ class TestComputedPropertyCrud:
             is_active=True,
         )
 
+        # Draft save accepts invalid computed property (draft/publish safety pattern)
+        draft = service.add_computed_property(
+            entity_id=entity_id,
+            tenant_id=tenant_context.tenant_id,
+            prop=cp,
+            lock_holder_id="user-1",
+        )
+        assert len(draft.computed_properties) == 1
+
+        # Publish blocks it
         with pytest.raises(Exception) as exc_info:
-            service.add_computed_property(
+            service.publish_draft(
                 entity_id=entity_id,
                 tenant_id=tenant_context.tenant_id,
-                prop=cp,
-                lock_holder_id="user-1",
             )
-
-        assert "property" in str(exc_info.value).lower()
+        error_msg = str(exc_info.value).lower()
+        assert "nonexistent" in error_msg or "unknown" in error_msg or "publish validation failed" in error_msg
 
     def test_computed_property_preserved_through_publish(self, db_session, tenant_context):
         """Computed property survives publish."""
@@ -267,7 +275,7 @@ class TestComputedPropertyCrud:
                     id="cp1",
                     property_key="total_comp",
                     display_name="Total Compensation",
-                    formula="salary * 1.1",
+                    formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
                     inputs=["salary"],
                     output_type="number",

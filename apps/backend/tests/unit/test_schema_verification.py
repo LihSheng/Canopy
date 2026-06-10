@@ -56,6 +56,10 @@ EXPECTED_CONTROL_PLANE_TABLES = {
     "semantic_object_types",
     "retention_policies",
     "feature_flags",
+    "entity_revision_dependencies",
+    "entity_revisions",
+    "connector_registry",
+    "entity_materialized_rows",
 }
 
 

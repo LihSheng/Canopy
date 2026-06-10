@@ -80,6 +80,25 @@ class EntityMaterializationService:
 
         # Count existing rows before replace
         existing_rows = self._materialization_repo.get_rows(entity_id, revision_id, include_tombstones=False)
+        if not existing_rows:
+            # No existing rows for this revision yet. Seed from any other revision's
+            # materialized rows so tombstone tracking works across revisions.
+            other_rows = self._materialization_repo.get_rows_for_entity(entity_id, exclude_revision_id=revision_id)
+            if other_rows:
+                migrated = [
+                    EntityMaterializedRow(
+                        id=str(uuid.uuid4()),
+                        entity_id=entity_id,
+                        revision_id=revision_id,
+                        row_id=r.row_id,
+                        row_data=r.row_data,
+                        is_tombstone=False,
+                        materialized_at=datetime.now(UTC),
+                    )
+                    for r in other_rows
+                ]
+                self._materialization_repo.save_rows(entity_id, revision_id, migrated)
+                existing_rows = migrated
         existing_row_ids = {r.row_id for r in existing_rows}
 
         rows_inserted = len(new_row_ids - existing_row_ids)

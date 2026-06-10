@@ -84,7 +84,7 @@ class TestComputedPropertyApi:
         payload = {
             "property_key": "total_comp",
             "display_name": "Total Compensation",
-            "formula": "salary * 1.1",
+            "formula": "multiply(salary, 1.1)",
             "formula_type": "arithmetic",
             "inputs": ["salary"],
             "output_type": "number",
@@ -132,7 +132,7 @@ class TestComputedPropertyApi:
                     id="cp1",
                     property_key="total_comp",
                     display_name="Total Compensation",
-                    formula="salary * 1.1",
+                    formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
                     inputs=["salary"],
                     output_type="number",
@@ -144,7 +144,7 @@ class TestComputedPropertyApi:
         )
 
         payload = {
-            "formula": "salary * 1.2",
+            "formula": "multiply(salary, 1.2)",
             "inputs": ["salary"],
         }
 
@@ -156,7 +156,7 @@ class TestComputedPropertyApi:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["computed_properties"][0]["formula"] == "salary * 1.2"
+        assert data["computed_properties"][0]["formula"] == "multiply(salary, 1.2)"
 
     def test_remove_computed_property(self, client, auth_headers, db_session):
         """DELETE /entities/{id}/draft/computed-properties/{id} removes it."""
@@ -187,7 +187,7 @@ class TestComputedPropertyApi:
                     id="cp1",
                     property_key="total_comp",
                     display_name="Total Compensation",
-                    formula="salary * 1.1",
+                    formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
                     inputs=["salary"],
                     output_type="number",
@@ -236,7 +236,7 @@ class TestComputedPropertyApi:
                     id="cp1",
                     property_key="total_comp",
                     display_name="Total Compensation",
-                    formula="salary * 1.1",
+                    formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
                     inputs=["salary"],
                     output_type="number",
@@ -332,7 +332,7 @@ class TestComputedPropertyApi:
                     id="cp1",
                     property_key="total_comp",
                     display_name="Total Compensation",
-                    formula="salary * 1.1",
+                    formula="multiply(salary, 1.1)",
                     formula_type="arithmetic",
                     inputs=["salary"],
                     output_type="number",

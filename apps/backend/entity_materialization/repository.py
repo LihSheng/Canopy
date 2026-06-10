@@ -99,6 +99,21 @@ class EntityMaterializationRepository:
         models = q.order_by(EntityMaterializedRowModel.row_id).all()
         return [self._to_domain(m) for m in models]
 
+    def get_rows_for_entity(
+        self,
+        entity_id: str,
+        exclude_revision_id: str | None = None,
+    ) -> list[EntityMaterializedRow]:
+        """Return materialized rows for an entity across all revisions, excluding a specific revision."""
+        q = self._db.query(EntityMaterializedRowModel).filter(
+            EntityMaterializedRowModel.entity_id == entity_id,
+            EntityMaterializedRowModel.is_tombstone.is_(False),
+        )
+        if exclude_revision_id is not None:
+            q = q.filter(EntityMaterializedRowModel.revision_id != exclude_revision_id)
+        models = q.order_by(EntityMaterializedRowModel.row_id).all()
+        return [self._to_domain(m) for m in models]
+
     def get_row(self, entity_id: str, row_id: str) -> EntityMaterializedRow | None:
         """Return a single row by entity_id + row_id (any revision)."""
         model = (

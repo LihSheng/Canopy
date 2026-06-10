@@ -432,7 +432,7 @@ class EntityRevisionService:
         draft = self._get_editable_draft(entity_id, tenant_id, lock_holder_id)
         if not prop.id:
             prop.id = str(uuid.uuid4())
-        self._validate_computed_property(draft, prop)
+        self._validate_computed_property_syntax(prop.formula)
         draft.computed_properties.append(prop)
         draft.updated_at = datetime.now(UTC)
         return self._revision_repo.save(draft)
@@ -460,7 +460,7 @@ class EntityRevisionService:
                     sort_order=updates.get("sort_order", cp.sort_order),
                     is_active=updates.get("is_active", cp.is_active),
                 )
-                self._validate_computed_property(draft, updated)
+                self._validate_computed_property_syntax(updated.formula)
                 draft.computed_properties[i] = updated
                 draft.updated_at = datetime.now(UTC)
                 return self._revision_repo.save(draft)
@@ -601,10 +601,10 @@ class EntityRevisionService:
                 errors.append(f"Required property (id={rp.property_id}) has an empty property_key.")
 
             # Check that the required property has at least one source binding (prefer explicit bindings)
-            if draft.source_bindings:
+            if draft.source_bindings is not None:
                 bound = any(b.property_key == rp.property_key for b in draft.source_bindings)
             else:
-                # Fallback to source_nodes.fields for backward compat
+                # Fallback to source_nodes.fields for backward compat (legacy data without explicit bindings)
                 bound = any(rp.property_key in (sn.get("fields") or []) for sn in source_nodes)
             if not bound:
                 errors.append(
