@@ -20,6 +20,14 @@ import {
   setSourceBindings,
   updateDraft,
   revertToRevision,
+  addComputedProperty,
+  updateComputedProperty,
+  removeComputedProperty as removeComputedPropertyApi,
+  listComputedProperties,
+  addLink,
+  updateLink,
+  removeLink as removeLinkApi,
+  listLinks,
 } from "@/lib/api/entities";
 import { ROUTES } from "@/lib/constants";
 import type {
@@ -28,7 +36,9 @@ import type {
   EntityRevisionDetail,
   PropertyMapping,
   ComputedProperty,
+  EntityComputedPropertyDetail,
   EntityLink,
+  EntityLinkDetail,
   EntityRevisionProperty,
   SourceBinding,
   SourceNode,
@@ -41,6 +51,8 @@ import { EntityLineageCanvas } from "@/components/entity-graph/entity-lineage-ca
 import { EntityVersionHistory } from "@/components/entity-graph/entity-version-history";
 import type { EntityLineageGraph } from "@/lib/api/types";
 import { WorkshopChartXY } from "@/components/data-studio/workshop/WorkshopChartXY";
+import { ComputedPropertyComposer, type EntityComputedProperty } from "@/components/entity-graph/computed-property-composer";
+import { formatValue } from "@/lib/formatters";
 
 export const EntityDetailPage = () => {
   const params = useParams();
@@ -201,6 +213,11 @@ export const EntityDetailPage = () => {
   const [draftBindings, setDraftBindings] = useState<SourceBinding[]>([]);
   const [bindingsLoaded, setBindingsLoaded] = useState(false);
 
+  // ── Draft-mode computed properties & links ──
+  const [draftComputedProps, setDraftComputedProps] = useState<EntityComputedPropertyDetail[]>([]);
+  const [draftLinks, setDraftLinks] = useState<EntityLinkDetail[]>([]);
+  const [showComposer, setShowComposer] = useState(false);
+
   // Load bindings when draft is available
   useEffect(() => {
     if (status?.has_draft && !bindingsLoaded) {
@@ -214,6 +231,99 @@ export const EntityDetailPage = () => {
       setDraftBindings([]);
     }
   }, [id, status?.has_draft, bindingsLoaded]);
+
+  // Load draft computed properties and links when draft is available
+  useEffect(() => {
+    if (status?.has_draft) {
+      Promise.all([
+        listComputedProperties(id).catch(() => [] as EntityComputedPropertyDetail[]),
+        listLinks(id).catch(() => [] as EntityLinkDetail[]),
+      ]).then(([cps, lnks]) => {
+        setDraftComputedProps(cps);
+        setDraftLinks(lnks);
+      });
+    } else {
+      setDraftComputedProps([]);
+      setDraftLinks([]);
+      setShowComposer(false);
+    }
+  }, [id, status?.has_draft]);
+
+  const refreshDraftDetails = async () => {
+    const [cps, lnks] = await Promise.all([
+      listComputedProperties(id).catch(() => [] as EntityComputedPropertyDetail[]),
+      listLinks(id).catch(() => [] as EntityLinkDetail[]),
+    ]);
+    setDraftComputedProps(cps);
+    setDraftLinks(lnks);
+    await refreshSilently();
+  };
+
+  const handleAddComputedProperty = async (cp: EntityComputedProperty) => {
+    setTableRefreshing(true);
+    setError(null);
+    try {
+      await addComputedProperty(id, {
+        property_key: cp.property_key,
+        display_name: cp.display_name,
+        formula: cp.formula,
+        formula_type: cp.formula_type,
+        output_type: cp.output_type,
+        sort_order: cp.sort_order,
+      });
+      setShowComposer(false);
+      await refreshDraftDetails();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add computed property");
+    } finally {
+      setTableRefreshing(false);
+    }
+  };
+
+  const handleRemoveComputedProperty = async (cpId: string) => {
+    setTableRefreshing(true);
+    try {
+      await removeComputedPropertyApi(id, cpId);
+      await refreshDraftDetails();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove computed property");
+    } finally {
+      setTableRefreshing(false);
+    }
+  };
+
+  const handleAddLink = async (link: EntityLinkDetail) => {
+    setTableRefreshing(true);
+    setError(null);
+    try {
+      await addLink(id, {
+        link_id: link.link_id,
+        display_name: link.display_name,
+        source_property_key: link.source_property_key,
+        target_entity_id: link.target_entity_id,
+        target_property_key: link.target_property_key,
+        cardinality: link.cardinality,
+        is_optional: link.is_optional,
+      });
+      await refreshDraftDetails();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add link");
+    } finally {
+      setTableRefreshing(false);
+    }
+  };
+
+  const handleRemoveLink = async (linkId: string) => {
+    setTableRefreshing(true);
+    try {
+      await removeLinkApi(id, linkId);
+      await refreshDraftDetails();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove link");
+    } finally {
+      setTableRefreshing(false);
+    }
+  };
 
   const handleSaveProperty = async (data: PropertySavePayload) => {
     setTableRefreshing(true);
@@ -752,7 +862,101 @@ export const EntityDetailPage = () => {
               )}
 
               {/* Computed Properties */}
-              {effectiveComputed.length > 0 && (
+              {/* Draft mode: show composer + editable list */}
+              {status?.has_draft ? (
+                <section className="rounded-lg border border-zinc-200 bg-white">
+                  <div className="border-b border-zinc-100 px-4 py-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-zinc-900">
+                      Computed Properties
+                      <span className="ml-1.5 text-xs font-normal text-zinc-400">
+                        ({draftComputedProps.length})
+                      </span>
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowComposer(!showComposer)}
+                      className="text-xs font-medium text-purple-600 hover:text-purple-800"
+                    >
+                      {showComposer ? "Cancel" : "+ Add Computed Property"}
+                    </button>
+                  </div>
+                  {showComposer && (
+                    <div className="border-b border-zinc-100 px-4 py-4">
+                      <ComputedPropertyComposer
+                        existingPropertyKeys={[
+                          ...(effectiveRevision?.properties || []).map((p) => p.property_key),
+                          ...draftComputedProps.map((cp) => cp.property_key),
+                        ]}
+                        entityId={id}
+                        onAdd={handleAddComputedProperty}
+                        onCancel={() => setShowComposer(false)}
+                      />
+                    </div>
+                  )}
+                  {draftComputedProps.length === 0 && !showComposer ? (
+                    <p className="px-4 py-6 text-sm text-zinc-400">
+                      No computed properties. Click &quot;+ Add Computed Property&quot; to create a formula from existing properties.
+                    </p>
+                  ) : (
+                    <table className="min-w-full divide-y divide-zinc-100 text-sm">
+                      <thead>
+                        <tr className="bg-zinc-50">
+                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                            Property
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                            Key
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                            Formula Type
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                            Output
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                            Expression
+                          </th>
+                          <th className="px-4 py-2 w-20" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {draftComputedProps.map((cp) => (
+                          <tr key={cp.id} className="hover:bg-zinc-50">
+                            <td className="px-4 py-2 font-medium text-zinc-900">
+                              {cp.display_name}
+                            </td>
+                            <td className="px-4 py-2 font-mono text-xs text-zinc-500">
+                              {cp.property_key}
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className="inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+                                {cp.formula_type}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className="inline-block rounded-full border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                                {semanticTypeLabel(cp.output_type)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-xs font-mono text-zinc-500 max-w-xs truncate">
+                              {cp.formula || "\u2014"}
+                            </td>
+                            <td className="px-4 py-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveComputedProperty(cp.id)}
+                                className="text-xs font-medium text-rose-500 hover:text-rose-700"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </section>
+              ) : effectiveComputed.length > 0 ? (
                 <section className="rounded-lg border border-zinc-200 bg-white">
                   <div className="border-b border-zinc-100 px-4 py-3">
                     <h3 className="text-sm font-semibold text-zinc-900">
@@ -798,19 +1002,41 @@ export const EntityDetailPage = () => {
                     </tbody>
                   </table>
                 </section>
-              )}
+              ) : null}
 
               {/* Links */}
               <section className="rounded-lg border border-zinc-200 bg-white">
-                <div className="border-b border-zinc-100 px-4 py-3">
+                <div className="border-b border-zinc-100 px-4 py-3 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-zinc-900">
                     Links
                     <span className="ml-1.5 text-xs font-normal text-zinc-400">
-                      ({effectiveLinks.length})
+                      ({status?.has_draft ? draftLinks.length : effectiveLinks.length})
                     </span>
                   </h3>
+                  {status?.has_draft && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const linkId = crypto.randomUUID();
+                        const defaultTarget = (draftLinks[0] as EntityLinkDetail | undefined)?.target_entity_id || "";
+                        handleAddLink({
+                          link_id: linkId,
+                          display_name: "New Link",
+                          source_property_key: (effectiveRevision?.properties || [])[0]?.property_key || "",
+                          target_entity_id: defaultTarget,
+                          target_property_key: "",
+                          cardinality: "1:1",
+                          is_optional: false,
+                          is_active: true,
+                        });
+                      }}
+                      className="text-xs font-medium text-purple-600 hover:text-purple-800"
+                    >
+                      + Add Link
+                    </button>
+                  )}
                 </div>
-                {effectiveLinks.length === 0 ? (
+                {(status?.has_draft ? draftLinks.length : effectiveLinks.length) === 0 ? (
                   <p className="px-4 py-6 text-sm text-zinc-400">
                     No linked entities.
                   </p>
@@ -825,30 +1051,136 @@ export const EntityDetailPage = () => {
                           Source Property
                         </th>
                         <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                          Target Entity
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                          Target Property
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
                           Cardinality
                         </th>
+                        {status?.has_draft && (
+                          <th className="px-4 py-2 w-20" />
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
-                      {effectiveLinks.map((link) => (
-                        <tr key={link.link_id} className="hover:bg-zinc-50">
-                          <td className="px-4 py-2 font-medium text-zinc-900">
-                            {link.display_name}
-                          </td>
-                          <td className="px-4 py-2 font-mono text-xs text-zinc-500">
-                            {link.source_property_key}
-                          </td>
-                          <td className="px-4 py-2 text-zinc-500">
-                            <span className="inline-block rounded-full border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
-                              {link.cardinality}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {status?.has_draft
+                        ? draftLinks.map((link) => (
+                            <tr key={link.link_id} className="hover:bg-zinc-50">
+                              <td className="px-4 py-2 font-medium text-zinc-900">
+                                {link.display_name}
+                              </td>
+                              <td className="px-4 py-2 font-mono text-xs text-zinc-500">
+                                {link.source_property_key}
+                              </td>
+                              <td className="px-4 py-2 font-mono text-xs text-zinc-500">
+                                {link.target_entity_id.slice(0, 12)}...
+                              </td>
+                              <td className="px-4 py-2 font-mono text-xs text-zinc-500">
+                                {link.target_property_key}
+                              </td>
+                              <td className="px-4 py-2">
+                                <span className="inline-block rounded-full border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                                  {link.cardinality}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveLink(link.link_id)}
+                                  className="text-xs font-medium text-rose-500 hover:text-rose-700"
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        : (effectiveLinks as EntityLink[]).map((link) => (
+                            <tr key={link.link_id} className="hover:bg-zinc-50">
+                              <td className="px-4 py-2 font-medium text-zinc-900">
+                                {link.display_name}
+                              </td>
+                              <td className="px-4 py-2 font-mono text-xs text-zinc-500">
+                                {link.source_property_key}
+                              </td>
+                              <td className="px-4 py-2 font-mono text-xs text-zinc-500">
+                                {link.target_object_type_id.slice(0, 12)}...
+                              </td>
+                              <td className="px-4 py-2 font-mono text-xs text-zinc-500">
+                                {link.target_property_key}
+                              </td>
+                              <td className="px-4 py-2 text-zinc-500">
+                                <span className="inline-block rounded-full border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                                  {link.cardinality}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
                     </tbody>
                   </table>
                 )}
               </section>
+
+              {/* Data Preview — materialized rows with format hints */}
+              {entity?.materialized_preview && entity.materialized_preview.length > 0 && (
+                <section className="rounded-lg border border-zinc-200 bg-white">
+                  <div className="border-b border-zinc-100 px-4 py-3">
+                    <h3 className="text-sm font-semibold text-zinc-900">
+                      Data Preview
+                      <span className="ml-1.5 text-xs font-normal text-zinc-400">
+                        ({entity.materialized_preview.length} row{entity.materialized_preview.length !== 1 ? "s" : ""})
+                      </span>
+                    </h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-zinc-100 text-sm">
+                      <thead>
+                        <tr className="bg-zinc-50">
+                          {(Object.keys(entity.materialized_preview[0] || {})).map((key) => {
+                            const field = entity.field_groups
+                              ?.flatMap((g) => g.fields)
+                              .find((f) => f.property_key === key);
+                            return (
+                              <th
+                                key={key}
+                                className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 whitespace-nowrap"
+                              >
+                                {field?.display_name || key}
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {entity.materialized_preview.slice(0, 20).map((row, ri) => {
+                          const keys = Object.keys(row || {});
+                          // Build property_key → format_hint map
+                          const formatMap: Record<string, string> = {};
+                          entity.field_groups?.forEach((g) =>
+                            g.fields.forEach((f) => {
+                              formatMap[f.property_key] = f.format_hint;
+                            })
+                          );
+                          return (
+                            <tr key={ri} className="hover:bg-zinc-50">
+                              {keys.map((key) => (
+                                <td
+                                  key={key}
+                                  className="px-3 py-2 text-zinc-700 whitespace-nowrap max-w-[200px] truncate"
+                                  title={String(row[key] ?? "")}
+                                >
+                                  {formatValue(row[key], formatMap[key])}
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
 
               {/* Source nodes (revision-only section) */}
               {effectiveRevision && effectiveSources.length > 0 && (

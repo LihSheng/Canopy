@@ -34,6 +34,7 @@ const mockProperty = (overrides?: Record<string, unknown>): EntityRevisionProper
   is_required: true,
   is_primary_key: false,
   sort_order: 0,
+  format_hint: "",
   ...overrides,
 });
 

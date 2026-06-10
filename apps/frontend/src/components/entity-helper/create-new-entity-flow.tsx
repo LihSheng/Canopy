@@ -112,6 +112,7 @@ export function CreateNewEntityFlow({ onClose }: CreateNewEntityFlowProps) {
               is_required: false,
               is_primary_key: p.is_primary_key,
               sort_order: i,
+              format_hint: "",
             })),
           });
         } catch {

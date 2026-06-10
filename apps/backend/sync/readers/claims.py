@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,7 +19,7 @@ class ClaimReader(SourceReader[SourceClaim]):
                 amount=r.amount,
                 currency=r.currency,
                 claim_type=r.claim_type,
-                submitted_at=datetime.fromisoformat(r.submitted_at),
+                submitted_at=r.submitted_at,
                 status=r.status,
             )
             for r in rows

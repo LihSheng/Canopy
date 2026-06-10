@@ -74,7 +74,7 @@ class PayrollMapper(OntologyMapper[SourcePayroll, PayrollExpense]):
                 department_id=department_id,
                 cost_center_id=cost_center_id,
                 budget_code_id=None,
-                payroll_month=src.period_start[:7] if len(src.period_start) >= 7 else src.period_start,
+                payroll_month=str(src.period_start)[:7],
                 amount=src.amount,
                 currency=src.currency,
                 pay_component="base_salary",

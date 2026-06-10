@@ -414,6 +414,18 @@ export interface EntityLink {
   cardinality: string;
 }
 
+/** Full link detail from the entity revision API (EntityLinkResponse). */
+export interface EntityLinkDetail {
+  link_id: string;
+  display_name: string;
+  source_property_key: string;
+  target_entity_id: string;
+  target_property_key: string;
+  cardinality: string;
+  is_optional: boolean;
+  is_active: boolean;
+}
+
 export interface SourceNode {
   source_id: string;
   source_type: string;
@@ -436,6 +448,18 @@ export interface ComputedProperty {
   expression: string;
   inputs: FieldRef[];
   included: boolean;
+}
+
+/** Computed property from the entity revision API (ComputedPropertyResponse). */
+export interface EntityComputedPropertyDetail {
+  id: string;
+  property_key: string;
+  display_name: string;
+  formula: string;
+  formula_type: string;
+  output_type: string;
+  sort_order: number;
+  is_active: boolean;
 }
 
 export interface SemanticMapping {
@@ -529,6 +553,7 @@ export interface FieldDetail {
   property_key: string;
   display_name: string;
   semantic_type: string;
+  format_hint: string;
   is_required: boolean;
   is_primary_key: boolean;
   sort_order: number;

@@ -6,6 +6,8 @@ import type {
   EntityStatus,
   EntityRevisionProperty,
   SourceBinding,
+  EntityComputedPropertyDetail,
+  EntityLinkDetail,
 } from "./types";
 
 export const fetchEntities = (search?: string): Promise<EntityRegistryItem[]> => {
@@ -213,7 +215,134 @@ export const revertToRevision = (
   );
 };
 
-// ─── Computed Properties ───
+// ─── Computed Property CRUD (within draft) ───
+
+export const addComputedProperty = (
+  entityId: string,
+  body: {
+    property_key: string;
+    display_name: string;
+    formula: string;
+    formula_type?: string;
+    output_type?: string;
+    sort_order?: number;
+    is_active?: boolean;
+  }
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/draft/computed-properties`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    }
+  );
+};
+
+export const updateComputedProperty = (
+  entityId: string,
+  computedPropertyId: string,
+  body: {
+    property_key?: string;
+    display_name?: string;
+    formula?: string;
+    formula_type?: string;
+    output_type?: string;
+    sort_order?: number;
+    is_active?: boolean;
+  }
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/draft/computed-properties/${computedPropertyId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }
+  );
+};
+
+export const removeComputedProperty = (
+  entityId: string,
+  computedPropertyId: string
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/draft/computed-properties/${computedPropertyId}`,
+    { method: "DELETE" }
+  );
+};
+
+export const listComputedProperties = (
+  entityId: string
+): Promise<EntityComputedPropertyDetail[]> => {
+  return request<EntityComputedPropertyDetail[]>(
+    `/api/entities/${entityId}/draft/computed-properties`
+  );
+};
+
+// ─── Link CRUD (within draft) ───
+
+export const addLink = (
+  entityId: string,
+  body: {
+    link_id: string;
+    display_name: string;
+    source_property_key: string;
+    target_entity_id: string;
+    target_property_key: string;
+    cardinality: string;
+    is_optional?: boolean;
+    is_active?: boolean;
+  }
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/draft/links`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    }
+  );
+};
+
+export const updateLink = (
+  entityId: string,
+  linkId: string,
+  body: {
+    display_name?: string;
+    source_property_key?: string;
+    target_entity_id?: string;
+    target_property_key?: string;
+    cardinality?: string;
+    is_optional?: boolean;
+    is_active?: boolean;
+  }
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/draft/links/${linkId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }
+  );
+};
+
+export const removeLink = (
+  entityId: string,
+  linkId: string
+): Promise<EntityRevision> => {
+  return request<EntityRevision>(
+    `/api/entities/${entityId}/draft/links/${linkId}`,
+    { method: "DELETE" }
+  );
+};
+
+export const listLinks = (
+  entityId: string
+): Promise<EntityLinkDetail[]> => {
+  return request<EntityLinkDetail[]>(
+    `/api/entities/${entityId}/draft/links`
+  );
+};
+
+// ─── Compute/Eval ───
 
 export const evaluateFormula = (
   entityId: string,
