@@ -1,0 +1,467 @@
+name: OpenAB PR Review
+
+on:
+  pull_request_target:
+    types: [opened, ready_for_review, reopened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number to review"
+        required: true
+        type: string
+      agent:
+        description: "OpenAB agent to assign"
+        required: false
+        default: "berlin"
+        type: string
+      task:
+        description: "Review instruction for the agent"
+        required: false
+        default: "Please review this Canopy pull request. Focus on ARCHITECTURE.md, deterministic analytics, snapshot consistency, source read-only safety, audit boundaries, tenant seams, tests, and whether it is safe to merge."
+        type: string
+      task_type:
+        description: "OpenAB task type"
+        required: false
+        default: "chat"
+        type: choice
+        options:
+          - chat
+          - code
+          - auto
+
+jobs:
+  auto_pr_review:
+    name: Auto assign Berlin on new Canopy PR
+    if: >
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Prepare OpenAB Canopy PR review task
+        id: task
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HTML_URL: ${{ github.event.pull_request.html_url }}
+          PR_USER: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+
+          AGENT="berlin"
+          TASK_TYPE="chat"
+          TASK_ID="canopy-pr-${PR_NUMBER}-auto-${AGENT}-${GITHUB_RUN_ID}"
+
+          TASK="$(cat <<EOF
+          Please perform a Canopy architecture-aware code review for this pull request.
+
+          Pull request: #${PR_NUMBER}
+          URL: ${PR_HTML_URL}
+          Title: ${PR_TITLE}
+          Author: ${PR_USER}
+          Base branch: ${PR_BASE_REF}
+          Head branch: ${PR_HEAD_REF}
+
+          Review focus:
+          1. Start from ARCHITECTURE.md and doc/codebase-map.md before judging the change.
+          2. Check whether the implementation respects Canopy's three non-negotiable rules:
+             - explicit audited actions only; no hidden side effects
+             - deterministic analytics decide; the LLM narrates only
+             - dashboard, export, and AI use the same snapshot basis
+          3. Check source-system safety: no upstream/source-system writes unless routed through an explicit connector/workflow boundary with policy checks and audit logging.
+          4. Check tenant-aware seams, storage routing, audit, and module boundaries.
+          5. Check dependency direction: UI -> API client -> API routes -> services -> repositories / external clients.
+          6. Look for bugs, risky logic, regressions, missing validation, security concerns, or unclear product behavior.
+          7. Check whether tests, lint, typecheck, and backend/frontend validation expectations are clear.
+          8. Leave a review summary with: approve / request changes / needs human decision.
+
+          PR body:
+          ${PR_BODY:-'(empty)'}
+          EOF
+          )"
+
+          {
+            echo "agent=$AGENT"
+            echo "task_type=$TASK_TYPE"
+            echo "task_id=$TASK_ID"
+            echo "task<<EOF"
+            echo "$TASK"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure PR review labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.task.outputs.agent }}
+        run: |
+          gh label create "openab/$AGENT" --color 5319e7 --force 2>/dev/null || true
+          gh label create "openab/$AGENT/review" --color 1d76db --force 2>/dev/null || true
+          gh label create "openab/$AGENT/wip" --color fbca04 --force 2>/dev/null || true
+          gh label create "openab/$AGENT/failed" --color d73a4a --force 2>/dev/null || true
+          gh label create "openab/pr-review" --color 1d76db --force 2>/dev/null || true
+          gh label create "openab/done" --color 0e8a16 --force 2>/dev/null || true
+          gh label create "openab/needs-human" --color b60205 --force 2>/dev/null || true
+
+      - name: Add OpenAB PR review labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.task.outputs.agent }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$GH_REPO/issues/$PR_NUMBER/labels" \
+            -f "labels[]=openab/$AGENT" \
+            -f "labels[]=openab/$AGENT/review" \
+            -f "labels[]=openab/pr-review" \
+            || echo "::warning::Failed to add OpenAB labels; continuing because metadata comment is the real queue signal."
+
+      - name: Post OpenAB metadata comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.task.outputs.agent }}
+          TASK: ${{ steps.task.outputs.task }}
+          TASK_TYPE: ${{ steps.task.outputs.task_type }}
+          TASK_ID: ${{ steps.task.outputs.task_id }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HTML_URL: ${{ github.event.pull_request.html_url }}
+          COMMENTER: ${{ github.event.pull_request.user.login }}
+        run: |
+          BODY="$(cat <<EOF
+          **OpenAB Canopy PR Review** — assigned to \`$AGENT\` :mag:
+
+          Task type: \`$TASK_TYPE\`
+
+          Task:
+          $TASK
+
+          <!-- openab-task
+          id: $TASK_ID
+          agent: $AGENT
+          task_type: $TASK_TYPE
+          task: $TASK
+          repository: $GH_REPO
+          issue: $PR_NUMBER
+          pr: $PR_NUMBER
+          pr_title: $PR_TITLE
+          pr_url: $PR_HTML_URL
+          base_ref: $PR_BASE_REF
+          head_ref: $PR_HEAD_REF
+          commenter: $COMMENTER
+          trigger: pull_request
+          -->
+          EOF
+          )"
+
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$GH_REPO/issues/$PR_NUMBER/comments" \
+            -f body="$BODY"
+
+  manual_pr_review:
+    name: Manual OpenAB command on Canopy PR
+    if: >
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/openab')
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Parse OpenAB PR command
+        id: parse
+        shell: bash
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          COMMENT="$COMMENT_BODY"
+          FIRST_LINE="$(printf '%s\n' "$COMMENT" | head -n 1)"
+          AGENT="$(printf '%s' "$FIRST_LINE" | awk '{print $2}')"
+
+          if [ -z "${AGENT:-}" ]; then
+            echo "Missing agent name. Usage: /openab <agent> [--chat|--code] <task>"
+            exit 1
+          fi
+
+          TASK_TYPE="auto"
+          if printf '%s' "$COMMENT" | grep -q -- '--code'; then
+            TASK_TYPE="code"
+          elif printf '%s' "$COMMENT" | grep -q -- '--chat'; then
+            TASK_TYPE="chat"
+          fi
+
+          TASK="$(printf '%s' "$COMMENT" | sed -E '1s#^/openab[[:space:]]+[^[:space:]]+[[:space:]]*##')"
+          TASK="$(printf '%s' "$TASK" | sed -E 's/--(code|chat)[[:space:]]*//g')"
+          TASK="$(printf '%s' "$TASK" | sed '/./,$!d' | sed ':a;/^\n*$/{$d;N;ba}')"
+
+          if [ -z "${TASK:-}" ]; then
+            TASK="Please review this Canopy pull request based on ARCHITECTURE.md, doc/codebase-map.md, linked issue, PR description, and code changes."
+          fi
+
+          TASK_ID="canopy-pr-${PR_NUMBER}-comment-${COMMENT_ID}-${AGENT}"
+
+          {
+            echo "agent=$AGENT"
+            echo "task_type=$TASK_TYPE"
+            echo "task_id=$TASK_ID"
+            echo "task<<EOF"
+            echo "$TASK"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fetch PR metadata
+        id: pr
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          PR_JSON="$(gh pr view "$PR_NUMBER" --json title,url,headRefName,baseRefName,author)"
+
+          {
+            echo "title=$(printf '%s' "$PR_JSON" | jq -r '.title')"
+            echo "url=$(printf '%s' "$PR_JSON" | jq -r '.url')"
+            echo "head_ref=$(printf '%s' "$PR_JSON" | jq -r '.headRefName')"
+            echo "base_ref=$(printf '%s' "$PR_JSON" | jq -r '.baseRefName')"
+            echo "author=$(printf '%s' "$PR_JSON" | jq -r '.author.login')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.parse.outputs.agent }}
+        run: |
+          gh label create "openab/$AGENT" --color 5319e7 --force 2>/dev/null || true
+          gh label create "openab/$AGENT/review" --color 1d76db --force 2>/dev/null || true
+          gh label create "openab/$AGENT/wip" --color fbca04 --force 2>/dev/null || true
+          gh label create "openab/$AGENT/failed" --color d73a4a --force 2>/dev/null || true
+          gh label create "openab/pr-review" --color 1d76db --force 2>/dev/null || true
+          gh label create "openab/done" --color 0e8a16 --force 2>/dev/null || true
+          gh label create "openab/needs-human" --color b60205 --force 2>/dev/null || true
+
+      - name: Add agent review label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.parse.outputs.agent }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$GH_REPO/issues/$PR_NUMBER/labels" \
+            -f "labels[]=openab/$AGENT" \
+            -f "labels[]=openab/$AGENT/review" \
+            -f "labels[]=openab/pr-review" \
+            || echo "::warning::Failed to add OpenAB labels; continuing because metadata comment is the real queue signal."
+
+      - name: Post OpenAB metadata comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.parse.outputs.agent }}
+          TASK: ${{ steps.parse.outputs.task }}
+          TASK_TYPE: ${{ steps.parse.outputs.task_type }}
+          TASK_ID: ${{ steps.parse.outputs.task_id }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          PR_HEAD_REF: ${{ steps.pr.outputs.head_ref }}
+          PR_BASE_REF: ${{ steps.pr.outputs.base_ref }}
+          PR_HTML_URL: ${{ steps.pr.outputs.url }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+        run: |
+          BODY="$(cat <<EOF
+          **OpenAB Canopy PR Review** — assigned to \`$AGENT\` :mag:
+
+          Task type: \`$TASK_TYPE\`
+
+          Task:
+          $TASK
+
+          <!-- openab-task
+          id: $TASK_ID
+          agent: $AGENT
+          task_type: $TASK_TYPE
+          task: $TASK
+          repository: $GH_REPO
+          issue: $PR_NUMBER
+          pr: $PR_NUMBER
+          pr_title: $PR_TITLE
+          pr_url: $PR_HTML_URL
+          base_ref: $PR_BASE_REF
+          head_ref: $PR_HEAD_REF
+          commenter: $COMMENTER
+          trigger: issue_comment
+          -->
+          EOF
+          )"
+
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$GH_REPO/issues/$PR_NUMBER/comments" \
+            -f body="$BODY"
+
+  dispatch_pr_review:
+    name: Manual workflow dispatch Canopy PR review
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Prepare dispatch task
+        id: dispatch
+        shell: bash
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          AGENT_INPUT: ${{ inputs.agent }}
+          TASK_INPUT: ${{ inputs.task }}
+          TASK_TYPE_INPUT: ${{ inputs.task_type }}
+        run: |
+          set -euo pipefail
+
+          AGENT="${AGENT_INPUT:-berlin}"
+          TASK_TYPE="${TASK_TYPE_INPUT:-chat}"
+          TASK="${TASK_INPUT:-Please review this Canopy pull request. Focus on ARCHITECTURE.md, deterministic analytics, snapshot consistency, source read-only safety, audit boundaries, tenant seams, tests, and whether it is safe to merge.}"
+          TASK_ID="canopy-pr-${PR_NUMBER}-dispatch-${AGENT}-${GITHUB_RUN_ID}"
+
+          {
+            echo "agent=$AGENT"
+            echo "task_type=$TASK_TYPE"
+            echo "task_id=$TASK_ID"
+            echo "task<<EOF"
+            echo "$TASK"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fetch PR metadata
+        id: pr
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+
+          PR_JSON="$(gh pr view "$PR_NUMBER" --json title,url,headRefName,baseRefName,author)"
+
+          {
+            echo "title=$(printf '%s' "$PR_JSON" | jq -r '.title')"
+            echo "url=$(printf '%s' "$PR_JSON" | jq -r '.url')"
+            echo "head_ref=$(printf '%s' "$PR_JSON" | jq -r '.headRefName')"
+            echo "base_ref=$(printf '%s' "$PR_JSON" | jq -r '.baseRefName')"
+            echo "author=$(printf '%s' "$PR_JSON" | jq -r '.author.login')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.dispatch.outputs.agent }}
+        run: |
+          gh label create "openab/$AGENT" --color 5319e7 --force 2>/dev/null || true
+          gh label create "openab/$AGENT/review" --color 1d76db --force 2>/dev/null || true
+          gh label create "openab/$AGENT/wip" --color fbca04 --force 2>/dev/null || true
+          gh label create "openab/$AGENT/failed" --color d73a4a --force 2>/dev/null || true
+          gh label create "openab/pr-review" --color 1d76db --force 2>/dev/null || true
+          gh label create "openab/done" --color 0e8a16 --force 2>/dev/null || true
+          gh label create "openab/needs-human" --color b60205 --force 2>/dev/null || true
+
+      - name: Add agent review label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.dispatch.outputs.agent }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$GH_REPO/issues/$PR_NUMBER/labels" \
+            -f "labels[]=openab/$AGENT" \
+            -f "labels[]=openab/$AGENT/review" \
+            -f "labels[]=openab/pr-review" \
+            || echo "::warning::Failed to add OpenAB labels; continuing because metadata comment is the real queue signal."
+
+      - name: Post OpenAB metadata comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.dispatch.outputs.agent }}
+          TASK: ${{ steps.dispatch.outputs.task }}
+          TASK_TYPE: ${{ steps.dispatch.outputs.task_type }}
+          TASK_ID: ${{ steps.dispatch.outputs.task_id }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          PR_HEAD_REF: ${{ steps.pr.outputs.head_ref }}
+          PR_BASE_REF: ${{ steps.pr.outputs.base_ref }}
+          PR_HTML_URL: ${{ steps.pr.outputs.url }}
+          COMMENTER: workflow_dispatch
+        run: |
+          BODY="$(cat <<EOF
+          **OpenAB Canopy PR Review** — assigned to \`$AGENT\` :mag:
+
+          Task type: \`$TASK_TYPE\`
+
+          Task:
+          $TASK
+
+          <!-- openab-task
+          id: $TASK_ID
+          agent: $AGENT
+          task_type: $TASK_TYPE
+          task: $TASK
+          repository: $GH_REPO
+          issue: $PR_NUMBER
+          pr: $PR_NUMBER
+          pr_title: $PR_TITLE
+          pr_url: $PR_HTML_URL
+          base_ref: $PR_BASE_REF
+          head_ref: $PR_HEAD_REF
+          commenter: $COMMENTER
+          trigger: workflow_dispatch
+          -->
+          EOF
+          )"
+
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$GH_REPO/issues/$PR_NUMBER/comments" \
+            -f body="$BODY"
