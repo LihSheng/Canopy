@@ -1,0 +1,252 @@
+name: OpenAB Issue Review
+
+on:
+  issues:
+    types: [assigned]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number to review"
+        required: true
+        type: string
+      agent:
+        description: "OpenAB agent to assign"
+        required: false
+        default: "berlin"
+        type: string
+      task:
+        description: "Review instruction"
+        required: false
+        default: "Analyze this issue context and propose a solution"
+        type: string
+
+jobs:
+  auto_issue_review:
+    name: Queue Berlin on issue assign
+    if: >
+      github.event_name == 'issues' &&
+      github.event.action == 'assigned'
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+
+    steps:
+      - name: Prepare OpenAB issue task
+        id: task
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_HTML_URL: ${{ github.event.issue.html_url }}
+          ASSIGNEE: ${{ github.event.assignee.login }}
+          SENDER: ${{ github.event.sender.login }}
+        run: |
+          set -euo pipefail
+
+          AGENT="berlin"
+          TASK_TYPE="chat"
+          TASK_ID="issue-${ISSUE_NUMBER}-assign-${ASSIGNEE}-${GITHUB_RUN_ID}"
+
+          TASK="$(cat <<EOF
+          Analyze this issue and propose a solution.
+
+          Issue: #${ISSUE_NUMBER}
+          URL: ${ISSUE_HTML_URL}
+          Title: ${ISSUE_TITLE}
+          Assignee: ${ASSIGNEE}
+          Set by: ${SENDER}
+
+          Instructions:
+          1. Read the issue title, body, comments, and labels.
+          2. Understand the problem or feature request.
+          3. Propose a concrete solution: architecture approach, files to change, key logic.
+          4. If the issue is unclear, ask clarifying questions.
+          5. If the issue is a bug, narrow down root cause and suggest a fix.
+          6. If the issue is a feature, outline implementation steps.
+
+          Issue body:
+          ${ISSUE_BODY:-'(empty)'}
+          EOF
+          )"
+
+          {
+            echo "agent=$AGENT"
+            echo "task_type=$TASK_TYPE"
+            echo "task_id=$TASK_ID"
+            echo "task<<EOF"
+            echo "$TASK"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure OpenAB labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.task.outputs.agent }}
+        run: |
+          gh label create "openab/$AGENT" --color 5319e7 --force 2>/dev/null || true
+          gh label create "openab/$AGENT/wip" --color fbca04 --force 2>/dev/null || true
+          gh label create "openab/$AGENT/failed" --color d73a4a --force 2>/dev/null || true
+          gh label create "openab/pr-created" --color 0e8a16 --force 2>/dev/null || true
+          gh label create "openab/done" --color 0e8a16 --force 2>/dev/null || true
+          gh label create "openab/needs-human" --color b60205 --force 2>/dev/null || true
+
+      - name: Add agent queue label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.task.outputs.agent }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --add-label "openab/$AGENT"
+
+      - name: Post OpenAB metadata comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.task.outputs.agent }}
+          TASK: ${{ steps.task.outputs.task }}
+          TASK_TYPE: ${{ steps.task.outputs.task_type }}
+          TASK_ID: ${{ steps.task.outputs.task_id }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ASSIGNEE: ${{ github.event.assignee.login }}
+          SENDER: ${{ github.event.sender.login }}
+        run: |
+          BODY="$(cat <<EOF
+          **OpenAB Issue Review** — assigned to \`$AGENT\` :mag:
+
+          Trigger: assignee \`$ASSIGNEE\` was set by \`$SENDER\`
+          Task type: \`$TASK_TYPE\`
+
+          Task:
+          $TASK
+
+          <!-- openab-task
+          id: $TASK_ID
+          agent: $AGENT
+          task_type: $TASK_TYPE
+          task: $TASK
+          repository: $GH_REPO
+          issue: $ISSUE_NUMBER
+          commenter: $SENDER
+          trigger: issues.assigned
+          -->
+          EOF
+          )"
+
+          gh issue comment "$ISSUE_NUMBER" --body "$BODY"
+
+  dispatch_issue_review:
+    name: Manual dispatch issue review
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+
+    steps:
+      - name: Prepare dispatch task
+        id: dispatch
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          AGENT_INPUT: ${{ inputs.agent }}
+          TASK_INPUT: ${{ inputs.task }}
+        run: |
+          set -euo pipefail
+
+          AGENT="${AGENT_INPUT:-berlin}"
+          TASK="${TASK_INPUT:-Analyze this issue context and propose a solution}"
+          TASK_TYPE="chat"
+          TASK_ID="issue-${ISSUE_NUMBER}-dispatch-${AGENT}-${GITHUB_RUN_ID}"
+
+          {
+            echo "agent=$AGENT"
+            echo "task_type=$TASK_TYPE"
+            echo "task_id=$TASK_ID"
+            echo "task<<EOF"
+            echo "$TASK"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fetch issue metadata
+        id: issue
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          set -euo pipefail
+
+          ISSUE_JSON="$(gh issue view "$ISSUE_NUMBER" --json title,url,author,assignees,body,labels)"
+          ASSIGNEES="$(printf '%s' "$ISSUE_JSON" | jq -r '[.assignees[].login] | join(", ")')"
+
+          {
+            echo "title=$(printf '%s' "$ISSUE_JSON" | jq -r '.title')"
+            echo "url=$(printf '%s' "$ISSUE_JSON" | jq -r '.url')"
+            echo "author=$(printf '%s' "$ISSUE_JSON" | jq -r '.author.login')"
+            echo "assignees=${ASSIGNEES:-unassigned}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.dispatch.outputs.agent }}
+        run: |
+          gh label create "openab/$AGENT" --color 5319e7 --force 2>/dev/null || true
+          gh label create "openab/$AGENT/wip" --color fbca04 --force 2>/dev/null || true
+          gh label create "openab/$AGENT/failed" --color d73a4a --force 2>/dev/null || true
+          gh label create "openab/pr-created" --color 0e8a16 --force 2>/dev/null || true
+          gh label create "openab/done" --color 0e8a16 --force 2>/dev/null || true
+          gh label create "openab/needs-human" --color b60205 --force 2>/dev/null || true
+
+      - name: Add agent queue label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.dispatch.outputs.agent }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --add-label "openab/$AGENT"
+
+      - name: Post OpenAB metadata comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT: ${{ steps.dispatch.outputs.agent }}
+          TASK: ${{ steps.dispatch.outputs.task }}
+          TASK_TYPE: ${{ steps.dispatch.outputs.task_type }}
+          TASK_ID: ${{ steps.dispatch.outputs.task_id }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          ISSUE_TITLE: ${{ steps.issue.outputs.title }}
+          ISSUE_URL: ${{ steps.issue.outputs.url }}
+          ISSUE_AUTHOR: ${{ steps.issue.outputs.author }}
+          ASSIGNEES: ${{ steps.issue.outputs.assignees }}
+        run: |
+          BODY="$(cat <<EOF
+          **OpenAB Issue Review** — assigned to \`$AGENT\` :mag:
+
+          Trigger: manual dispatch
+          Task type: \`$TASK_TYPE\`
+
+          Task:
+          $TASK
+
+          <!-- openab-task
+          id: $TASK_ID
+          agent: $AGENT
+          task_type: $TASK_TYPE
+          task: $TASK
+          repository: $GH_REPO
+          issue: $ISSUE_NUMBER
+          commenter: workflow_dispatch
+          trigger: workflow_dispatch
+          -->
+          EOF
+          )"
+
+          gh issue comment "$ISSUE_NUMBER" --body "$BODY"
